@@ -9,7 +9,7 @@
     
     <!-- NuGet 패키지 메타데이터 (글로벌 오픈소스 규격) -->
     <PackageId>Kable</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <Description>High-performance, Zero-Allocation reactive hardware communication engine combining Bedrock Pipelines and RSocket interaction patterns.</Description>

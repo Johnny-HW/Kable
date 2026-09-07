@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     
     <PackageId>Kable.Core</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Johnny</Authors>
     <Description>Pure zero-dependency abstractions and contracts for the Kable reactive communication engine.</Description>
     <PackageTags>industrial;hardware;serial;socket;namedpipe;pipelines;rsocket;reactive;zerogc;contracts</PackageTags>

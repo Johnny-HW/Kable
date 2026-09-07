@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-07
+
+### Added
+- **Weak-Coupled Telemetry Stream & State Bus (`Kable.Observability.DeviceTelemetryStream<T>`)**:
+  - Lock-free, weak-coupling status streaming engine based on `Channel<T>` with `BoundedChannelFullMode.DropOldest`.
+  - Solves memory leaks from standard C# `event EventHandler` and eliminates UI thread-marshalling bottlenecks.
+  - Multi-consumer dynamic broadcast support with automatic conflation for high-frequency hardware telemetry.
+- **Automated Modbus-RTU Framing & Zero-Allocation Codec (`Kable.Codecs.ModbusRtuCodec`)**:
+  - `IProtocolCodec<ReadOnlyMemory<byte>>` implementation with automatic CRC-16 append on encode and automated frame validation on decode.
+
+---
+
 ## [1.1.0] - 2026-09-07
 
 ### Added
