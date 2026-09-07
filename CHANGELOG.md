@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.1.0] - 2026-09-04
+## [1.1.0] - 2026-09-07
 
 ### Added
+- **Industrial Checksum & CRC Engine (`Kable.Core.Checksums`)**:
+  - High-performance, zero-allocation (`ReadOnlySpan<byte>`) industrial integrity verification suite.
+  - `Crc16Modbus`: 256-byte static LUT-based Modbus RTU CRC-16 (0xA001) with in-place buffer append and validation.
+  - `Crc16Ccitt`: CRC-16 CCITT (0x1021 / XModem) for wafer aligners, robotic stages, and motor controllers.
+  - `IndustrialChecksums`: Modbus ASCII LRC (2's complement), Barcode/RFID XOR BCC (Block Check Character), and Sum8 algorithms.
+  - Full architectural documentation in `docs/05_INDUSTRIAL_CHECKSUMS.md` and complete unit test coverage in `Kable.Tests`.
 - **QA Test Engineering Master Plan & Suite**:
   - Comprehensive QA master plan and gap analysis specifications in `docs/qa_test_engineering/`.
   - 21 new test cases covering extreme byte fragmentation, sliding window framing, multi-segment UTF-8 boundaries, and 100-concurrent FIFO request fairness.
