@@ -20,9 +20,15 @@ public sealed class BinaryLengthPrefixedCodec : LengthFieldCodec<ReadOnlyMemory<
             LengthFieldLength = headerLength,
             LengthIncludesHeader = false,
             IsBigEndian = isBigEndian,
-            MaxFrameSize = maxFrameSize
+            MaxPayloadSize = maxFrameSize,
+            MaxFrameSize = maxFrameSize + headerLength
         })
     {
+        if (headerLength != 2 && headerLength != 4)
+        {
+            throw new ArgumentOutOfRangeException(nameof(headerLength), "Header length must be 2 or 4 bytes.");
+        }
+
         _headerLength = headerLength;
         _isBigEndian = isBigEndian;
     }

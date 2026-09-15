@@ -127,25 +127,18 @@ public abstract class DelimitedFrameCodec<TMessage> : IProtocolCodec<TMessage>
 
             // 3. 완전한 프레임 슬라이스 계산
             var endDelimiterEndPos = buffer.GetPosition(delimiterLength, endPos.Value);
-            var fullFrameSeq = buffer.Slice(0, endDelimiterEndPos);
-
-            if (fullFrameSeq.Length > _options.MaxFrameSize)
-            {
-                buffer = buffer.Slice(endDelimiterEndPos);
-                throw new ProtocolViolationException($"Frame size limit exceeded ({fullFrameSeq.Length} > {_options.MaxFrameSize}).");
-            }
 
             // 4. 페이로드 슬라이스 (Strip Delimiters 적용 여부)
-            ReadOnlySequence<byte> payloadSeq;
-            if (_options.StripDelimiters)
+            int startOffset = _options.StartMarker.HasValue ? 1 : 0;
+            var payloadStart = buffer.GetPosition(startOffset, buffer.Start);
+            var payloadSeq = _options.StripDelimiters
+                ? buffer.Slice(payloadStart, endPos.Value)
+                : buffer.Slice(0, endDelimiterEndPos);
+
+            if (payloadSeq.Length > _options.MaxFrameSize)
             {
-                int startOffset = _options.StartMarker.HasValue ? 1 : 0;
-                var payloadStart = buffer.GetPosition(startOffset, buffer.Start);
-                payloadSeq = buffer.Slice(payloadStart, endPos.Value);
-            }
-            else
-            {
-                payloadSeq = fullFrameSeq;
+                buffer = buffer.Slice(endDelimiterEndPos);
+                throw new ProtocolViolationException($"Frame size limit exceeded ({payloadSeq.Length} > {_options.MaxFrameSize}).");
             }
 
             // 5. 도메인 메시지 파싱 및 유효성 검증

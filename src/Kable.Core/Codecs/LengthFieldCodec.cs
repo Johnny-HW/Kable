@@ -42,9 +42,14 @@ public sealed class LengthFieldOptions
     public bool IsBigEndian { get; init; } = true;
 
     /// <summary>
-    /// 최대 허용 프레임 크기 (OOM 방어)
+    /// 최대 허용 프레임 크기 (헤더/트레일러 포함 전체 프레임 OOM 방어 한계치)
     /// </summary>
     public int MaxFrameSize { get; init; } = 65536;
+
+    /// <summary>
+    /// 순수 페이로드/바디의 최대 허용 크기 (null이면 MaxFrameSize를 기준으로 제한)
+    /// </summary>
+    public int? MaxPayloadSize { get; init; }
 
     /// <summary>
     /// 헤더 마커 불일치 시 다음 유효 헤더 마커까지 가비지 바이트를 자동으로 스킵하며 재동기화할지 여부
@@ -136,7 +141,22 @@ public abstract class LengthFieldCodec<TMessage> : IProtocolCodec<TMessage>
                 _ => throw new InvalidOperationException()
             };
 
-            // 4. 전체 프레임 크기 계산
+            // 4. 전체 프레임 크기 및 페이로드 크기 계산
+            int payloadLength = _options.LengthIncludesHeader
+                ? rawLength - minHeaderLength
+                : rawLength;
+
+            int maxAllowedPayload = _options.MaxPayloadSize ?? (_options.MaxFrameSize - minHeaderLength - _options.TrailerLength);
+            if (rawLength < 0 || payloadLength < 0 || payloadLength > maxAllowedPayload)
+            {
+                if (_options.HeaderMarker.HasValue && _options.ResynchronizeOnInvalidHeader)
+                {
+                    buffer = buffer.Slice(buffer.GetPosition(1, buffer.Start));
+                    continue;
+                }
+                throw new ProtocolViolationException($"Frame size limit exceeded ({payloadLength} > {maxAllowedPayload}).");
+            }
+
             int totalFrameSize = _options.LengthIncludesHeader
                 ? rawLength + _options.TrailerLength
                 : minHeaderLength + rawLength + _options.TrailerLength;

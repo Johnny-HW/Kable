@@ -48,23 +48,58 @@ public class KableSimpleTests
         await using var listener = new TcpConnectionListener(IPAddress.Loopback, 0);
         int port = ((IPEndPoint)listener.LocalEndPoint).Port;
 
-        var tcs = new TaskCompletionSource<string>();
+        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var clientConnectedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var serverTask = Task.Run(async () =>
         {
             await using var serverCtx = await listener.AcceptAsync();
-            await Task.Delay(50);
+            await clientConnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
             byte[] msg = Encoding.ASCII.GetBytes("$EVENT_READY\n");
             await serverCtx.Output.WriteAsync(msg);
             await serverCtx.Output.FlushAsync();
-            await Task.Delay(300);
+            await Task.Delay(200);
         });
 
         await using var client = await KableSimple.OpenTcpAsync("127.0.0.1", port);
         client.LineReceived += line => tcs.TrySetResult(line);
 
-        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        // Signal server that client listener is ready
+        clientConnectedTcs.TrySetResult();
+
+        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         received.Should().Be("$EVENT_READY");
+
+        await serverTask;
+    }
+
+    [Fact]
+    public async Task KableSimple_DisconnectedEvent_SurfacesExceptionOnRemoteAbort()
+    {
+        await using var listener = new TcpConnectionListener(IPAddress.Loopback, 0);
+        int port = ((IPEndPoint)listener.LocalEndPoint).Port;
+
+        var disconnectedTcs = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var clientConnectedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var serverTask = Task.Run(async () =>
+        {
+            await using var serverCtx = await listener.AcceptAsync();
+            await clientConnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // Abruptly abort connection
+            serverCtx.Abort("Server forced reset");
+        });
+
+        await using var client = await KableSimple.OpenTcpAsync("127.0.0.1", port);
+        client.Disconnected += ex => disconnectedTcs.TrySetResult(ex);
+
+        clientConnectedTcs.TrySetResult();
+
+        var ex = await disconnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        ex.Should().NotBeNull();
+        ex.Should().BeAssignableTo<Exception>();
 
         await serverTask;
     }
