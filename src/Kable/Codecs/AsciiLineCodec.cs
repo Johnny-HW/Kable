@@ -4,48 +4,54 @@ using System;
 using System.Buffers;
 using System.Text;
 
-public sealed class AsciiLineCodec : IProtocolCodec<string>
+/// <summary>
+/// ASCII 또는 커스텀 인코딩 기반 단일/다중 바이트 구분자 라인 코덱
+/// <see cref="DelimitedFrameCodec{TMessage}"/> 베이스 클래스를 상속받아 강력한 가비지 스킵 및 OOM 방어를 공유합니다.
+/// </summary>
+public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
 {
     private readonly byte _delimiter;
     private readonly Encoding _encoding;
-    private readonly int _maxFrameSize;
-
-    public bool SupportsCorrelationId => false;
-    public int MaxFrameSize => _maxFrameSize;
 
     public AsciiLineCodec(byte delimiter = 0x0A, Encoding? encoding = null, int maxFrameSize = 65536)
+        : base(new DelimitedFrameOptions
+        {
+            StartMarker = null,
+            EndDelimiter = new byte[] { delimiter },
+            StripDelimiters = true,
+            MaxFrameSize = maxFrameSize,
+            ResynchronizeOnGarbage = false
+        })
     {
         _delimiter = delimiter;
         _encoding = encoding ?? Encoding.ASCII;
-        _maxFrameSize = maxFrameSize;
     }
 
-    public bool TryDecode(ref ReadOnlySequence<byte> buffer, out string message)
+    public override bool TryDecode(ref ReadOnlySequence<byte> buffer, out string message)
     {
-        var position = buffer.PositionOf(_delimiter);
-        if (position == null)
+        if (base.TryDecode(ref buffer, out message))
         {
-            if (buffer.Length > _maxFrameSize)
-            {
-                throw new Kable.Exceptions.ProtocolViolationException($"Frame size limit exceeded ({buffer.Length} > {_maxFrameSize}) without delimiter.");
-            }
-            message = string.Empty;
-            return false;
+            return true;
         }
 
-        var lineSlice = buffer.Slice(0, position.Value);
-        if (lineSlice.Length > _maxFrameSize)
-        {
-            buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
-            throw new Kable.Exceptions.ProtocolViolationException($"Frame size limit exceeded ({lineSlice.Length} > {_maxFrameSize}).");
-        }
+        message = string.Empty;
+        return false;
+    }
 
-        message = GetStringFromSequence(lineSlice).TrimEnd('\r', '\n');
-        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
+    protected override bool TryDecodePayload(in ReadOnlySequence<byte> payloadSequence, out string message)
+    {
+        message = GetStringFromSequence(payloadSequence).TrimEnd('\r', '\n');
         return true;
     }
 
-    public void Encode(string message, IBufferWriter<byte> output)
+    public override bool IsAutonomousMessage(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return false;
+        char first = message[0];
+        return first == '$' || first == '#' || first == '!' || first == '*';
+    }
+
+    public override void Encode(string message, IBufferWriter<byte> output)
     {
         var bytes = _encoding.GetBytes(message);
         var span = output.GetSpan(bytes.Length + 1);
@@ -54,36 +60,32 @@ public sealed class AsciiLineCodec : IProtocolCodec<string>
         output.Advance(bytes.Length + 1);
     }
 
-    public string? ExtractCorrelationId(string message) => null;
-
-    public bool IsAutonomousMessage(string message)
-    {
-        return message.StartsWith("$", StringComparison.Ordinal) ||
-               message.StartsWith("#", StringComparison.Ordinal);
-    }
-
-    private string GetStringFromSequence(ReadOnlySequence<byte> sequence)
+    private string GetStringFromSequence(in ReadOnlySequence<byte> sequence)
     {
         if (sequence.IsSingleSegment)
         {
-#if NETSTANDARD2_0
-            var array = sequence.First.ToArray();
-            return _encoding.GetString(array);
-#else
+#if NETCOREAPP || NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             return _encoding.GetString(sequence.First.Span);
+#else
+            var segment = sequence.First;
+            if (System.Runtime.InteropServices.MemoryMarshal.TryGetArray(segment, out var segmentArray))
+            {
+                return _encoding.GetString(segmentArray.Array!, segmentArray.Offset, segmentArray.Count);
+            }
+            return _encoding.GetString(segment.ToArray());
 #endif
         }
 
-        var length = (int)sequence.Length;
-        byte[] rented = ArrayPool<byte>.Shared.Rent(length);
+        var length = unchecked((int)sequence.Length);
+        byte[] rentArray = ArrayPool<byte>.Shared.Rent(length);
         try
         {
-            sequence.CopyTo(rented);
-            return _encoding.GetString(rented, 0, length);
+            sequence.CopyTo(rentArray);
+            return _encoding.GetString(rentArray, 0, length);
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(rented);
+            ArrayPool<byte>.Shared.Return(rentArray);
         }
     }
 }

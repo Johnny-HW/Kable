@@ -3,62 +3,39 @@ namespace Kable.Codecs;
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using Kable.Exceptions;
 
-public sealed class BinaryLengthPrefixedCodec : IProtocolCodec<ReadOnlyMemory<byte>>
+/// <summary>
+/// 2바이트 또는 4바이트 길이 접두사 바이너리 코덱
+/// <see cref="LengthFieldCodec{TMessage}"/> 베이스 클래스를 상속받아 강력한 재동기화 및 엣지 케이스 방어를 공유합니다.
+/// </summary>
+public sealed class BinaryLengthPrefixedCodec : LengthFieldCodec<ReadOnlyMemory<byte>>
 {
     private readonly int _headerLength;
     private readonly bool _isBigEndian;
-    private readonly int _maxFrameSize;
-
-    public bool SupportsCorrelationId => false;
-    public int MaxFrameSize => _maxFrameSize;
 
     public BinaryLengthPrefixedCodec(int headerLength = 4, bool isBigEndian = false, int maxFrameSize = 65536)
-    {
-        if (headerLength != 2 && headerLength != 4)
+        : base(new LengthFieldOptions
         {
-            throw new ArgumentOutOfRangeException(nameof(headerLength), "Header length must be 2 or 4 bytes.");
-        }
-
+            LengthFieldOffset = 0,
+            LengthFieldLength = headerLength,
+            LengthIncludesHeader = false,
+            IsBigEndian = isBigEndian,
+            MaxFrameSize = maxFrameSize
+        })
+    {
         _headerLength = headerLength;
         _isBigEndian = isBigEndian;
-        _maxFrameSize = maxFrameSize;
     }
 
-    public bool TryDecode(ref ReadOnlySequence<byte> buffer, out ReadOnlyMemory<byte> message)
+    protected override bool TryDecodePayload(in ReadOnlySequence<byte> frameSequence, out ReadOnlyMemory<byte> message)
     {
-        if (buffer.Length < _headerLength)
-        {
-            message = ReadOnlyMemory<byte>.Empty;
-            return false;
-        }
-
-        Span<byte> headerSpan = stackalloc byte[_headerLength];
-        buffer.Slice(0, _headerLength).CopyTo(headerSpan);
-
-        int bodyLength = _headerLength == 2
-            ? (_isBigEndian ? BinaryPrimitives.ReadInt16BigEndian(headerSpan) : BinaryPrimitives.ReadInt16LittleEndian(headerSpan))
-            : (_isBigEndian ? BinaryPrimitives.ReadInt32BigEndian(headerSpan) : BinaryPrimitives.ReadInt32LittleEndian(headerSpan));
-
-        if (bodyLength < 0 || bodyLength > _maxFrameSize)
-        {
-            throw new ProtocolViolationException($"Frame size limit exceeded ({bodyLength} > {_maxFrameSize}).");
-        }
-
-        if (buffer.Length < _headerLength + bodyLength)
-        {
-            message = ReadOnlyMemory<byte>.Empty;
-            return false;
-        }
-
-        var bodySequence = buffer.Slice(_headerLength, bodyLength);
+        // frameSequence는 [헤더(2 or 4B)] + [바디]로 구성되어 있음
+        var bodySequence = frameSequence.Slice(_headerLength);
         message = bodySequence.ToArray();
-        buffer = buffer.Slice(buffer.GetPosition(_headerLength + bodyLength));
         return true;
     }
 
-    public void Encode(ReadOnlyMemory<byte> message, IBufferWriter<byte> output)
+    public override void Encode(ReadOnlyMemory<byte> message, IBufferWriter<byte> output)
     {
         var span = output.GetSpan(_headerLength + message.Length);
 
@@ -88,8 +65,4 @@ public sealed class BinaryLengthPrefixedCodec : IProtocolCodec<ReadOnlyMemory<by
         message.Span.CopyTo(span.Slice(_headerLength));
         output.Advance(_headerLength + message.Length);
     }
-
-    public string? ExtractCorrelationId(ReadOnlyMemory<byte> message) => null;
-
-    public bool IsAutonomousMessage(ReadOnlyMemory<byte> message) => false;
 }
