@@ -57,6 +57,25 @@ builder.Services.AddKableSession<string>((client, sp) =>
 });
 ```
 
+### 3. Lightweight Simple Facade (`KableSimple`)
+
+For quick prototypes and minimal ceremony (always use `await using` to ensure non-blocking cleanup):
+
+```csharp
+using Kable.Simple;
+
+// Open connection and guarantee clean non-blocking disposal
+await using var client = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
+
+// Subscribe to real-time events & errors
+client.LineReceived += line => Console.WriteLine($"Rx: {line}");
+client.ErrorOccurred += ex => Console.Error.WriteLine($"Error: {ex.Message}");
+
+// Send single line or Query (Request-Response)
+await client.SendLineAsync("SET:PARAM=1");
+string reply = await client.QueryAsync("GET:PARAM?");
+```
+
 ---
 
 ## 📄 License

@@ -12,8 +12,15 @@ using Kable.Extensions;
 using Kable.Observability;
 
 /// <summary>
-/// Pipelines와 반응형 스트림 학습 곡선 없이 즉시 장비와 통신할 수 있는 심플 파사드
+/// Pipelines와 반응형 스트림 학습 곡선 없이 즉시 장비와 통신할 수 있는 심플 파사드.
 /// 동기 블로킹(.Result / .Wait())을 엄격히 배제하고 async/await 기반의 안전한 비차단 API를 제공합니다.
+/// <para>
+/// <b>리소스 해제 권장사항:</b> 동기 블로킹 방지를 위해 항상 <c>await using</c> 패턴을 사용하십시오.
+/// <code>
+/// await using var client = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
+/// string response = await client.QueryAsync("IDN?");
+/// </code>
+/// </para>
 /// </summary>
 public static class KableSimple
 {
@@ -177,9 +184,14 @@ public static class KableSimple
             {
                 ErrorOccurred?.Invoke(ex);
             }
-            catch
+            catch (Exception handlerEx)
             {
-                // ErrorOccurred 핸들러 자체 오류는 무한 재귀를 막기 위해 차단
+                // ErrorOccurred 핸들러 자체 오류는 무한 재귀를 막기 위해 ErrorOccurred를 재호출하지 않고 observer에 직접 기록
+                _observer?.OnPacketTrace(new PacketTraceRecord(
+                    DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                    "ERROR_HANDLER_FAULT", ReadOnlyMemory<byte>.Empty,
+                    $"{handlerEx.GetType().Name} in ErrorOccurred handler: {handlerEx.Message}",
+                    TimeSpan.Zero, LogLevel.Error));
             }
         }
 
