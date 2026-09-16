@@ -27,8 +27,9 @@
 | 계층 | 기술 / 프로토콜 | 주 사용처 | 신뢰도 / 결정론 (Determinism) | Kable 현재 지원 여부 | 향후 대응 방안 |
 | :--- | :--- | :--- | :--- | :---: | :--- |
 | **PC 내부 IPC** | **1. Named Pipe IPC** | 동일 PC 내 프로세스 격리 (Daemon) | ★★★★★ (OS 커널 직결) | **✅ 지원 완료** | `UseNamedPipe()` 탑재 |
-| | **2. Shared Memory (MMF)** | 초고속 비전 영상, 파형 데이터 | ★★★★★ (0µs 제로카피) | ❌ 미지원 | 초고주파 계측용 MMF Transport 검토 |
-| **PC ↔ PC / 원격** | **3. Raw TCP Socket** | 일반 네트워크 장비 연동 | ★★★☆☆ (지터 발생 가능) | **✅ 지원 완료** | `UseTcp()` 탑재 |
+| | **2. Shared Memory RingBuffer (SharedQueue)** | 락프리 초고속 IPC (마이크로초 이하 지연) | ★★★★★ (Zero-Copy / Zero-Syscall) | ❌ 미지원 (검토 대상) | **[Phase 2]** MMF 기반 Lock-free SPSC 큐 탑재 |
+| | **3. Shared Memory (MMF Raw Bulk)** | 초고속 비전 영상, 파형 대용량 버퍼 | ★★★★★ (RAM 포인터 직결) | ❌ 미지원 | 초고주파 계측용 MMF Transport 검토 |
+| **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | ★★★☆☆ (지터 발생 가능) | **✅ 지원 완료** | `UseTcp()` 탑재 |
 | | **4. gRPC (Protobuf)** | PC 간 / 모듈 간 고속 제어 표준 | ★★★★☆ (스키마 타입 보장) | ❌ 미지원 | Kable 상위 gRPC Gateway 어댑터 구축 |
 | | **5. OPC UA (IEC 62541)** | 반도체 설비 상위 표준 (TSN 결합) | ★★★★★ (표준 보안/모델링) | ❌ 미지원 | OPC UA .NET Standard 스택 바인딩 |
 | | **6. DDS (Data Distribution)** | 분산 실시간 제어, 로봇 연계 | ★★★★★ (P2P Zero-Broker) | ❌ 미지원 | CycloneDDS / OpenDDS C# 바인딩 |
@@ -46,10 +47,17 @@
 
 ### 3.1 PC 내부 초고속 IPC (In-PC Communication)
 1. **Named Pipe (현재 지원)**:
-   - Windows/Linux 커널의 파이프 메모리를 활용하여 네트워크 카드(NIC)를 거치지 않음.
+   - Windows/Linux 커널의 파이프 버퍼를 활용하여 네트워크 스택(TCP/IP)을 타지 않음.
    - 단일 PC에서 장비 GUI 프로세스와 하드웨어 백그라운드 서비스(Pump Daemon 등)를 격리할 때 최적의 성능 제공.
-2. **MemoryMappedFile (공유 메모리 - MMF)**:
-   - 초당 수 기가바이트의 비전 카메라 검사 영상이나 고속 아날로그 파형 데이터를 복사(Copy) 없이 메모리 포인터로 직결.
+2. **Shared Memory RingBuffer / SharedQueue (검토 대상 - 초고속 락프리 IPC)**:
+   - **동작 원리**: OS의 `MemoryMappedFile(MMF)` 기반 가상 메모리를 공유하고, 그 위에 **Lock-free SPSC(Single Producer Single Consumer) 원형 큐(RingBuffer)**를 배치.
+   - **동기화 기법**: 프로세스 간 시그널은 Windows `EventWaitHandle` 또는 CAS(Interlocked SpinLock) 연산 사용.
+   - **핵심 장점**:
+     - **OS System Call(Syscall) 제거**: Named Pipe는 OS 커널 모드 전환(Context Switch)이 발생하지만, SharedQueue는 유저 레벨 메모리 주소 직결(Direct RAM)로 **나노초~마이크로초(µs) 미만 지연** 달성.
+     - **Zero-Copy & Zero-GC**: `Span<byte>`를 공유 큐 슬롯에 직접 기록하므로 가비지 컬렉션(GC) 및 메모리 복사가 전무함.
+   - **적용처**: 초당 수만 회의 모션 제어 좌표 갱신, 고속 I/O 스캔, 펌프 텔레메트리 링버퍼.
+3. **MemoryMappedFile (대용량 Raw 벌크 버퍼)**:
+   - 초당 수 기가바이트의 비전 카메라 검사 영상이나 초음파 고속 아날로그 파형 데이터를 복사 없이 포인터로 직결.
 
 ### 3.2 분산 PC 및 상위 시스템 연동 (High-Level Network)
 1. **gRPC (HTTP/2 + Protocol Buffers)**:
