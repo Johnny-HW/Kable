@@ -3,6 +3,8 @@ namespace Kable.OpcUa;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Kable.OpcUa.Models;
 using Opc.Ua;
 using Opc.Ua.Client;
@@ -10,10 +12,12 @@ using Opc.Ua.Client;
 /// <summary>
 /// 공식 OPCFoundation 스택 기반의 경량 OPC UA 클라이언트 브리지.
 /// </summary>
-public sealed class OpcUaClientBridge : IAsyncDisposable
+public sealed class OpcUaClientBridge : IOpcUaClientBridge
 {
     private readonly string _endpointUrl;
     private readonly bool _autoAcceptUntrustedCertificates;
+    private readonly uint _sessionTimeoutMs;
+    private readonly ILogger<OpcUaClientBridge>? _logger;
     private Session? _session;
     private ApplicationConfiguration? _configuration;
     private int _isDisposed;
@@ -21,10 +25,27 @@ public sealed class OpcUaClientBridge : IAsyncDisposable
     public bool IsConnected => _session != null && _session.Connected;
     public string EndpointUrl => _endpointUrl;
 
-    public OpcUaClientBridge(string endpointUrl, bool autoAcceptUntrustedCertificates = true)
+    public OpcUaClientBridge(
+        string endpointUrl,
+        bool autoAcceptUntrustedCertificates = true,
+        uint sessionTimeoutMs = 60000,
+        ILogger<OpcUaClientBridge>? logger = null)
     {
         _endpointUrl = endpointUrl ?? throw new ArgumentNullException(nameof(endpointUrl));
         _autoAcceptUntrustedCertificates = autoAcceptUntrustedCertificates;
+        _sessionTimeoutMs = sessionTimeoutMs;
+        _logger = logger;
+    }
+
+    public OpcUaClientBridge(
+        IOptions<OpcUaOptions> options,
+        ILogger<OpcUaClientBridge>? logger = null)
+    {
+        var opt = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        _endpointUrl = opt.EndpointUrl;
+        _autoAcceptUntrustedCertificates = opt.AutoAcceptUntrustedCertificates;
+        _sessionTimeoutMs = opt.SessionTimeoutMs;
+        _logger = logger;
     }
 
     private static async Task<ApplicationConfiguration> CreateDefaultConfigurationAsync(bool autoAcceptCertificates)

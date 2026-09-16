@@ -4,6 +4,8 @@ using System;
 using System.Buffers.Binary;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Kable.Core;
 using Kable.Engine;
 using Kable.Modbus.Codecs;
@@ -13,17 +15,28 @@ using Kable.Modbus.Messages;
 /// KableSession 기반의 고수준 Modbus-TCP 마스터 클라이언트.
 /// 자동 Transaction ID 발급, 동시 다중 비동기 질의(Pipelining), 에러 감지를 제공합니다.
 /// </summary>
-public sealed class ModbusTcpMaster : IAsyncDisposable
+public sealed class ModbusTcpMaster : IModbusMaster
 {
     private readonly IDeviceSession<ModbusTcpMessage> _session;
+    private readonly ILogger<ModbusTcpMaster>? _logger;
     private int _nextTransactionId;
 
     public byte DefaultUnitId { get; set; } = 1;
     public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
-    public ModbusTcpMaster(IDeviceSession<ModbusTcpMessage> session)
+    public ModbusTcpMaster(
+        IDeviceSession<ModbusTcpMessage> session,
+        IOptions<ModbusTcpOptions>? options = null,
+        ILogger<ModbusTcpMaster>? logger = null)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
+        _logger = logger;
+
+        if (options?.Value != null)
+        {
+            DefaultUnitId = options.Value.DefaultUnitId;
+            DefaultTimeout = options.Value.Timeout;
+        }
     }
 
     private ushort GetNextTransactionId()

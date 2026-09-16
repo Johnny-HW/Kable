@@ -4,6 +4,8 @@ using System;
 using System.Buffers.Binary;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Kable.Engine;
 using Kable.Melsec.Protocol;
 
@@ -11,17 +13,29 @@ using Kable.Melsec.Protocol;
 /// KableSession 기반의 고수준 미쓰비시 PLC 클라이언트.
 /// D, W, R, M, X, Y 디바이스의 비동기 일괄 읽기/쓰기 및 에러 코드 처리를 제공합니다.
 /// </summary>
-public sealed class MelsecPlcClient : IAsyncDisposable
+public sealed class MelsecPlcClient : IMelsecPlcClient
 {
     private readonly IDeviceSession<Slmp3EFrame> _session;
+    private readonly ILogger<MelsecPlcClient>? _logger;
 
     public byte NetworkNo { get; set; } = 0;
     public byte PcNo { get; set; } = 0xFF;
     public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
-    public MelsecPlcClient(IDeviceSession<Slmp3EFrame> session)
+    public MelsecPlcClient(
+        IDeviceSession<Slmp3EFrame> session,
+        IOptions<MelsecOptions>? options = null,
+        ILogger<MelsecPlcClient>? logger = null)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
+        _logger = logger;
+
+        if (options?.Value != null)
+        {
+            NetworkNo = options.Value.NetworkNo;
+            PcNo = options.Value.PcNo;
+            DefaultTimeout = options.Value.Timeout;
+        }
     }
 
     /// <summary>

@@ -4,6 +4,8 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Kable.Mqtt.Telemetry;
 using MQTTnet;
 using MQTTnet.Client;
@@ -12,23 +14,34 @@ using MQTTnet.Protocol;
 /// <summary>
 /// MQTTnet 기반 초고속 설비 텔레메트리 발행기.
 /// </summary>
-public sealed class MqttTelemetryPublisher : IAsyncDisposable
+public sealed class MqttTelemetryPublisher : IMqttTelemetryPublisher
 {
     private readonly IMqttClient _client;
     private readonly MqttClientOptions _options;
     private readonly string _topicPrefix;
+    private readonly ILogger<MqttTelemetryPublisher>? _logger;
     private int _isDisposed;
 
     public bool IsConnected => _client.IsConnected;
 
-    public MqttTelemetryPublisher(IMqttClient client, MqttClientOptions options, string topicPrefix = "kable/telemetry")
+    public MqttTelemetryPublisher(
+        IMqttClient client,
+        MqttClientOptions options,
+        string topicPrefix = "kable/telemetry",
+        ILogger<MqttTelemetryPublisher>? logger = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _topicPrefix = topicPrefix.TrimEnd('/');
+        _logger = logger;
     }
 
-    public static MqttTelemetryPublisher CreateTcp(string host, int port = 1883, string clientId = "KablePublisher", string topicPrefix = "kable/telemetry")
+    public static MqttTelemetryPublisher CreateTcp(
+        string host,
+        int port = 1883,
+        string clientId = "KablePublisher",
+        string topicPrefix = "kable/telemetry",
+        ILogger<MqttTelemetryPublisher>? logger = null)
     {
         var factory = new MqttFactory();
         var client = factory.CreateMqttClient();
@@ -39,7 +52,7 @@ public sealed class MqttTelemetryPublisher : IAsyncDisposable
             .WithCleanSession(true)
             .Build();
 
-        return new MqttTelemetryPublisher(client, options, topicPrefix);
+        return new MqttTelemetryPublisher(client, options, topicPrefix, logger);
     }
 
     public async Task StartAsync(CancellationToken ct = default)
