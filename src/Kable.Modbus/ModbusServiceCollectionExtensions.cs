@@ -27,10 +27,9 @@ public static class ModbusServiceCollectionExtensions
             var codec = new ModbusTcpCodec();
             var session = new KableSession<ModbusTcpMessage>(factory, codec);
 
-            session.StartAsync().AsTask().GetAwaiter().GetResult();
-
             return new ModbusTcpMaster(session, sp.GetRequiredService<IOptions<ModbusTcpOptions>>(), logger);
         });
+
 
         return services;
     }

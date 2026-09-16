@@ -27,10 +27,9 @@ public static class MelsecServiceCollectionExtensions
             var codec = new MelsecSlmpCodec();
             var session = new KableSession<Slmp3EFrame>(factory, codec);
 
-            session.StartAsync().AsTask().GetAwaiter().GetResult();
-
             return new MelsecPlcClient(session, sp.GetRequiredService<IOptions<MelsecOptions>>(), logger);
         });
+
 
         return services;
     }

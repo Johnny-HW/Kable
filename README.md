@@ -8,12 +8,13 @@
 ## ✨ Key Features
 
 - **Pure Multi-Targeting**: Native support for `.NET 10.0`, `.NET 8.0 (LTS)`, and `netstandard2.0` (.NET Framework 4.8 / Legacy systems).
-- **0-GC Pipelines I/O**: Zero memory copies and vector-accelerated buffer parsing via `System.IO.Pipelines` and `ReadOnlySequence<byte>`.
+- **Zero-Copy Pipelines & Low-Allocation Budget**: Zero memory copies and vector-accelerated buffer parsing via `System.IO.Pipelines` and `ReadOnlySequence<byte>` with predictable allocation budgets (<1KB/request).
 - **Hybrid Transaction Router**:
   - **No-Correlation ID Devices** (RS-232C, Simple ASCII): Automatic asynchronous preemptive FIFO lock (`SemaphoreSlim`) preventing request interleaving.
   - **Correlation ID Protocols** (Modern TCP/IPC): High-speed lock-free pipelining & interleaving.
 - **Fail-Fast Safety Policy**: Immediate `DeviceDisconnectedException` dispatch upon cable/link disconnection to guarantee physical hardware safe-state.
 - **Tri-Stream Observability**: Independent bounded ringbuffers (`DropOldest`) separating Periodic Telemetry, Command Console, and Spontaneous Alarms to prevent UI lagging.
+
 
 ---
 

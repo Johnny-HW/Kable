@@ -45,10 +45,16 @@ public sealed class ModbusTcpMaster : IModbusMaster
         DefaultTimeout = options.Timeout;
     }
 
+    public async Task StartAsync(CancellationToken ct = default)
+    {
+        await _session.StartAsync(ct).ConfigureAwait(false);
+    }
+
     private ushort GetNextTransactionId()
     {
         return (ushort)(Interlocked.Increment(ref _nextTransactionId) & 0xFFFF);
     }
+
 
     /// <summary>
     /// FC03 Read Holding Registers 실행

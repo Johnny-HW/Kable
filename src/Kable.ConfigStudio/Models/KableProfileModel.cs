@@ -44,6 +44,23 @@ public sealed class KableProfileModel
     public string HostIp { get; set; } = "192.168.0.100";
     public int TcpPort { get; set; } = 502;
 
+    // Modbus-TCP Options
+    public byte ModbusUnitId { get; set; } = 1;
+    public ushort ModbusTestRegister { get; set; } = 100;
+
+    // Melsec SLMP Options
+    public byte MelsecNetworkNo { get; set; } = 0;
+    public byte MelsecPcNo { get; set; } = 255;
+    public string MelsecDevice { get; set; } = "D1000";
+
+    // MQTT Options
+    public string MqttClientId { get; set; } = "Kable_Studio_Tester";
+    public string MqttTopicPrefix { get; set; } = "kable/telemetry";
+
+    // OPC UA Options
+    public string OpcEndpointUrl { get; set; } = "opc.tcp://192.168.0.100:4840";
+    public string OpcNodeId { get; set; } = "ns=2;s=Device.Status";
+
     // NamedPipe Options
     public string PipeName { get; set; } = "kable_pump_ch1";
 
@@ -58,3 +75,4 @@ public sealed class KableProfileModel
     public int TimeoutMs { get; set; } = 1000;
     public int HeartbeatIntervalMs { get; set; } = 5000;
 }
+

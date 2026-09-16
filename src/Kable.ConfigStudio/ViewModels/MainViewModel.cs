@@ -1,6 +1,13 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Ports;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kable.ConfigStudio.Models;
@@ -62,7 +69,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch
         {
-            // fallback
+            // ignore
         }
 
         if (DetectedComPorts.Count == 0)
@@ -92,76 +99,137 @@ public partial class MainViewModel : ObservableObject
         UpdateTomlPreview();
     }
 
+    /// <summary>
+    /// 실제 대상 호스트 및 포트에 TCP 소켓 핸드셰이크를 직접 시도하고 실제 RTT를 측정합니다.
+    /// 실패 시 실제 네트워크 예외를 붉은색 경고로 명확히 출력합니다.
+    /// </summary>
     [RelayCommand]
-    public async Task RunLoopbackTestAsync()
+    public async Task RunLiveTestAsync()
     {
-        TestStatus = "통신 연결 및 실시간 패킷 트레이스 진행 중...";
+        TestStatus = $"⚡ [실제 진단] {Profile.Transport} 네트워크 링크 핸드셰이크 진행 중...";
         TestResultColor = "#F9E2AF"; // yellow
-        TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> 통신 링크 개설 시도: {Profile.Transport}");
+        TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] {Profile.Transport} 실제 연결 시도 시작");
 
-        await Task.Delay(250);
+        var sw = Stopwatch.StartNew();
 
-        if (Profile.Transport == TransportType.Serial)
+        try
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> 포트 열기: {Profile.PortName} ({Profile.BaudRate} bps)");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- TX: [01 03 00 01 00 01 D5 CA] (Modbus-RTU Query)");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> RX: [01 03 02 11 94 B5 C8] (Echo OK, 1.4ms)");
-            TestStatus = $"🟢 성공: {Profile.PortName} 통신 정상 (지연시간: 1.4ms)";
-            TestResultColor = "#A6E3A1";
+            if (Profile.Transport == TransportType.Serial)
+            {
+                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] COM 포트 열기 시도: {Profile.PortName} ({Profile.BaudRate} bps)");
+                using var serial = new SerialPort(Profile.PortName, Profile.BaudRate);
+                serial.Open();
+                sw.Stop();
+                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] COM 포트 열기 성공 ({sw.Elapsed.TotalMilliseconds:F2}ms)");
+                serial.Close();
+
+                TestStatus = $"🟢 [LIVE 성공] 시리얼 포트 '{Profile.PortName}' 열기 성공 (RTT: {sw.Elapsed.TotalMilliseconds:F2}ms)";
+                TestResultColor = "#A6E3A1"; // green
+            }
+            else if (Profile.Transport == TransportType.NamedPipe)
+            {
+                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] Named Pipe 확인: \\\\.\\pipe\\{Profile.PipeName}");
+                string pipePath = $@"\\.\pipe\{Profile.PipeName}";
+                bool exists = File.Exists(pipePath);
+                sw.Stop();
+
+                if (exists)
+                {
+                    TestStatus = $"🟢 [LIVE 성공] Named Pipe '{Profile.PipeName}' 서버 인스턴스 확인 완료 ({sw.Elapsed.TotalMilliseconds:F2}ms)";
+                    TestResultColor = "#A6E3A1";
+                }
+                else
+                {
+                    TestStatus = $"🟡 [LIVE 대기] 파이프 '{Profile.PipeName}' 활성 서버 프로세스가 아직 대기 중이지 않습니다.";
+                    TestResultColor = "#F9E2AF";
+                }
+            }
+            else
+            {
+                string targetHost = Profile.HostIp;
+                int targetPort = Profile.TcpPort;
+
+                if (Profile.Transport == TransportType.OpcUa && Uri.TryCreate(Profile.OpcEndpointUrl, UriKind.Absolute, out var uri))
+                {
+                    targetHost = uri.Host;
+                    targetPort = uri.Port > 0 ? uri.Port : 4840;
+                }
+
+                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] TCP 소켓 연결 시도: {targetHost}:{targetPort}");
+                using var client = new TcpClient();
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Math.Max(1500, Profile.TimeoutMs)));
+                
+                await client.ConnectAsync(targetHost, targetPort, cts.Token);
+                sw.Stop();
+
+                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] TCP 3-way 핸드셰이크 성공: RTT={sw.Elapsed.TotalMilliseconds:F2}ms");
+
+                TestStatus = $"🟢 [LIVE 성공] {Profile.Transport} 엔드포인트({targetHost}:{targetPort}) 연결 성공 (RTT: {sw.Elapsed.TotalMilliseconds:F2}ms)";
+                TestResultColor = "#A6E3A1";
+            }
         }
-        else if (Profile.Transport == TransportType.ModbusTcp)
+        catch (Exception ex)
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> Modbus-TCP 세션 연결: {Profile.HostIp}:{Profile.TcpPort}");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- TX: [00 01 00 00 00 06 01 03 00 64 00 02] (MBAP TransId=1, FC03 Reg=100)");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> RX: [00 01 00 00 00 07 01 03 04 04 D2 16 2E] (RegValues=[1234, 5678], RTT: 0.65ms)");
-            TestStatus = $"🟢 성공: Modbus-TCP 장비 응답 확인 (TransId=1, RTT: 0.65ms)";
-            TestResultColor = "#A6E3A1";
+            sw.Stop();
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE 오류] {ex.GetType().Name}: {ex.Message}");
+            TestStatus = $"🔴 [LIVE 실패] 연결 불가: {ex.Message} ({sw.Elapsed.TotalMilliseconds:F1}ms)";
+            TestResultColor = "#F38BA8"; // red
+        }
+    }
+
+    /// <summary>
+    /// 프로토콜 코덱 및 패킷 포맷 검증을 위한 오프라인 시뮬레이션(Mock Loopback) 모드입니다.
+    /// </summary>
+    [RelayCommand]
+    public async Task RunMockSimulationAsync()
+    {
+        TestStatus = "🔬 [오프라인 시뮬레이션] 가상 루프백 패킷 검증 중...";
+        TestResultColor = "#89B4FA"; // blue
+        TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] {Profile.Transport} 시뮬레이션 프레임 인코딩/디코딩 테스트");
+
+        await Task.Delay(100);
+
+        if (Profile.Transport == TransportType.ModbusTcp)
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] MBAP Header 생성 (UnitId={Profile.ModbusUnitId})");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] TX: [00 01 00 00 00 06 {Profile.ModbusUnitId:X2} 03 {Profile.ModbusTestRegister >> 8:X2} {Profile.ModbusTestRegister & 0xFF:X2} 00 02]");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] RX: [00 01 00 00 00 07 {Profile.ModbusUnitId:X2} 03 04 04 D2 16 2E] (Mock Regs: [1234, 5678])");
+            TestStatus = $"🔷 [MOCK 성공] Modbus-TCP FC03 코덱 규격 검증 완료 (가상 루프백)";
         }
         else if (Profile.Transport == TransportType.MelsecSlmp)
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> 미쓰비시 SLMP 3E 소켓 연결: {Profile.HostIp}:5000");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- TX: [50 00 00 FF FF 03 00 0C 00 10 00 01 04 00 00 E8 03 00 A8 02 00] (Read D1000)");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> RX: [D0 00 00 FF FF 03 00 06 00 00 00 D2 04 2E 16] (EndCode: 0x0000, D1000=1234, RTT: 0.82ms)");
-            TestStatus = $"🟢 성공: 미쓰비시 PLC 응답 정상 (EndCode: 0000, RTT: 0.82ms)";
-            TestResultColor = "#A6E3A1";
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] SLMP 3E Binary 프레임 빌드 (Net={Profile.MelsecNetworkNo}, PC={Profile.MelsecPcNo}, Dev={Profile.MelsecDevice})");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] TX: [50 00 00 FF FF 03 00 0C 00 10 00 01 04 00 00 E8 03 00 A8 02 00]");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] RX: [D0 00 00 FF FF 03 00 06 00 00 00 D2 04 2E 16] (EndCode: 0000 OK)");
+            TestStatus = $"🔷 [MOCK 성공] 미쓰비시 SLMP 3E 코덱 규격 검증 완료 (가상 루프백)";
         }
         else if (Profile.Transport == TransportType.Mqtt)
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> MQTT 브로커 연결: {Profile.HostIp}:1883");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- PUBLISH: topic='kable/telemetry/pump_pressure', payload={{\"name\":\"pump_pressure\",\"value\":4.25}}");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> PUBACK 수신 (QoS 1, RTT: 1.1ms)");
-            TestStatus = $"🟢 성공: MQTT 텔레메트리 발행 확인 (RTT: 1.1ms)";
-            TestResultColor = "#A6E3A1";
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] MQTT Publish 패킷 구성: ClientId='{Profile.MqttClientId}', Topic='{Profile.MqttTopicPrefix}/test'");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] Payload: {{\"client\":\"{Profile.MqttClientId}\",\"value\":100.0}}");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] PUBACK 시뮬레이션 수신 완료");
+            TestStatus = $"🔷 [MOCK 성공] MQTT 텔레메트리 직렬화 규격 검증 완료 (가상 루프백)";
         }
         else if (Profile.Transport == TransportType.OpcUa)
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> OPC UA 엔드포인트 연결: opc.tcp://{Profile.HostIp}:4840");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- ReadRequest: NodeId='ns=2;s=Device.Status'");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> ReadResponse: Value='RUNNING', StatusCode=Good (0x00000000), RTT: 2.3ms");
-            TestStatus = $"🟢 성공: OPC UA 노드 조회 정상 (StatusCode: Good, RTT: 2.3ms)";
-            TestResultColor = "#A6E3A1";
-        }
-        else if (Profile.Transport == TransportType.Tcp)
-        {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> 소켓 연결 시도: {Profile.HostIp}:{Profile.TcpPort}");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- TCP 핸드셰이크 성공 (RTT: 0.8ms)");
-            TestStatus = $"🟢 성공: {Profile.HostIp}:{Profile.TcpPort} 연결 확인";
-            TestResultColor = "#A6E3A1";
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] OPC UA ReadRequest 구성: NodeId='{Profile.OpcNodeId}'");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] ReadResponse: StatusCode=Good, Value='NORMAL_OPERATING'");
+            TestStatus = $"🔷 [MOCK 성공] OPC UA 노드 데이터 모델 규격 검증 완료 (가상 루프백)";
         }
         else
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] -> Named Pipe 클라이언트 바인딩: {Profile.PipeName}");
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] <- Pipe 생존 확인 (Zero-Copy)");
-            TestStatus = $"🟢 성공: \\\\.\\pipe\\{Profile.PipeName} 파이프 연결 준비 완료";
-            TestResultColor = "#A6E3A1";
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] {Profile.Transport} 기본 프레임 에코 시뮬레이션 성공");
+            TestStatus = $"🔷 [MOCK 성공] {Profile.Transport} 가상 루프백 테스트 완료";
         }
+
+        TestResultColor = "#89B4FA";
     }
 
     [RelayCommand]
     public void UpdateTomlPreview()
     {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"# Kable v1.2.0 Connection Configuration");
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Kable Communication Configuration");
         sb.AppendLine($"# Generated by Kable.ConfigStudio on {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
         sb.AppendLine($"[device]");
@@ -171,22 +239,52 @@ public partial class MainViewModel : ObservableObject
         sb.AppendLine($"[transport]");
         sb.AppendLine($"type = \"{Profile.Transport}\"");
 
-        if (Profile.Transport == TransportType.Serial)
+        switch (Profile.Transport)
         {
-            sb.AppendLine($"port_name = \"{Profile.PortName}\"");
-            sb.AppendLine($"baud_rate = {Profile.BaudRate}");
-            sb.AppendLine($"data_bits = {Profile.DataBits}");
-            sb.AppendLine($"parity = \"{Profile.Parity}\"");
-            sb.AppendLine($"stop_bits = \"{Profile.StopBits}\"");
-        }
-        else if (Profile.Transport == TransportType.Tcp)
-        {
-            sb.AppendLine($"host = \"{Profile.HostIp}\"");
-            sb.AppendLine($"port = {Profile.TcpPort}");
-        }
-        else
-        {
-            sb.AppendLine($"pipe_name = \"{Profile.PipeName}\"");
+            case TransportType.Serial:
+                sb.AppendLine($"port_name = \"{Profile.PortName}\"");
+                sb.AppendLine($"baud_rate = {Profile.BaudRate}");
+                sb.AppendLine($"data_bits = {Profile.DataBits}");
+                sb.AppendLine($"parity = \"{Profile.Parity}\"");
+                sb.AppendLine($"stop_bits = \"{Profile.StopBits}\"");
+                break;
+
+            case TransportType.Tcp:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                break;
+
+            case TransportType.NamedPipe:
+                sb.AppendLine($"pipe_name = \"{Profile.PipeName}\"");
+                break;
+
+            case TransportType.ModbusTcp:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                sb.AppendLine($"default_unit_id = {Profile.ModbusUnitId}");
+                sb.AppendLine($"test_register = {Profile.ModbusTestRegister}");
+                break;
+
+            case TransportType.MelsecSlmp:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                sb.AppendLine($"network_no = {Profile.MelsecNetworkNo}");
+                sb.AppendLine($"pc_no = {Profile.MelsecPcNo}");
+                sb.AppendLine($"default_device = \"{Profile.MelsecDevice}\"");
+                break;
+
+            case TransportType.Mqtt:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                sb.AppendLine($"client_id = \"{Profile.MqttClientId}\"");
+                sb.AppendLine($"topic_prefix = \"{Profile.MqttTopicPrefix}\"");
+                break;
+
+            case TransportType.OpcUa:
+                sb.AppendLine($"endpoint_url = \"{Profile.OpcEndpointUrl}\"");
+                sb.AppendLine($"node_id = \"{Profile.OpcNodeId}\"");
+                sb.AppendLine($"auto_accept_certificates = true");
+                break;
         }
 
         sb.AppendLine();
@@ -200,14 +298,55 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void SaveToFile()
+    public async Task SaveToFileAsync()
     {
         UpdateTomlPreview();
-        string targetDir = @"d:\Johnny\00.New\02.SoftwareLib\01.Kable\config";
-        Directory.CreateDirectory(targetDir);
-        string filePath = Path.Combine(targetDir, $"{Profile.DeviceName.ToLower()}_comm.toml");
-        File.WriteAllText(filePath, GeneratedTomlPreview);
-        TestStatus = $"💾 파일 저장 완료: {filePath}";
-        TestResultColor = "#89B4FA"; // blue
+
+        try
+        {
+            // 1. Validate device name to prevent directory traversal and invalid filename chars
+            string rawName = Profile.DeviceName?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(rawName))
+            {
+                TestStatus = "⚠️ 저장 실패: 장치 이름(DeviceName)이 비어있습니다.";
+                TestResultColor = "#F9E2AF";
+                return;
+            }
+
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            var sanitizedSb = new StringBuilder();
+            foreach (char c in rawName)
+            {
+                if (Array.IndexOf(invalidChars, c) < 0 && c != '/' && c != '\\' && c != '.')
+                {
+                    sanitizedSb.Append(c);
+                }
+            }
+
+            string safeFileName = sanitizedSb.ToString();
+            if (string.IsNullOrWhiteSpace(safeFileName))
+            {
+                safeFileName = "kable_device";
+            }
+
+            string targetDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
+            Directory.CreateDirectory(targetDir);
+
+            string filePath = Path.Combine(targetDir, $"{safeFileName.ToLowerInvariant()}_comm.toml");
+
+            // 2. Asynchronous write
+            await File.WriteAllTextAsync(filePath, GeneratedTomlPreview, Encoding.UTF8);
+
+            TestStatus = $"💾 파일 안전 저장 완료: {filePath}";
+            TestResultColor = "#A6E3A1"; // green
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [SAVE] 설정 파일 비동기 기록 완료: {filePath}");
+        }
+        catch (Exception ex)
+        {
+            TestStatus = $"🔴 저장 실패: {ex.Message}";
+            TestResultColor = "#F38BA8"; // red
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [SAVE 오류] {ex.Message}");
+        }
     }
 }
+

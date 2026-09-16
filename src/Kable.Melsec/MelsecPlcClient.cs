@@ -44,7 +44,13 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
         DefaultTimeout = options.Timeout;
     }
 
+    public async Task StartAsync(CancellationToken ct = default)
+    {
+        await _session.StartAsync(ct).ConfigureAwait(false);
+    }
+
     /// <summary>
+
     /// 지정된 워드 디바이스(D, W, R 등)에서 count 개수만큼의 ushort 값을 일괄 읽어옵니다.
     /// </summary>
     public async Task<ushort[]> ReadWordsAsync(MelsecDeviceCode device, int headDeviceNo, ushort count, CancellationToken ct = default)

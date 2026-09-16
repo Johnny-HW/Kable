@@ -11,6 +11,8 @@ public interface IMelsecPlcClient : IAsyncDisposable
     byte PcNo { get; set; }
     TimeSpan DefaultTimeout { get; set; }
 
+    Task StartAsync(CancellationToken ct = default);
     Task<ushort[]> ReadWordsAsync(MelsecDeviceCode device, int headDeviceNo, ushort count, CancellationToken ct = default);
     Task WriteWordsAsync(MelsecDeviceCode device, int headDeviceNo, ushort[] values, CancellationToken ct = default);
 }
+
