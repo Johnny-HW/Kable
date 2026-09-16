@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Kable.ConfigStudio</RootNamespace>
+    <AssemblyName>Kable.ConfigStudio</AssemblyName>
+    <ApplicationTitle>Kable Connection Config Studio</ApplicationTitle>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.0-preview.1.25080.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
+    <ProjectReference Include="..\Kable\Kable.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,233 @@
+<Window x:Class="Kable.ConfigStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Kable.ConfigStudio.ViewModels"
+        xmlns:models="clr-namespace:Kable.ConfigStudio.Models"
+        mc:Ignorable="d"
+        Title="🔌 Kable Connection Config Studio (통신 채널 간편 빌더)" Height="760" Width="1050"
+        WindowStartupLocation="CenterScreen" Background="#11111B">
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <SolidColorBrush x:Key="BgDark" Color="#1E1E2E"/>
+        <SolidColorBrush x:Key="BgCard" Color="#252538"/>
+        <SolidColorBrush x:Key="BgInput" Color="#313244"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#45475A"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#CDD6F4"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#A6ADC8"/>
+        <SolidColorBrush x:Key="AccentBlue" Color="#89B4FA"/>
+        <SolidColorBrush x:Key="AccentGreen" Color="#A6E3A1"/>
+        <SolidColorBrush x:Key="AccentYellow" Color="#F9E2AF"/>
+        <SolidColorBrush x:Key="AccentOrange" Color="#FAB387"/>
+
+        <Style x:Key="TransportRadioBtn" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,16,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header -->
+        <Border Grid.Row="0" Background="{StaticResource BgDark}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="🔌 Kable Connection Config Studio" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentOrange}"/>
+                    <TextBlock Text="C# 코드 수정 없이 콤보박스 선택과 통신 테스트로 TOML 설정 파일을 자동 생성하는 비주얼 도구" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Border Background="#313244" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                        <TextBlock Text="Engine: Kable v1.2.0" Foreground="{StaticResource AccentBlue}" FontWeight="Bold"/>
+                    </Border>
+                    <Border Background="#313244" CornerRadius="4" Padding="8,4">
+                        <TextBlock Text="0-GC Pipelines" Foreground="{StaticResource AccentGreen}" FontWeight="Bold"/>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 2. Main 2-Column Split: Config Left, Live Test & TOML Right -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="520"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: Configuration Form -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,8,0">
+                <StackPanel>
+                    <!-- Device Info -->
+                    <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="1. 장치 식별 및 설명" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="장치 식별자:" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Text="{Binding Profile.DeviceName, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="장치 설명:" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Text="{Binding Profile.Description, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Transport Selection -->
+                    <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="2. 통신 선로 (Transport) 선택" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,10"/>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <RadioButton Content="Serial (RS-232/485)" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
+                                <RadioButton Content="TCP/IP 소켓" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
+                                <RadioButton Content="Named Pipe (IPC)" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
+                            </StackPanel>
+
+                            <!-- Serial Specific Settings -->
+                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsSerial, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,6">
+                                        <TextBlock Text="시리얼 COM 포트 (자동 감지):" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                        <Button Content="🔄 포트 새로고침" Command="{Binding RefreshComPortsCommand}" DockPanel.Dock="Right" Padding="6,2" Background="{StaticResource BgInput}" Foreground="{StaticResource AccentBlue}" Cursor="Hand"/>
+                                    </DockPanel>
+                                    <ComboBox ItemsSource="{Binding DetectedComPorts}" SelectedItem="{Binding Profile.PortName}" Padding="6,4" Margin="0,0,0,6"/>
+
+                                    <UniformGrid Columns="2" Margin="0,4,0,0">
+                                        <StackPanel Margin="0,0,4,0">
+                                            <TextBlock Text="보레이트 (BaudRate):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                            <ComboBox ItemsSource="{Binding AvailableBaudRates}" SelectedItem="{Binding Profile.BaudRate}" Padding="6,4"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,0,0">
+                                            <TextBlock Text="패리티 (Parity):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                            <ComboBox ItemsSource="{Binding AvailableParities}" SelectedItem="{Binding Profile.Parity}" Padding="6,4"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- TCP Specific Settings -->
+                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsTcp, Converter={StaticResource BoolToVis}}">
+                                <UniformGrid Columns="2">
+                                    <StackPanel Margin="0,0,4,0">
+                                        <TextBlock Text="대상 장비 IP 주소:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="4,0,0,0">
+                                        <TextBlock Text="TCP 포트 번호:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </Border>
+
+                            <!-- Named Pipe Settings -->
+                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsNamedPipe, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="로컬 Named Pipe 이름:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                    <TextBox Text="{Binding Profile.PipeName, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
+                                    <TextBlock Text="\\.\pipe\ 식별자로 백그라운드 드라이버 데몬과 연결됩니다." FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Codec & Router Settings -->
+                    <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="3. 패킷 코덱(Codec) 및 트랜잭션 라우터" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
+                            <UniformGrid Columns="2">
+                                <StackPanel Margin="0,0,4,0">
+                                    <TextBlock Text="프레이밍 코덱 (Codec):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                    <ComboBox ItemsSource="{Binding AvailableCodecs}" SelectedItem="{Binding Profile.Codec}" Padding="6,4"/>
+                                </StackPanel>
+                                <StackPanel Margin="4,0,0,0">
+                                    <TextBlock Text="트랜잭션 라우터:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                    <ComboBox ItemsSource="{Binding AvailableRouters}" SelectedItem="{Binding Profile.Router}" Padding="6,4"/>
+                                </StackPanel>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- RIGHT: Live Loopback Test & TOML Output -->
+            <Grid Grid.Column="1" Margin="8,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="180"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Connection Test Bar -->
+                <Border Grid.Row="0" Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="4. 현장 즉석 통신 검증 (Live Echo/Ping Test)" FontWeight="Bold" Foreground="{StaticResource AccentYellow}" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding TestStatus}" Foreground="{Binding TestResultColor}" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="⚡ 실시간 통신 테스트" Command="{Binding RunLoopbackTestCommand}" Padding="14,6" Background="{StaticResource AccentYellow}" Foreground="#11111B" FontWeight="Bold" Cursor="Hand"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Packet Trace Box -->
+                <Border Grid.Row="1" Background="{StaticResource BgDark}" CornerRadius="8" Padding="10" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📡 패킷 송수신 트레이스 로그 (Tri-Stream Channel)" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,0,0,4"/>
+                        <ListBox Grid.Row="1" ItemsSource="{Binding TraceLog}" Background="{StaticResource BgInput}" Foreground="{StaticResource AccentGreen}" FontFamily="Consolas" FontSize="11"/>
+                    </Grid>
+                </Border>
+
+                <!-- Generated TOML Preview -->
+                <Border Grid.Row="2" Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                            <TextBlock Text="📄 자동 생성된 TOML 설정 미리보기" FontWeight="Bold" Foreground="{StaticResource AccentGreen}" VerticalAlignment="Center"/>
+                            <Button Content="🔄 갱신" Command="{Binding UpdateTomlPreviewCommand}" DockPanel.Dock="Right" Padding="6,2" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
+                        </DockPanel>
+                        <TextBox Grid.Row="1" Text="{Binding GeneratedTomlPreview}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- 3. Bottom Action Bar -->
+        <Border Grid.Row="2" Background="{StaticResource BgDark}" CornerRadius="8" Padding="12" Margin="0,12,0,0" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+            <DockPanel>
+                <TextBlock Text="설정은 config/ 폴더에 표준 TOML 파일로 즉시 저장되며, Kable 세션 생성 시 1줄로 로드됩니다." Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                <Button Content="💾 설정 저장 및 TOML 파일 생성" Command="{Binding SaveToFileCommand}" DockPanel.Dock="Right" Padding="20,8" Background="{StaticResource AccentBlue}" Foreground="#11111B" FontWeight="Bold" FontSize="14" Cursor="Hand"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
