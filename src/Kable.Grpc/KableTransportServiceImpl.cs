@@ -1,4 +1,4 @@
-namespace Kable.Integrations.Grpc;
+namespace Kable.Grpc;
 
 using System;
 using System.Threading;
@@ -6,7 +6,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using global::Grpc.Core;
 using global::Kable.Core;
-using Kable.Integrations.Grpc.Protos;
+using Kable.Grpc.Protos;
 
 /// <summary>
 /// gRPC 서버 단에서 들어오는 클라이언트 스트림을 수신하여 IConnectionContext를 생성하고 채널로 전달하는 서비스 구현체

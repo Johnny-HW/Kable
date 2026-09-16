@@ -1,11 +1,11 @@
-namespace Kable.Integrations.Grpc;
+namespace Kable.Grpc;
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using global::Grpc.Net.Client;
 using global::Kable.Core;
-using Kable.Integrations.Grpc.Protos;
+using Kable.Grpc.Protos;
 
 /// <summary>
 /// 원격 gRPC 엔드포인트에 접속하여 StreamTunnel을 열고 IConnectionContext를 반환하는 클라이언트 팩토리

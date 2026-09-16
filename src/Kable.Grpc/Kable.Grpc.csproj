@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
-    <PackageId>Kable.Integrations.Grpc</PackageId>
+    <PackageId>Kable.Grpc</PackageId>
     <Version>1.0.0</Version>
     <Authors>Johnny</Authors>
     <Description>High-performance gRPC bidirectional streaming transport adapter for Kable over System.IO.Pipelines.</Description>

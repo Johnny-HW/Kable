@@ -1,4 +1,4 @@
-namespace Kable.Integrations.Grpc;
+namespace Kable.Grpc;
 
 using System;
 using System.IO.Pipelines;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Google.Protobuf;
 using global::Grpc.Core;
 using global::Kable.Core;
-using Kable.Integrations.Grpc.Protos;
+using Kable.Grpc.Protos;
 
 /// <summary>
 /// gRPC 양방향 스트리밍을 System.IO.Pipelines(PipeReader, PipeWriter)로 투명하게 브리징하는 ConnectionContext 구현체

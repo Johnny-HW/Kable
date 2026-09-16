@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Kable.Core\Kable.Core.csproj" />
-    <ProjectReference Include="..\..\src\Kable.Integrations.Grpc\Kable.Integrations.Grpc.csproj" />
+    <ProjectReference Include="..\..\src\Kable.Grpc\Kable.Grpc.csproj" />
     <ProjectReference Include="..\..\src\Kable\Kable.csproj" />
   </ItemGroup>
 
