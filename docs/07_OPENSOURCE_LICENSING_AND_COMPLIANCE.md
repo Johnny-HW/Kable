@@ -147,5 +147,6 @@ This software incorporates components from the projects listed below:
 
 ## 6. 결론 및 보증
 
-`Kable`과 공식 확장 패키지(`gRPC`, `Protobuf`, `Pipelines` 등)는 **100% Permissive 라이선스(Apache-2.0, MIT, BSD-3)**로 구성되어 있습니다.  
+`Kable` 핵심 엔진과 공식 확장 패키지(`Kable.Grpc`, `Kable.SharedMemory`, `Kable.Modbus`, `Kable.Melsec`, `Kable.Mqtt`, `Kable.OpcUa` 등)는 **100% Permissive 라이선스(Apache-2.0, MIT, BSD-3, OPC Foundation Dual License)**로 구성되어 있습니다.  
 따라서 당사의 독점 기술, 공정 레시피, 장비 시퀀스 로직을 온전히 비공개 상태로 유지하면서, 글로벌 반도체 팹 및 상용 고객사에 법적 리스크 없이 안전하게 영구 배포할 수 있습니다.
+
