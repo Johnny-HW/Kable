@@ -25,23 +25,23 @@
 
 ---
 
-## 2. 산업용 통신 프로토콜 비교 매트릭스 (결정론 및 환경 조건 명시)
+## 2. 산업용 통신 프로토콜 비교 매트릭스 (결정론 및 범위 경계 명시)
 
-| 계층 | 기술 / 프로토콜 | 주 사용처 | 실시간성 분류 (Determinism Class) | 달성 전제 조건 (OS / HW / 튜닝) | Kable 현재 지원 상태 | Kable 연동 권장 방안 |
-| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
-| **PC 내부 IPC** | **1. Named Pipe IPC** | 프로세스 격리 (Daemon 연동) | **Soft Real-Time** | 일반 OS 커널, 블로킹 I/O | **✅ 기본 제공** | `UseNamedPipe()` 기본 탑재 |
-| | **2. 프로세스 간 MMF SharedQueue** | 초고속 락프리 IPC | **Soft Real-Time** | MMF 링버퍼, CPU 코어 격리 | ❌ **프로세스 간 미지원**<br/>*(단, In-Process SPSC 큐는 보유)* | **[Phase 2]** 별도 어댑터로 검토 |
-| | **3. Shared Memory (MMF Raw Bulk)**| 비전 영상, 파형 데이터 | **Best Effort** (대용량 전송) | 가상 메모리 매핑, 페이징 고려 | ❌ **미지원** | 초고속 파형 버퍼 어댑터 검토 |
-| **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | **Best Effort** | 일반 네트워크 스위치, Nagle Off | **✅ 기본 제공** | `UseTcp()` 기본 탑재 |
-| | **5. gRPC (HTTP/2 + Protobuf)** | 모듈 간 RPC 및 원격 제어 | **Soft Real-Time** | LAN 환경, HTTP/2 멀티플렉싱 | ❌ **미지원** | **[Phase 2]** `Kable.Integrations.Grpc` |
-| | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | OPC UA .NET Standard 스택 | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.OpcUa` |
-| | **7. DDS (Data Distribution)** | 분산 실시간 제어 버스 | **Hard / Soft Real-Time** | 실시간 OS 또는 QoS 튜닝 전제 | ❌ **미지원** | 필요 시 외부 바인딩 연동 |
-| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | 경량 브로커(Broker) 인프라 | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.Mqtt` |
-| **필드버스 / 구동계** | **9. RS-232C / RS-485** | 시리얼 펌프, 센서, 유량계 | **Soft Real-Time** | 점대점/반이중 타이밍 제어 필요 | **✅ 직렬 포트 제공** | `UseSerialPort()` 기본 탑재 |
-| | **10. EtherCAT** | 초정밀 서보 모터, 실시간 IO | **Hard Real-Time** *(마스터 조건부)* | **전용 실시간 OS/코어, Intel NIC, DC** | ❌ **직접 구현 비대상** | 외부 마스터(SOEM 등) 연동 |
-| | **11. PROFINET (IRT)** | 지멘스 PLC 기반 산업 라인 | **Hard Real-Time** *(IRT 조건부)* | 지멘스 통신 ASIC/인터페이스 보드 | ❌ **직접 구현 비대상** | PLC 게이트웨이 연동 |
-| | **12. EtherNet/IP (CIP Safety)**| 로크웰 PLC 기반 안전 공정 | **기능 안전 연동** *(SIL 3 적용 지원)* | **인증된 안전 하드웨어 및 안전 루프 입증** | ❌ **직접 구현 비대상** | 공인 안전 컨트롤러 연동 |
-| | **13. CC-Link IE TSN** | 일본/국내 반도체 라인 | **Hard Real-Time** *(TSN 조건부)* | TSN 전용 스위치 및 인터페이스 보드 | ❌ **직접 구현 비대상** | 전용 보드 드라이버 연동 |
+| 계층 | 기술 / 프로토콜 | 주 사용처 | 실시간성 분류 (Determinism Class) | 라이선스 형태 및 비용 | Kable 로드맵 상태 | Kable 연동 권장 방안 |
+| :--- | :--- | :--- | :--- | :---: | :---: | :--- |
+| **PC 내부 IPC** | **1. Named Pipe IPC** | 프로세스 격리 (Daemon 연동) | **Soft Real-Time** | **OS 표준 (무료)** | **✅ 기본 제공** | `UseNamedPipe()` 기본 탑재 |
+| | **2. 프로세스 간 MMF SharedQueue** | 초고속 락프리 IPC | **Soft Real-Time** | **순수 구현 (무료)** | ❌ **프로세스 간 미지원** | **[Phase 2]** 별도 어댑터로 검토 |
+| | **3. Shared Memory (MMF Raw Bulk)**| 비전 영상, 파형 데이터 | **Best Effort** (대용량 전송) | **순수 구현 (무료)** | ❌ **미지원** | 초고속 파형 버퍼 어댑터 검토 |
+| **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | **Best Effort** | **OS 표준 (무료)** | **✅ 기본 제공** | `UseTcp()` 기본 탑재 |
+| | **5. gRPC (HTTP/2 + Protobuf)** | 분산 모듈 RPC / 원격 제어 | **Soft Real-Time** | **Apache-2.0 / BSD (무료)** | 🚀 **[Phase 2 개발 착수]** | `Kable.Integrations.Grpc` |
+| | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | **OPC Dual / MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.OpcUa` |
+| | **7. DDS (Data Distribution)** | 분산 실시간 제어 버스 | **Soft Real-Time** | **EDL-1.0 / BSD (무료)** | ❌ **직접 구현 제외** | 필요 시 CycloneDDS C# 바인딩 연동 |
+| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | **MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.Mqtt` |
+| **필드버스 / PLC** | **9. RS-232C / RS-485** | 시리얼 펌프, 센서, 유량계 | **Soft Real-Time** | **OS 표준 / MIT (무료)** | **✅ 기본 제공** | `UseSerialPort()`, Modbus-RTU |
+| | **10. EtherCAT** | 초정밀 서보 모터 다축 제어 | **Hard Real-Time** | **GPL(SOEM) / 상용 라이선스** | 🚫 **[자체 마스터 개발 제외]** | 외부 상용 마스터(Beckhoff ADS 등) SDK 브리지 |
+| | **11. PROFINET ➔ S7 통신** | 지멘스 S7 PLC 데이터 연동 | **Soft Real-Time** | **MIT (`S7NetPlus`) (무료)** | 🔄 **[S7 이더넷 통신으로 대체]** | `Kable.Integrations.Siemens` (S7 프로토콜) |
+| | **12. EtherNet/IP (비안전 CIP)**| 로크웰 PLC 태그 데이터 연동 | **Soft Real-Time** | **MIT / Apache (무료)** | 🔄 **[비안전 진단 태그로 대체]**<br/>*(⚠️ CIP Safety 안전 루프는 영구 제외)* | `Kable.Integrations.EtherNetIP` (일반 CIP 태그) |
+| | **13. CC-Link ➔ SLMP (MC)** | 미쓰비시 PLC D/M 디바이스 | **Soft Real-Time** | **미쓰비시 무료 오픈 규격 (무료)** | 🔄 **[SLMP 오픈 규격으로 대체]**<br/>*(⚠️ TSN 전용 보드 스택은 영구 제외)* | `Kable.Integrations.Melsec` (SLMP TCP) |
 
 > [!NOTE]
 > **실시간성 분류 기준**:
@@ -96,19 +96,41 @@ IPC 지연 시간은 절대 수치가 아니며, 실행 환경에 따라 크게 
 
 ---
 
-## 4. 물리 필드버스 및 구동계 통신 가이드
+## 4. 물리 필드버스 / PLC 통신 및 안전·라이선스 경계 가이드
 
-### 4.1 모션 제어 vs 유체/센서 통신의 현실적 분리
-1. **초정밀 다축 모션 제어 (로봇 암, 웨이퍼 얼라이너, 서보 드라이브)**:
-   - **산업 표준 기술**: **EtherCAT**
-   - **현실적 제약**: EtherCAT은 표준 이더넷 하드웨어를 활용할 수 있으나, **1µs 미만의 지터와 동기화를 달성하려면 Real-Time OS(또는 Windows RT 확장의 코어 격리), 전용 NIC 드라이버, Distributed Clocks(DC) 설정 및 실제 계측 검증**이 반드시 전제되어야 합니다.
-   - **Kable의 연동 방식**: Kable이 소프트웨어 레벨에서 직접 EtherCAT 마스터를 구현하기보다는, 상용/오픈소스 EtherCAT 마스터 소프트웨어(SOEM 등)가 제어하는 상태를 읽고 쓰는 **브리지 어댑터** 형태로 연동하는 것이 안전합니다.
-2. **유체 / 화학 / 환경 센서 제어 (세정 펌프, 유량계, 압력계, 밸브)**:
-   - **산업 표준 기술**: **Modbus-RTU / RS-485**
-   - **특징**: 펌프 RPM 지령, 압력 조회 등은 50~100ms 주기의 소프트 실시간으로 충분하며, 화학/반도체 유체 장비의 절대 다수가 RS-485 Modbus를 지원하므로 비용과 안정성 면에서 가장 실용적입니다.
-3. **기능 안전(Safety) 통신 주의사항 (CIP Safety / PROFINET IRT)**:
-   - CIP Safety는 네트워크 프로토콜 차원에서 안전 통신(SIL 3 수준)을 정의하지만, **시스템 전체의 안전성은 인증된 안전 PLC, 안전 I/O 모듈, 비상정지 회로 및 국제 인증(IEC 61508) 검증을 거쳐 별도로 입증**되어야 합니다.
-   - Kable은 비안전 통신 계층이므로, 하드웨어 E-Stop 라인과 공인 안전 컨트롤러를 대체할 수 없습니다.
+### 4.1 안전 루프 및 고가 하드웨어 스택의 명확한 경계 (Out of Scope 원칙)
+
+Kable은 100% Permissive(Apache-2.0 / MIT) 생태계를 유지하고 장비사의 독점 소스코드를 보호하기 위해 **유료 협회 라이선스, 법적 인증 필수 안전 루프, GPL 전염성 스택을 공식 개발 범위에서 제외**합니다.
+
+```mermaid
+graph TD
+    subgraph HardBoundary ["🚫 Kable 개발 공식 제외 (Out of Scope / 전용 제어기 전담)"]
+        SafeHW["1. 기능 안전 루프 (CIP Safety / Safety Relay)<br/>- TÜV SIL 3 / PL e 인증 필수<br/>- 하드웨어 Safety PLC가 전담 (법적 책임 분리)"]
+        TsnHW["2. CC-Link IE TSN 전용 스택<br/>- CLPA 협회 라이선스 및 고가 TSN 보드 종속"]
+        MotionMaster["3. EtherCAT 자체 마스터 개발<br/>- 1µs 미만 RTOS 지터 이슈 및 GPL(SOEM) 전염성 방지"]
+    end
+
+    subgraph KableScope ["✅ Kable이 담당하는 100% 무료·비공개 상용 프로토콜"]
+        K1["1. SLMP (MC Protocol TCP)<br/>- 미쓰비시 PLC D/M 디바이스 무료 통신 (MIT)"]
+        K2["2. S7 통신 (S7NetPlus)<br/>- 지멘스 S7-1200/1500 PLC DB 블록 비동기 통신 (MIT)"]
+        K3["3. EtherNet/IP 일반 CIP 태그<br/>- 로크웰 PLC 비안전 진단 데이터 수집 (MIT)"]
+        K4["4. Beckhoff TwinCAT ADS 브리지<br/>- 벡호프 공식 무료 NuGet SDK 연동"]
+        K5["5. RS-485 Modbus-RTU<br/>- 세정 펌프, 유량계, 압력계 실시간 제어"]
+    end
+```
+
+### 4.2 프로토콜별 현실적 대체 및 연동 방안
+
+1. **EtherCAT (10번)**:
+   - Kable이 C# 레벨에서 마스터를 자체 개발하지 않습니다. (SOEM 라이브러리의 GPL 전염성 및 윈도우 스케줄링 지터로 인한 모터 탈조 위험).
+   - 실제 장비에서는 전용 모션 보드 또는 Beckhoff IPC가 하드웨어 루프를 돌리고, Kable은 벡호프의 무료 공식 라이브러리(`Beckhoff.TwinCAT.Ads`) 등을 통해 좌표 및 상태를 조회하는 **브리지 어댑터** 역할만 수행합니다.
+2. **PROFINET IRT ➔ S7 통신 대체 (11번)**:
+   - 지멘스 전용 통신 ASIC 칩셋(ERTEC)이 필요한 PROFINET IRT 대신, 순수 C# MIT 라이선스 오픈소스인 **`S7NetPlus`** 기반 어댑터를 채택하여 일반 이더넷 케이블로 지멘스 PLC와 통신합니다.
+3. **CIP Safety ➔ 일반 EtherNet/IP 태그 통신 대체 (12번)**:
+   - 비상정지 E-Stop, 안전 라이트 커튼은 공인 Safety PLC(Rockwell GuardLogix 등)가 전담하며, Kable은 법적 안전 루프에 관여하지 않습니다.
+   - 대신 일반 CIP 통신으로 "어떤 안전 도어가 열려 정지했는가?"와 같은 **비안전 진단 텔레메트리**만 수집합니다.
+4. **CC-Link IE TSN ➔ SLMP (MC Protocol) 대체 (13번)**:
+   - CLPA 협회 라이선스와 전용 PCIe 인터페이스 카드가 필요한 CC-Link IE TSN 대신, 미쓰비시의 공식 무료 오픈 규격인 **SLMP (Seamless Message Protocol, TCP/IP)** 어댑터를 구축하여 일반 랜선으로 미쓰비시 PLC D/M 디바이스를 0-Allocation으로 제어합니다.
 
 ---
 
