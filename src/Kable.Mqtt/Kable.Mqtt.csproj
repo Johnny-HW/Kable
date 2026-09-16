@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Kable.Mqtt</PackageId>
+    <Version>1.3.0</Version>
+    <Authors>Kable Authors</Authors>
+    <Description>High-performance MQTT telemetry publisher and connection context over MQTTnet for Kable.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
+    <ProjectReference Include="..\Kable\Kable.csproj" />
+  </ItemGroup>
+
+</Project>

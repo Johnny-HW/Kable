@@ -36,7 +36,7 @@
 | | **5. gRPC (HTTP/2 + Protobuf)** | 분산 모듈 RPC / 원격 제어 | **Soft Real-Time** | **Apache-2.0 / BSD (무료)** | **✅ [Phase 2 구현 완료]** | `Kable.Grpc` (`System.IO.Pipelines` 브리지) |
 | | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | **OPC Dual / MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.OpcUa` |
 | | **7. DDS (Data Distribution)** | 분산 실시간 제어 버스 | **Soft Real-Time** | **EDL-1.0 / BSD (무료)** | ❌ **직접 구현 제외** | 필요 시 CycloneDDS C# 바인딩 연동 |
-| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | **MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Mqtt` |
+| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | **MIT (무료)** | **✅ [Phase 3 구현 완료]** | `Kable.Mqtt` (`MQTTnet` 텔레메트리 발행기) |
 | **필드버스 / PLC** | **9. RS-232C / RS-485** | 시리얼 펌프, 센서, 유량계 | **Soft Real-Time** | **OS 표준 / MIT (무료)** | **✅ 기본 제공** | `UseSerialPort()`, Modbus-RTU |
 | | **10. EtherCAT** | 초정밀 서보 모터 다축 제어 | **Hard Real-Time** | **GPL(SOEM) / 상용 라이선스** | 🚫 **[자체 마스터 개발 제외]** | 외부 상용 마스터(Beckhoff ADS 등) SDK 브리지 |
 | | **11. PROFINET ➔ S7 통신** | 지멘스 S7 PLC 데이터 연동 | **Soft Real-Time** | **MIT (`S7NetPlus`) (무료)** | 🔄 **[S7 이더넷 통신으로 대체]** | `Kable.Siemens` (S7 프로토콜) |
@@ -179,8 +179,11 @@ graph TD
     - SLMP 3E 바이너리 프레임(TCP) 0-GC 스트림 프레이밍 및 상태 머신.
     - D(데이터), W(링크), R(파일), M(내부릴레이), X/Y(입출력) 디바이스 일괄 읽기(`ReadWordsAsync`) 및 쓰기(`WriteWordsAsync`).
     - PLC EndCode(에러 코드) 자동 감지 및 예외 처리.
+  - **`Kable.Mqtt` (MQTT 텔레메트리 브로드캐스트 완료)**:
+    - 글로벌 표준 `MQTTnet` (MIT) 채택.
+    - `MqttTelemetryPublisher`: 센서 계측값, 펌프 파형 및 통신 메트릭의 초경량 비동기 JSON/바이너리 브로드캐스트.
+    - QoS 레벨(0, 1, 2) 선택 및 KeepAlive 안전 종료 지원.
   - `Kable.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
-  - `Kable.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
 
 ---
 
