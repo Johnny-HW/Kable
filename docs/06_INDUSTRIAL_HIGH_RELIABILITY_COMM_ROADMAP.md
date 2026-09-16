@@ -30,18 +30,18 @@
 | 계층 | 기술 / 프로토콜 | 주 사용처 | 실시간성 분류 (Determinism Class) | 라이선스 형태 및 비용 | Kable 로드맵 상태 | Kable 연동 권장 방안 |
 | :--- | :--- | :--- | :--- | :---: | :---: | :--- |
 | **PC 내부 IPC** | **1. Named Pipe IPC** | 프로세스 격리 (Daemon 연동) | **Soft Real-Time** | **OS 표준 (무료)** | **✅ 기본 제공** | `UseNamedPipe()` 기본 탑재 |
-| | **2. 프로세스 간 MMF SharedQueue** | 초고속 락프리 IPC | **Soft Real-Time** | **순수 구현 (무료)** | ❌ **프로세스 간 미지원** | **[Phase 2]** 별도 어댑터로 검토 |
-| | **3. Shared Memory (MMF Raw Bulk)**| 비전 영상, 파형 데이터 | **Best Effort** (대용량 전송) | **순수 구현 (무료)** | ❌ **미지원** | 초고속 파형 버퍼 어댑터 검토 |
+| | **2. 프로세스 간 MMF SharedQueue** | 초고속 락프리 IPC | **Soft Real-Time** | **순수 구현 (무료)** | **✅ [Phase 2 구현 완료]** | `Kable.SharedMemory` (`SharedMemoryRingBuffer`) |
+| | **3. Shared Memory (MMF Raw Bulk)**| 비전 영상, 파형 데이터 | **Best Effort** (대용량 전송) | **순수 구현 (무료)** | **✅ [Phase 2 구현 완료]** | `Kable.SharedMemory` (`SharedMemoryWaveformBuffer`) |
 | **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | **Best Effort** | **OS 표준 (무료)** | **✅ 기본 제공** | `UseTcp()` 기본 탑재 |
-| | **5. gRPC (HTTP/2 + Protobuf)** | 분산 모듈 RPC / 원격 제어 | **Soft Real-Time** | **Apache-2.0 / BSD (무료)** | **✅ [Phase 2 구현 완료]** | `Kable.Integrations.Grpc` (`System.IO.Pipelines` 브리지) |
-| | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | **OPC Dual / MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.OpcUa` |
+| | **5. gRPC (HTTP/2 + Protobuf)** | 분산 모듈 RPC / 원격 제어 | **Soft Real-Time** | **Apache-2.0 / BSD (무료)** | **✅ [Phase 2 구현 완료]** | `Kable.Grpc` (`System.IO.Pipelines` 브리지) |
+| | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | **OPC Dual / MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.OpcUa` |
 | | **7. DDS (Data Distribution)** | 분산 실시간 제어 버스 | **Soft Real-Time** | **EDL-1.0 / BSD (무료)** | ❌ **직접 구현 제외** | 필요 시 CycloneDDS C# 바인딩 연동 |
-| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | **MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.Mqtt` |
+| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | **MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Mqtt` |
 | **필드버스 / PLC** | **9. RS-232C / RS-485** | 시리얼 펌프, 센서, 유량계 | **Soft Real-Time** | **OS 표준 / MIT (무료)** | **✅ 기본 제공** | `UseSerialPort()`, Modbus-RTU |
 | | **10. EtherCAT** | 초정밀 서보 모터 다축 제어 | **Hard Real-Time** | **GPL(SOEM) / 상용 라이선스** | 🚫 **[자체 마스터 개발 제외]** | 외부 상용 마스터(Beckhoff ADS 등) SDK 브리지 |
-| | **11. PROFINET ➔ S7 통신** | 지멘스 S7 PLC 데이터 연동 | **Soft Real-Time** | **MIT (`S7NetPlus`) (무료)** | 🔄 **[S7 이더넷 통신으로 대체]** | `Kable.Integrations.Siemens` (S7 프로토콜) |
-| | **12. EtherNet/IP (비안전 CIP)**| 로크웰 PLC 태그 데이터 연동 | **Soft Real-Time** | **MIT / Apache (무료)** | 🔄 **[비안전 진단 태그로 대체]**<br/>*(⚠️ CIP Safety 안전 루프는 영구 제외)* | `Kable.Integrations.EtherNetIP` (일반 CIP 태그) |
-| | **13. CC-Link ➔ SLMP (MC)** | 미쓰비시 PLC D/M 디바이스 | **Soft Real-Time** | **미쓰비시 무료 오픈 규격 (무료)** | 🔄 **[SLMP 오픈 규격으로 대체]**<br/>*(⚠️ TSN 전용 보드 스택은 영구 제외)* | `Kable.Integrations.Melsec` (SLMP TCP) |
+| | **11. PROFINET ➔ S7 통신** | 지멘스 S7 PLC 데이터 연동 | **Soft Real-Time** | **MIT (`S7NetPlus`) (무료)** | 🔄 **[S7 이더넷 통신으로 대체]** | `Kable.Siemens` (S7 프로토콜) |
+| | **12. EtherNet/IP (비안전 CIP)**| 로크웰 PLC 태그 데이터 연동 | **Soft Real-Time** | **MIT / Apache (무료)** | 🔄 **[비안전 진단 태그로 대체]**<br/>*(⚠️ CIP Safety 안전 루프는 영구 제외)* | `Kable.EtherNetIP` (일반 CIP 태그) |
+| | **13. CC-Link ➔ SLMP (MC)** | 미쓰비시 PLC D/M 디바이스 | **Soft Real-Time** | **미쓰비시 무료 오픈 규격 (무료)** | 🔄 **[SLMP 오픈 규격으로 대체]**<br/>*(⚠️ TSN 전용 보드 스택은 영구 제외)* | `Kable.Melsec` (SLMP TCP) |
 
 > [!NOTE]
 > **실시간성 분류 기준**:
@@ -160,17 +160,19 @@ graph TD
   - `System.IO.Pipelines` 기반 0-GC 세션 엔진.
   - 기본 Transport 어댑터 (`UseTcp`, `UseSerialPort`, `UseNamedPipe`).
   - 인메모리 `SpscRingBuffer<T>` 및 `ModbusRtuCodec` (CRC-16 자동화).
-- **v1.3.0 (현재 완료)**:
-  - **`Kable.Integrations.Grpc` 구현 완료**:
+- **v1.3.0 (Phase 2 통신 확장 완료)**:
+  - **`Kable.Grpc` (gRPC 터널링 브리지 완료)**:
     - 공식 `Grpc.Net.Client`, `Grpc.Core.Api`, `Google.Protobuf` (Apache-2.0 / BSD) 채택.
     - `StreamTunnel(stream KablePacket)` 전이중 양방향 스트리밍 프로토콜 규격(`kable_transport.proto`) 수립.
     - gRPC 스트림을 `System.IO.Pipelines`(`PipeReader`/`PipeWriter`)로 투명하게 연결하는 `GrpcConnectionContext` 및 `KableTransportServiceImpl` 구축.
     - `KableSession<TMessage>`을 통한 요청-응답 왕복 및 파이프라이닝 통합 검증 완료.
-- **Phase 2 잔여 (단기 확장 계획)**:
-  - `Kable.Integrations.SharedMemory`: 고주파 아날로그 파형 수집을 위한 프로세스 간 MMF 버퍼 채널.
+  - **`Kable.SharedMemory` (초저지연 MMF IPC 및 파형 버퍼 완료)**:
+    - Windows 커널 `MemoryMappedFile` 및 `EventWaitHandle` 기반 0-GC SPSC 원형 링버퍼 (`SharedMemoryRingBuffer`).
+    - `IConnectionContext` 표준을 구현한 `SharedMemoryConnectionContext`로 `System.IO.Pipelines` 완전 호환 (초당 수십만 건 지령 왕복).
+    - 초고주파(수 kHz 이상) 아날로그 센서 및 펌프 계측 텔레메트리 교환을 위한 전용 `SharedMemoryWaveformBuffer`.
 - **Phase 3 (중장기 확장 계획)**:
-  - `Kable.Integrations.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
-  - `Kable.Integrations.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
+  - `Kable.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
+  - `Kable.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
 
 ---
 
