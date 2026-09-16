@@ -136,7 +136,7 @@ graph TD
 
 ## 5. Kable의 패키지 분리 및 단계별 로드맵 (Roadmap)
 
-Kable의 코어 계층은 순수 **0-GC 바이트 스트림 파이프라인(`System.IO.Pipelines`)**에만 집중하며, 상위 프로토콜 및 하드웨어 버스는 **독립 확장 패키지(Integrations)**로 분리합니다.
+Kable의 코어 계층은 순수 **0-GC 바이트 스트림 파이프라인(`System.IO.Pipelines`)**에만 집중하며, 상위 프로토콜 및 하드웨어 버스는 **간결한 기술명 독립 패키지(대안 A: `Kable.<Tech>`)**로 분리합니다. 모든 어댑터는 현대 .NET 표준(DIP 인터페이스, Fail-Fast Options 패턴, `ILogger<T>` 주입, `IServiceCollection` DI 확장)을 100% 충족합니다.
 
 ```mermaid
 graph TD
@@ -146,14 +146,29 @@ graph TD
         Session["IDeviceSession (Reactive Request/Stream)"]
     end
 
-    subgraph Integrations ["Kable.Integrations.* (별도 확장 패키지)"]
-        P2_Grpc["Kable.Integrations.Grpc (gRPC 클라이언트/서버 어댑터)"]
-        P2_Mmf["Kable.Integrations.SharedMemory (MMF 파형 버퍼)"]
-        P3_Opc["Kable.Integrations.OpcUa (OPC UA 노드 브리지)"]
-        P3_Mqtt["Kable.Integrations.Mqtt (Sparkplug B 텔레메트리)"]
+    subgraph Fieldbus ["산업용 필드버스 / PLC 어댑터"]
+        P2_Modbus["Kable.Modbus (Modbus-TCP MBAP Pipelining)"]
+        P3_Melsec["Kable.Melsec (미쓰비시 SLMP 3E 바이너리)"]
     end
 
-    CoreEngine --> Integrations
+    subgraph IPC_Remote ["고속 IPC 및 분산 원격 브리지"]
+        P2_Mmf["Kable.SharedMemory (MMF 파형 버퍼 & IPC)"]
+        P2_Grpc["Kable.Grpc (gRPC 양방향 스트리밍 터널)"]
+    end
+
+    subgraph SmartFactory ["스마트 팩토리 상위 연동"]
+        P3_Mqtt["Kable.Mqtt (MQTTnet 텔레메트리 발행기)"]
+        P3_Opc["Kable.OpcUa (공식 OPCFoundation 노드 브리지)"]
+    end
+
+    subgraph Tooling ["엔지니어링 진단 및 관측"]
+        Studio["Kable.ConfigStudio (실시간 패킷 스니퍼 & RTT 계측)"]
+    end
+
+    CoreEngine --> Fieldbus
+    CoreEngine --> IPC_Remote
+    CoreEngine --> SmartFactory
+    CoreEngine -.-> Studio
 ```
 
 - **v1.2.0 (초기 릴리스)**:
