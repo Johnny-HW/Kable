@@ -21,22 +21,28 @@ public sealed class ModbusTcpMaster : IModbusMaster
     private readonly ILogger<ModbusTcpMaster>? _logger;
     private int _nextTransactionId;
 
-    public byte DefaultUnitId { get; set; } = 1;
-    public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(3);
+    public byte DefaultUnitId { get; set; }
+    public TimeSpan DefaultTimeout { get; set; }
 
     public ModbusTcpMaster(
         IDeviceSession<ModbusTcpMessage> session,
-        IOptions<ModbusTcpOptions>? options = null,
+        IOptions<ModbusTcpOptions> options,
+        ILogger<ModbusTcpMaster>? logger = null)
+        : this(session, (options ?? throw new ArgumentNullException(nameof(options))).Value, logger)
+    {
+    }
+
+    public ModbusTcpMaster(
+        IDeviceSession<ModbusTcpMessage> session,
+        ModbusTcpOptions options,
         ILogger<ModbusTcpMaster>? logger = null)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(options);
         _logger = logger;
 
-        if (options?.Value != null)
-        {
-            DefaultUnitId = options.Value.DefaultUnitId;
-            DefaultTimeout = options.Value.Timeout;
-        }
+        DefaultUnitId = options.DefaultUnitId;
+        DefaultTimeout = options.Timeout;
     }
 
     private ushort GetNextTransactionId()

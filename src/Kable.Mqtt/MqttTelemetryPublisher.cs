@@ -26,13 +26,29 @@ public sealed class MqttTelemetryPublisher : IMqttTelemetryPublisher
 
     public MqttTelemetryPublisher(
         IMqttClient client,
+        IOptions<MqttOptions> options,
+        ILogger<MqttTelemetryPublisher>? logger = null)
+        : this(
+            client,
+            new MqttClientOptionsBuilder()
+                .WithTcpServer((options ?? throw new ArgumentNullException(nameof(options))).Value.Host, options.Value.Port)
+                .WithClientId(options.Value.ClientId)
+                .WithCleanSession(true)
+                .Build(),
+            options.Value.TopicPrefix,
+            logger)
+    {
+    }
+
+    public MqttTelemetryPublisher(
+        IMqttClient client,
         MqttClientOptions options,
         string topicPrefix = "kable/telemetry",
         ILogger<MqttTelemetryPublisher>? logger = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _options = options ?? throw new ArgumentNullException(nameof(options));
-        _topicPrefix = topicPrefix.TrimEnd('/');
+        _topicPrefix = (topicPrefix ?? throw new ArgumentNullException(nameof(topicPrefix))).TrimEnd('/');
         _logger = logger;
     }
 

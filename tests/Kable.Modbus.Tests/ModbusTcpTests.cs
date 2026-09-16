@@ -93,7 +93,7 @@ public class ModbusTcpTests
         var session = new KableSession<ModbusTcpMessage>(factory, codec);
         await session.StartAsync();
 
-        var master = new ModbusTcpMaster(session);
+        var master = new ModbusTcpMaster(session, new ModbusTcpOptions());
         var mockConn = factory.Connection;
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

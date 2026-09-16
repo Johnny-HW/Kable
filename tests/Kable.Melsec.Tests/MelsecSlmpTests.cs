@@ -96,7 +96,7 @@ public class MelsecSlmpTests
         var session = new KableSession<Slmp3EFrame>(factory, codec);
         await session.StartAsync();
 
-        var client = new MelsecPlcClient(session);
+        var client = new MelsecPlcClient(session, new MelsecOptions());
         var mockConn = factory.Connection;
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

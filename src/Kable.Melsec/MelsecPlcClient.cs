@@ -18,24 +18,30 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
     private readonly IDeviceSession<Slmp3EFrame> _session;
     private readonly ILogger<MelsecPlcClient>? _logger;
 
-    public byte NetworkNo { get; set; } = 0;
-    public byte PcNo { get; set; } = 0xFF;
-    public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(3);
+    public byte NetworkNo { get; set; }
+    public byte PcNo { get; set; }
+    public TimeSpan DefaultTimeout { get; set; }
 
     public MelsecPlcClient(
         IDeviceSession<Slmp3EFrame> session,
-        IOptions<MelsecOptions>? options = null,
+        IOptions<MelsecOptions> options,
+        ILogger<MelsecPlcClient>? logger = null)
+        : this(session, (options ?? throw new ArgumentNullException(nameof(options))).Value, logger)
+    {
+    }
+
+    public MelsecPlcClient(
+        IDeviceSession<Slmp3EFrame> session,
+        MelsecOptions options,
         ILogger<MelsecPlcClient>? logger = null)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(options);
         _logger = logger;
 
-        if (options?.Value != null)
-        {
-            NetworkNo = options.Value.NetworkNo;
-            PcNo = options.Value.PcNo;
-            DefaultTimeout = options.Value.Timeout;
-        }
+        NetworkNo = options.NetworkNo;
+        PcNo = options.PcNo;
+        DefaultTimeout = options.Timeout;
     }
 
     /// <summary>
