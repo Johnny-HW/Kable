@@ -1,155 +1,146 @@
-# 06. 산업용 차세대 고신뢰성 통신 기술 스펙트럼 및 Kable 로드맵
+# 06. 산업용 고신뢰성 통신 기술 비교 및 Kable 아키텍처 연동 로드맵
 
 - **문서 번호**: KABLE-SPEC-06
-- **버전**: v1.0.0
+- **문서 버전**: v1.2.0
 - **작성일**: 2026-09-16
+- **기준 Kable 버전**: v1.2.0
 - **모듈 위치**: `02.SoftwareLib/01.Kable/docs/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP.md`
 
 ---
 
-## 1. 개요 및 배경
+## 1. 개요 및 Kable의 시스템 경계 (System Scope)
 
-전통적인 장비 통신은 주로 **Raw TCP/IP Socket**이나 **RS-232C/485 직렬 통신**에 의존해 왔습니다.
-그러나 반도체 클린룸, 초정밀 화학 제어, 배터리 공정 등 현대 첨단 장비에서는 다음과 같은 한계로 인해 **결정론적(Deterministic) 고신뢰성 통신 기술**이 도입되고 있습니다:
+### 1.1 Kable의 역할 및 책임 한계
+> [!IMPORTANT]
+> **Kable은 Hard Real-Time 모션 제어기나 Safety Controller(기능 안전 제어기)가 아닙니다.**  
+> Kable은 반도체/정밀 제조 장비에서 **비안전(Non-Safety) 영역의 장비 제어 통신, 관측(Observability), 텔레메트리 스트리밍 및 상위 연동**을 고성능·저할당(Zero-Allocation 지향)으로 중계하는 통신 엔진입니다.
 
-1. **Raw TCP/IP의 한계**:
-   - 혼잡 제어 및 Nagle 알고리즘 등으로 인한 불시의 수십~수백 ms 지터(Jitter).
-   - 비정상 단선(Unplug) 발생 시 TCP Keep-Alive 감지에 수 초~수십 초 소요.
-   - 바이트 스트림 파편화(Fragmentation)로 인한 패킷 파싱 오류 위험.
-2. **Kable의 포지셔닝**:
-   - `01.Kable`은 현재 `System.IO.Pipelines` 기반의 **0-GC 버퍼 파이프라인, Fail-Fast 즉시 단선 감지, RS-485/TCP/NamedPipe 지원**을 완료한 상태입니다.
-   - 본 문서는 현재 Kable 지원 범위와 미지원 고신뢰성 프로토콜 전체 스펙트럼을 투명하게 비교하고 확장 로드맵을 정의합니다.
-
----
-
-## 2. 전체 산업용 통신 프로토콜 지원 현황 비교 매트릭스
-
-| 계층 | 기술 / 프로토콜 | 주 사용처 | 신뢰도 / 결정론 (Determinism) | Kable 현재 지원 여부 | 향후 대응 방안 |
-| :--- | :--- | :--- | :--- | :---: | :--- |
-| **PC 내부 IPC** | **1. Named Pipe IPC** | 동일 PC 내 프로세스 격리 (Daemon) | ★★★★★ (OS 커널 직결) | **✅ 지원 완료** | `UseNamedPipe()` 탑재 |
-| | **2. Shared Memory RingBuffer (SharedQueue)** | 락프리 초고속 IPC (마이크로초 이하 지연) | ★★★★★ (Zero-Copy / Zero-Syscall) | ❌ 미지원 (검토 대상) | **[Phase 2]** MMF 기반 Lock-free SPSC 큐 탑재 |
-| | **3. Shared Memory (MMF Raw Bulk)** | 초고속 비전 영상, 파형 대용량 버퍼 | ★★★★★ (RAM 포인터 직결) | ❌ 미지원 | 초고주파 계측용 MMF Transport 검토 |
-| **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | ★★★☆☆ (지터 발생 가능) | **✅ 지원 완료** | `UseTcp()` 탑재 |
-| | **4. gRPC (Protobuf)** | PC 간 / 모듈 간 고속 제어 표준 | ★★★★☆ (스키마 타입 보장) | ❌ 미지원 | Kable 상위 gRPC Gateway 어댑터 구축 |
-| | **5. OPC UA (IEC 62541)** | 반도체 설비 상위 표준 (TSN 결합) | ★★★★★ (표준 보안/모델링) | ❌ 미지원 | OPC UA .NET Standard 스택 바인딩 |
-| | **6. DDS (Data Distribution)** | 분산 실시간 제어, 로봇 연계 | ★★★★★ (P2P Zero-Broker) | ❌ 미지원 | CycloneDDS / OpenDDS C# 바인딩 |
-| | **7. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 수집 | ★★★☆☆ (QoS 1, 2) | ❌ 미지원 | 경량 브로커 수집 클라이언트 모듈화 |
-| **필드버스 / 구동계** | **8. RS-232C / RS-485** | 시리얼 펌프, 센서, 유량계 | ★★★★☆ (FIFO 엄격 보장) | **✅ 지원 완료** | `UseSerialPort()` 탑재 |
-| | **9. EtherCAT** | 초정밀 서보 모터, 실시간 IO | ★★★★★ (**지터 < 1µs 확정성**) | ❌ 미지원 (하드웨어 버스) | SOEM 마스터 또는 전용 NIC 드라이버 연동 |
-| | **10. PROFINET (IRT)** | 지멘스 PLC 기반 산업 라인 | ★★★★★ (지터 < 1µs) | ❌ 미지원 | 지멘스 산업용 통신 보드 연동 |
-| | **11. EtherNet/IP (CIP Safety)**| 로크웰 PLC 기반 안전 제어 | ★★★★★ (SIL 3 안전 보장) | ❌ 미지원 | CIP 스택 라이브러리 연동 |
-| | **12. CC-Link IE TSN** | 일본/국내 반도체 라인 | ★★★★★ (TSN 패킷 우선순위) | ❌ 미지원 | 전용 통신 보드 드라이버 연동 |
-| | **13. CANopen / DeviceNet** | 노이즈 극심한 모터/밸브 버스 | ★★★★☆ (차동 신호 내노이즈) | ❌ 미지원 | Kvaser / PEAK CAN SDK 어댑터 |
+1. **하드웨어 제어 경계**:
+   - EtherCAT, PROFINET, CIP Safety 등 안전 및 마이크로초 단위의 동기화가 필요한 영역은 Kable이 직접 마스터/스택을 구현하지 않으며, **인증된 하드웨어 컨트롤러, 전용 벤더 SDK, 또는 검증된 오픈소스 스택(SOEM 등)과 연동하는 어댑터(Adapter/Integration)** 계층으로 결합합니다.
+2. **Kable v1.2.0 기본 Transport 제공 범위**:
+   - `UseTcp()`: 표준 OS 소켓 기반 스트림 통신.
+   - `UseSerialPort()`: 표준 직렬 포트(RS-232C 등) 통신 어댑터. (※ RS-485 통신의 경우 반이중 TX/RX 방향 전환이나 멀티드롭 버스 충돌 중재는 외장 컨버터 또는 상위 시퀀스에서 보조해야 함).
+   - `UseNamedPipe()`: 단일 OS 내 프로세스 격리 통신.
+   - **단선 감지 조건**: 읽기 실패, 소켓 EOF 수신, 또는 세션 레벨의 Heartbeat/Watchdog 타임아웃 만료 시 `DeviceDisconnectedException`을 발행 (즉시 하드웨어 인터럽트 감지가 아님).
 
 ---
 
-## 3. 계층별 통신 기술 세부 해설
+## 2. 산업용 통신 프로토콜 비교 매트릭스 (결정론 및 환경 조건 명시)
 
-### 3.1 PC 내부 초고속 IPC (In-PC Communication)
-1. **Named Pipe (현재 지원)**:
-   - Windows/Linux 커널의 파이프 버퍼를 활용하여 네트워크 스택(TCP/IP)을 타지 않음.
-   - 단일 PC에서 장비 GUI 프로세스와 하드웨어 백그라운드 서비스(Pump Daemon 등)를 격리할 때 최적의 성능 제공.
-2. **Shared Memory RingBuffer / SharedQueue (검토 대상 - 초고속 락프리 IPC)**:
-   - **동작 원리**: OS의 `MemoryMappedFile(MMF)` 기반 가상 메모리를 공유하고, 그 위에 **Lock-free SPSC(Single Producer Single Consumer) 원형 큐(RingBuffer)**를 배치.
-   - **동기화 기법**: 프로세스 간 시그널은 Windows `EventWaitHandle` 또는 CAS(Interlocked SpinLock) 연산 사용.
-   - **핵심 장점**:
-     - **OS System Call(Syscall) 제거**: Named Pipe는 OS 커널 모드 전환(Context Switch)이 발생하지만, SharedQueue는 유저 레벨 메모리 주소 직결(Direct RAM)로 **나노초~마이크로초(µs) 미만 지연** 달성.
-     - **Zero-Copy & Zero-GC**: `Span<byte>`를 공유 큐 슬롯에 직접 기록하므로 가비지 컬렉션(GC) 및 메모리 복사가 전무함.
-   - **적용처**: 초당 수만 회의 모션 제어 좌표 갱신, 고속 I/O 스캔, 펌프 텔레메트리 링버퍼.
-3. **MemoryMappedFile (대용량 Raw 벌크 버퍼)**:
-   - 초당 수 기가바이트의 비전 카메라 검사 영상이나 초음파 고속 아날로그 파형 데이터를 복사 없이 포인터로 직결.
+| 계층 | 기술 / 프로토콜 | 주 사용처 | 실시간성 분류 (Determinism Class) | 달성 전제 조건 (OS / HW / 튜닝) | Kable 현재 지원 상태 | Kable 연동 권장 방안 |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| **PC 내부 IPC** | **1. Named Pipe IPC** | 프로세스 격리 (Daemon 연동) | **Soft Real-Time** | 일반 OS 커널, 블로킹 I/O | **✅ 기본 제공** | `UseNamedPipe()` 기본 탑재 |
+| | **2. 프로세스 간 MMF SharedQueue** | 초고속 락프리 IPC | **Soft Real-Time** | MMF 링버퍼, CPU 코어 격리 | ❌ **프로세스 간 미지원**<br/>*(단, In-Process SPSC 큐는 보유)* | **[Phase 2]** 별도 어댑터로 검토 |
+| | **3. Shared Memory (MMF Raw Bulk)**| 비전 영상, 파형 데이터 | **Best Effort** (대용량 전송) | 가상 메모리 매핑, 페이징 고려 | ❌ **미지원** | 초고속 파형 버퍼 어댑터 검토 |
+| **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | **Best Effort** | 일반 네트워크 스위치, Nagle Off | **✅ 기본 제공** | `UseTcp()` 기본 탑재 |
+| | **5. gRPC (HTTP/2 + Protobuf)** | 모듈 간 RPC 및 원격 제어 | **Soft Real-Time** | LAN 환경, HTTP/2 멀티플렉싱 | ❌ **미지원** | **[Phase 2]** `Kable.Integrations.Grpc` |
+| | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | OPC UA .NET Standard 스택 | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.OpcUa` |
+| | **7. DDS (Data Distribution)** | 분산 실시간 제어 버스 | **Hard / Soft Real-Time** | 실시간 OS 또는 QoS 튜닝 전제 | ❌ **미지원** | 필요 시 외부 바인딩 연동 |
+| | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | 경량 브로커(Broker) 인프라 | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.Mqtt` |
+| **필드버스 / 구동계** | **9. RS-232C / RS-485** | 시리얼 펌프, 센서, 유량계 | **Soft Real-Time** | 점대점/반이중 타이밍 제어 필요 | **✅ 직렬 포트 제공** | `UseSerialPort()` 기본 탑재 |
+| | **10. EtherCAT** | 초정밀 서보 모터, 실시간 IO | **Hard Real-Time** *(마스터 조건부)* | **전용 실시간 OS/코어, Intel NIC, DC** | ❌ **직접 구현 비대상** | 외부 마스터(SOEM 등) 연동 |
+| | **11. PROFINET (IRT)** | 지멘스 PLC 기반 산업 라인 | **Hard Real-Time** *(IRT 조건부)* | 지멘스 통신 ASIC/인터페이스 보드 | ❌ **직접 구현 비대상** | PLC 게이트웨이 연동 |
+| | **12. EtherNet/IP (CIP Safety)**| 로크웰 PLC 기반 안전 공정 | **기능 안전 연동** *(SIL 3 적용 지원)* | **인증된 안전 하드웨어 및 안전 루프 입증** | ❌ **직접 구현 비대상** | 공인 안전 컨트롤러 연동 |
+| | **13. CC-Link IE TSN** | 일본/국내 반도체 라인 | **Hard Real-Time** *(TSN 조건부)* | TSN 전용 스위치 및 인터페이스 보드 | ❌ **직접 구현 비대상** | 전용 보드 드라이버 연동 |
 
-### 3.2 분산 PC 및 상위 시스템 연동 (High-Level Network)
-1. **gRPC (HTTP/2 + Protocol Buffers)**:
-   - 현대 소프트웨어 장비 제어의 사실상 표준.
-   - 강타입(Strongly-Typed) 계약으로 클라이언트-서버 간 데이터 규격 불일치를 컴파일 타임에 원천 차단.
-2. **OPC UA over TSN**:
-   - 반도체/스마트팩토리 표준(IEC 62541). 장비 내부 변수와 객체를 표준 트리 구조로 탐색 및 보안 암호화 통신.
-3. **DDS (Data Distribution Service)**:
-   - 중앙 서버/브로커 없이 장비 내 모든 노드가 P2P로 데이터를 주고받으며, 22가지의 세부 QoS(신뢰도, 지연시간, 수명)를 설정 가능.
-
-### 3.3 물리 구동계 필드버스 (Hard Real-Time Fieldbus)
-1. **EtherCAT (최고 권장 / 글로벌 표준)**:
-   - 일반 이더넷 프레임이 슬레이브 노드를 통과하는 동안 데이터를 실시간으로 읽고 쓰는 'Processing-on-the-fly' 구조.
-   - 100마이크로초 이내에 수십 축 모터의 위치를 완전 동기화 (지터 < 1µs).
-   - 마스터 구축 시 고가의 전용 하드웨어 보드 없이 일반 PC 랜카드(NIC)로 구동 가능하여 비용과 성능 모두 최상.
-2. **CIP Safety (EtherNet/IP) / PROFINET IRT**:
-   - 지멘스(PROFINET) 또는 로크웰(EtherNet/IP) PLC 기반 공정에서 널리 사용.
-   - 별도 하드웨어 배선 없이 소프트웨어 통신 패킷만으로 SIL 3 / PLe 기능 안전(EMO 비상정지) 인증 충족.
-3. **Modbus-RTU / RS-485**:
-   - 초고속 모션 제어에는 부적합하나, 펌프, 유량계, 압력 센서 등 주기적 상태 모니터링 및 설정 변경에 가장 저렴하고 안정적인 전통 필드버스.
+> [!NOTE]
+> **실시간성 분류 기준**:
+> - **Hard Real-Time**: 데드라인 위반 시 시스템 실패로 간주되는 영역. 일반 윈도우 OS 단독으로는 불가하며, 전용 실시간 확장(RTOS/RT-Extension), CPU 코어 격리, 전용 NIC가 필수 전제됨.
+> - **Soft Real-Time**: 통상 수 ms 이내에 처리되나 통계적 편차(지터)가 허용되는 제어 영역 (대부분의 펌프, 밸브, 비전 트리거 등).
+> - **Best Effort**: 처리 지연시간에 대한 엄격한 보장 없이 대역폭 기반으로 전송되는 영역 (대용량 로그, 영상 스트림 등).
 
 ---
 
-### 3.4 IPC 통신 설계 심층 비교: Named Pipe vs SharedQueue (명령 vs 데이터 분리)
+## 3. IPC 통신 아키텍처: 명령(Command)과 대용량 데이터의 분리
 
-장비 제어 아키텍처에서 IPC를 설계할 때 **명령(Command)**과 **데이터(Telemetry/Bulk Data)**의 특성을 분리하여 접근해야 합니다:
+단일 PC 내에서 장비 UI/오케스트레이터와 하드웨어 드라이버 데몬 간 통신 시, 부하 특성에 따라 채널을 분리하는 구조가 권장됩니다.
 
-| 비교 항목 | **명령/제어 채널 (Command)** | **대용량 데이터 채널 (Bulk Data)** |
-| :--- | :--- | :--- |
-| **최적 추천 기술** | **`Named Pipe IPC` (강력 권장)** | **`Shared Memory (MMF Raw Bulk)`** |
-| **핵심 요구사항** | • 요청-응답(ACK/NACK) 트랜잭션 보장<br/>• 프로세스 크래시 시 0ms 즉각 단선 감지(Fail-Fast)<br/>• 완벽한 순서 보장(FIFO) 및 OS 수준 안정성 | • 마이크로초(µs) 미만 제로카피 접근<br/>• 대용량 고속 파형(Waveform)/영상 버퍼<br/>• GC 힙 할당 0% (`Span<byte>` 포인터) |
-| **SharedQueue를 쓰지 않는 이유** | • `SharedQueue`는 락프리 링버퍼로 속도는 빠르나(1µs 미만), 프로세스 비정상 종료 시 좀비 락/메모리 오염 위험 존재.<br/>• 명령/제어는 10~30µs 수준의 Named Pipe로도 기계 응답 대비 완벽한 실시간이며, 안전성이 훨씬 중요함. | • 고정 크기 슬롯(Fixed-size Slot) 링버퍼가 아니면 가변 길이 데이터 처리가 복잡함. 대용량 버퍼는 Raw MMF 포인터가 직관적. |
-| **최종 하이브리드 결론** | **[명령] Named Pipe** + **[데이터] Shared Memory (MMF)** 하이브리드 조합이 산업용 표준 정답 |
+```mermaid
+graph LR
+    subgraph HostProcess ["장비 메인 프로세스 (GUI / Recipe)"]
+        CmdClient["명령 송신 / 응답 대기"]
+        DataViewer["데이터 읽기 (Zero-Copy)"]
+    end
+
+    subgraph Channel1 ["1. 명령/제어 채널 (Named Pipe)"]
+        Pipe["Named Pipe (Kable 기본 지원)<br/>- Start, Stop, SetRpm 지령<br/>- EOF / 세션 Watchdog 단선 감지"]
+    end
+
+    subgraph Channel2 ["2. 대용량 데이터 채널 (Shared Memory)"]
+        MMF["MemoryMappedFile (공유 메모리)<br/>- 펌프 고주파 압력/유량 파형 버퍼<br/>- 초당 수천 회 계측 텔레메트리"]
+    end
+
+    subgraph DaemonProcess ["하드웨어 데몬 (Pump Service / Driver)"]
+        CmdServer["명령 수신 및 디스패치"]
+        DataWriter["Span 포인터 메모리 기록"]
+    end
+
+    CmdClient <-->|Request-Response| Pipe <--> CmdServer
+    DataWriter -->|Zero-Copy 메모리 공유| MMF -->|직접 읽기| DataViewer
+```
+
+### 3.1 Named Pipe vs SharedQueue 비교 분석
+- **Named Pipe**:
+  - **장점**: OS 커널 레벨에서 스트림 라이프사이클을 관리하므로 상대 프로세스 크래시 시 예외 감지가 명확하며, 요청-응답 트랜잭션 구현이 단순합니다.
+  - **적용**: 펌프 구동/정지, 파라미터 변경, 상태 질의 등 **명령/제어 채널**.
+- **프로세스 간 SharedQueue (MMF SPSC RingBuffer)**:
+  - **장점**: 시스템 콜(Syscall) 오버헤드가 없어 초고속 메시지 전달에 유리합니다.
+  - **주의사항**: 송신 프로세스가 비정상 종료되었을 때 메모리 락 상태 복구, 순환 큐 포인터 재정렬 등 복잡한 안전장치가 요구됩니다.
+  - **Kable 코드 현황**: 현재 Kable에는 인메모리 단일 프로세스용 `SpscRingBuffer<T>`([SpscRingBuffer.cs](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/src/Kable.Engine.Disruptor/SpscRingBuffer.cs))가 구현되어 있으며, **프로세스 간(Inter-Process) MMF 기반 SharedQueue는 향후 벤치마크 검증 후 도입할 확장 검토 항목**입니다.
+
+### 3.2 IPC 성능 지표 및 벤치마크 계획
+IPC 지연 시간은 절대 수치가 아니며, 실행 환경에 따라 크게 좌우됩니다. Kable은 향후 다음과 같은 조건 하에 정량 지표를 측정할 계획입니다:
+- **측정 시나리오**: 단일 요청-응답 왕복 지연시간 (Round-Trip Latency)
+- **지표 항목**: p50, p99, p99.9 백분위수 지연시간
+- **환경 변수**: 메시지 크기 (64B, 1KB, 64KB), CPU Affinity(코어 고정 여부), OS 부하 상태 (유휴 vs 고부하)
 
 ---
 
-### 3.5 물리 필드버스 / 구동계 선정 가이드: "어떤 것이 가장 좋은가?"
+## 4. 물리 필드버스 및 구동계 통신 가이드
 
-현대 반도체/정밀 제조 장비에서 구동계 필드버스는 **목적에 따라 명확히 2가지로 양분**됩니다:
+### 4.1 모션 제어 vs 유체/센서 통신의 현실적 분리
+1. **초정밀 다축 모션 제어 (로봇 암, 웨이퍼 얼라이너, 서보 드라이브)**:
+   - **산업 표준 기술**: **EtherCAT**
+   - **현실적 제약**: EtherCAT은 표준 이더넷 하드웨어를 활용할 수 있으나, **1µs 미만의 지터와 동기화를 달성하려면 Real-Time OS(또는 Windows RT 확장의 코어 격리), 전용 NIC 드라이버, Distributed Clocks(DC) 설정 및 실제 계측 검증**이 반드시 전제되어야 합니다.
+   - **Kable의 연동 방식**: Kable이 소프트웨어 레벨에서 직접 EtherCAT 마스터를 구현하기보다는, 상용/오픈소스 EtherCAT 마스터 소프트웨어(SOEM 등)가 제어하는 상태를 읽고 쓰는 **브리지 어댑터** 형태로 연동하는 것이 안전합니다.
+2. **유체 / 화학 / 환경 센서 제어 (세정 펌프, 유량계, 압력계, 밸브)**:
+   - **산업 표준 기술**: **Modbus-RTU / RS-485**
+   - **특징**: 펌프 RPM 지령, 압력 조회 등은 50~100ms 주기의 소프트 실시간으로 충분하며, 화학/반도체 유체 장비의 절대 다수가 RS-485 Modbus를 지원하므로 비용과 안정성 면에서 가장 실용적입니다.
+3. **기능 안전(Safety) 통신 주의사항 (CIP Safety / PROFINET IRT)**:
+   - CIP Safety는 네트워크 프로토콜 차원에서 안전 통신(SIL 3 수준)을 정의하지만, **시스템 전체의 안전성은 인증된 안전 PLC, 안전 I/O 모듈, 비상정지 회로 및 국제 인증(IEC 61508) 검증을 거쳐 별도로 입증**되어야 합니다.
+   - Kable은 비안전 통신 계층이므로, 하드웨어 E-Stop 라인과 공인 안전 컨트롤러를 대체할 수 없습니다.
+
+---
+
+## 5. Kable의 패키지 분리 및 단계별 로드맵 (Roadmap)
+
+Kable의 코어 계층은 순수 **0-GC 바이트 스트림 파이프라인(`System.IO.Pipelines`)**에만 집중하며, 상위 프로토콜 및 하드웨어 버스는 **독립 확장 패키지(Integrations)**로 분리합니다.
 
 ```mermaid
 graph TD
-    subgraph PC ["산업용 제어 PC (C# Host / HardwareManager)"]
-        HostEngine["장비 통합 제어 소프트웨어"]
+    subgraph CoreEngine ["Kable.Core & Kable (순수 비안전 통신 엔진)"]
+        Transport["IConnectionContext (Tcp, Serial, NamedPipe)"]
+        Codec["IProtocolCodec (0-GC Framing, ModbusRtuCodec)"]
+        Session["IDeviceSession (Reactive Request/Stream)"]
     end
 
-    subgraph FastBus ["1. 초정밀 모션 / 고속 IO 버스"]
-        EtherCAT["★ EtherCAT (압도적 1위 권장)<br/>- 웨이퍼 이송 로봇, 정밀 얼라이너, 서보 모터<br/>- 지터 < 1µs, 실시간 궤적 동기화<br/>- 일반 PC 랜카드로 마스터 구동 가능"]
+    subgraph Integrations ["Kable.Integrations.* (별도 확장 패키지)"]
+        P2_Grpc["Kable.Integrations.Grpc (gRPC 클라이언트/서버 어댑터)"]
+        P2_Mmf["Kable.Integrations.SharedMemory (MMF 파형 버퍼)"]
+        P3_Opc["Kable.Integrations.OpcUa (OPC UA 노드 브리지)"]
+        P3_Mqtt["Kable.Integrations.Mqtt (Sparkplug B 텔레메트리)"]
     end
 
-    subgraph SlowBus ["2. 유체 / 약액 / 공정 센서 버스"]
-        SerialBus["Modbus-RTU / RS-485 (비용 효율 1위)<br/>- 약액 공급 펌프(Levitronix BPS), 유량계, 압력계<br/>- 10~100ms 단위 저속 지령에 최적<br/>- 노이즈 내성 우수 및 전 세계 유체기기 표준"]
-    end
-
-    HostEngine -->|실시간 고속 모션| EtherCAT
-    HostEngine -->|유체 펌프 / 밸브| SerialBus
+    CoreEngine --> Integrations
 ```
 
-1. **초정밀 모션 제어 (로봇, 서보 모터, 얼라이너)**: 👉 **`EtherCAT`이 압도적으로 가장 좋습니다.**
-   - **이유 1**: 독점 하드웨어 전용 칩셋이 필요한 다른 필드버스와 달리, **일반 PC 메인보드의 인텔 이더넷 랜카드(NIC)를 소프트웨어 마스터(SOEM 등)로 바로 사용**할 수 있어 비용과 확장성이 뛰어납니다.
-   - **이유 2**: 지터가 1µs 미만으로 여러 축 모터 간의 완벽한 물리적 위치 동기화가 가능합니다.
-2. **유체/화학/센서 제어 (펌프, 유량계, 압력 센서, 히터)**: 👉 **`Modbus-RTU / RS-485`가 가장 실용적이고 좋습니다.**
-   - 화학 약액 펌프(Levitronix BPS, 시린지 펌프)나 유량 센서는 모터처럼 1ms 동기화가 필요 없으며(응답 주기 50~100ms), 전 세계 화학/유체 장비의 95%가 RS-485 Modbus를 표준 인터페이스로 채택하고 있습니다.
-3. **공장 라인 전체가 지멘스/로크웰 PLC 중심일 때**:
-   - 지멘스 중심 라인: **`PROFINET (IRT)`**
-   - 로크웰(AB) 중심 라인: **`EtherNet/IP (CIP Safety)`** (소프트웨어 비상정지 SIL 3 공인)
-
-## 4. Kable의 단계별 진화 로드맵 (Expansion Roadmap)
-
-```mermaid
-graph TD
-    subgraph Current ["Kable 현재 지원 (v1.0)"]
-        K1["System.IO.Pipelines (0-GC Engine)"]
-        K2["Raw TCP/IP Socket (UseTcp)"]
-        K3["Serial Port RS-232/485 (UseSerialPort)"]
-        K4["NamedPipe IPC (UseNamedPipe)"]
-    end
-
-    subgraph Phase2 ["Kable 2단계 확장 (Software IPC 고도화)"]
-        P2_1["gRPC 양방향 스트리밍 어댑터"]
-        P2_2["Shared Memory (MMF) 초고속 버퍼 채널"]
-    end
-
-    subgraph Phase3 ["Kable 3단계 확장 (스마트 팩토리 & 산업 표준)"]
-        P3_1["OPC UA Client 통신 세션 지원"]
-        P3_2["MQTT / Sparkplug B 텔레메트리 송출기"]
-    end
-
-    Current --> Phase2
-    Phase2 --> Phase3
-```
-
-- **Phase 1 (완료)**: `Serial`, `TCP`, `NamedPipe`를 아우르는 0-GC 리액티브 파이프라인.
-- **Phase 2 (단기 계획)**: 장비 프로세스 격리 및 원격 시뮬레이터를 위한 **`gRPC Transport 어댑터`** 개발.
-- **Phase 3 (중장기 계획)**: 스마트 캐비닛 및 공장 상위 연동을 위한 **`OPC UA` / `MQTT Sparkplug B` 커넥터** 모듈화.
+- **v1.2.0 (현재 완료)**:
+  - `System.IO.Pipelines` 기반 0-GC 세션 엔진.
+  - 기본 Transport 어댑터 (`UseTcp`, `UseSerialPort`, `UseNamedPipe`).
+  - 인메모리 `SpscRingBuffer<T>` 및 `ModbusRtuCodec` (CRC-16 자동화).
+- **Phase 2 (단기 확장 계획)**:
+  - `Kable.Integrations.Grpc`: PC 간 프로세스 격리 및 원격 시뮬레이터를 위한 gRPC 양방향 스트리밍 어댑터.
+  - `Kable.Integrations.SharedMemory`: 고주파 아날로그 파형 수집을 위한 프로세스 간 MMF 버퍼 채널.
+- **Phase 3 (중장기 확장 계획)**:
+  - `Kable.Integrations.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
+  - `Kable.Integrations.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
