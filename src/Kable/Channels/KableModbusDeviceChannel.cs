@@ -42,11 +42,30 @@ public sealed class KableModbusDeviceChannel : IKableModbusChannel
         _unitId = unitId;
     }
 
+    public async Task OpenAsync(CancellationToken ct = default)
+    {
+        if (_context == null)
+        {
+            _context = await _factory.ConnectAsync(ct).ConfigureAwait(false);
+        }
+    }
+
+    public async Task CloseAsync(CancellationToken ct = default)
+    {
+        if (_context != null)
+        {
+            await _context.DisposeAsync().ConfigureAwait(false);
+            _context = null;
+        }
+    }
+
+    [Obsolete("Use OpenAsync instead to avoid UI deadlocks.")]
     public void Open()
     {
         _context ??= _factory.ConnectAsync().GetAwaiter().GetResult();
     }
 
+    [Obsolete("Use CloseAsync instead to avoid UI deadlocks.")]
     public void Close()
     {
         if (_context != null)

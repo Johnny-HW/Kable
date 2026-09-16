@@ -1,9 +1,9 @@
 namespace Kable.Engine;
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -22,7 +22,11 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
 
     private readonly SemaphoreSlim _fifoLock = new(1, 1);
     private readonly ConcurrentDictionary<string, TaskCompletionSource<TMessage>> _pendingRequests = new();
+
+    // Telemetry/Unsolicited stream
     private readonly Channel<TMessage> _incomingStream = Channel.CreateUnbounded<TMessage>(new UnboundedChannelOptions { SingleWriter = true });
+
+    // Inbound Dispatch Queue
     private readonly Channel<TMessage> _dispatchQueue = Channel.CreateBounded<TMessage>(new BoundedChannelOptions(10000)
     {
         FullMode = BoundedChannelFullMode.Wait,
@@ -30,9 +34,18 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
         SingleReader = true
     });
 
+    // P0: Single Outbound Writer Queue (Urgent prioritised)
+    private readonly Channel<OutboundCommand> _outboundUrgentQueue = Channel.CreateUnbounded<OutboundCommand>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Channel<OutboundCommand> _outboundNormalQueue = Channel.CreateBounded<OutboundCommand>(new BoundedChannelOptions(5000)
+    {
+        FullMode = BoundedChannelFullMode.Wait,
+        SingleReader = true
+    });
+
     private IConnectionContext? _context;
     private Task? _readLoopTask;
     private Task? _dispatchLoopTask;
+    private Task? _outboundPumpTask;
     private TaskCompletionSource<TMessage>? _currentFifoTcs;
     private readonly CancellationTokenSource _sessionCts = new();
     private readonly HeartbeatOptions<TMessage>? _heartbeatOptions;
@@ -75,6 +88,7 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
         _context = await _connectionFactory.ConnectAsync(ct).ConfigureAwait(false);
         _context.ConnectionClosed.Register(OnConnectionClosed);
         Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
+        _outboundPumpTask = Task.Run(OutboundPumpLoopAsync);
         _dispatchLoopTask = Task.Run(DispatchLoopAsync);
         _readLoopTask = Task.Run(ReadLoopAsync);
 
@@ -87,8 +101,9 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
     public async ValueTask SendAsync(TMessage message, CancellationToken ct = default)
     {
         EnsureConnected();
-        _codec.Encode(message, _context!.Output);
-        await _context.Output.FlushAsync(ct).ConfigureAwait(false);
+        var cmd = new OutboundCommand(message, isUrgent: false);
+        await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
+        await cmd.Completion.Task.ConfigureAwait(false);
 
         _observer?.OnPacketTrace(new PacketTraceRecord(
             DateTime.UtcNow, PacketDirection.Tx, TrafficKind.AperiodicCommand,
@@ -108,19 +123,9 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
                 var tcs = new TaskCompletionSource<TMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _currentFifoTcs = tcs;
 
-                _codec.Encode(request, _context!.Output);
-                try
-                {
-                    await _context.Output.FlushAsync(ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is System.IO.IOException or System.Net.Sockets.SocketException)
-                {
-                    _observer?.OnPacketTrace(new PacketTraceRecord(
-                        DateTime.UtcNow, PacketDirection.Tx, TrafficKind.SpontaneousAlarm,
-                        "IO_FLUSH_ERROR", ReadOnlyMemory<byte>.Empty, ex.Message, sw.GetElapsedTime(), LogLevel.Error));
-                    OnConnectionClosed();
-                    throw new DeviceDisconnectedException("Hardware connection was lost during data transmission.", ex);
-                }
+                var cmd = new OutboundCommand(request, isUrgent: false);
+                await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
+                await cmd.Completion.Task.ConfigureAwait(false);
 
                 using var timeoutCts = new CancellationTokenSource(timeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
@@ -164,19 +169,9 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
 
             try
             {
-                _codec.Encode(request, _context!.Output);
-                try
-                {
-                    await _context.Output.FlushAsync(ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is System.IO.IOException or System.Net.Sockets.SocketException)
-                {
-                    _observer?.OnPacketTrace(new PacketTraceRecord(
-                        DateTime.UtcNow, PacketDirection.Tx, TrafficKind.SpontaneousAlarm,
-                        "IO_FLUSH_ERROR", ReadOnlyMemory<byte>.Empty, ex.Message, sw.GetElapsedTime(), LogLevel.Error));
-                    OnConnectionClosed();
-                    throw new DeviceDisconnectedException("Hardware connection was lost during data transmission.", ex);
-                }
+                var cmd = new OutboundCommand(request, isUrgent: false);
+                await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
+                await cmd.Completion.Task.ConfigureAwait(false);
 
                 using var timeoutCts = new CancellationTokenSource(timeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
@@ -211,47 +206,143 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
     public async ValueTask SendUrgentAsync(TMessage urgentMessage)
     {
         EnsureConnected();
-        _codec.Encode(urgentMessage, _context!.Output);
-        await _context.Output.FlushAsync().ConfigureAwait(false);
+        var cmd = new OutboundCommand(urgentMessage, isUrgent: true);
+        _outboundUrgentQueue.Writer.TryWrite(cmd);
+        await cmd.Completion.Task.ConfigureAwait(false);
 
         _observer?.OnPacketTrace(new PacketTraceRecord(
             DateTime.UtcNow, PacketDirection.Tx, TrafficKind.AperiodicCommand,
             "URGENT_OOB", ReadOnlyMemory<byte>.Empty, urgentMessage?.ToString(), TimeSpan.Zero, LogLevel.Critical));
     }
 
-    private async Task ReadLoopAsync()
+    /// <summary>
+    /// P0: Single Outbound Writer Pump Loop.
+    /// Serializes access to PipeWriter, prioritizes urgent messages, and batches flush calls.
+    /// </summary>
+    private async Task OutboundPumpLoopAsync()
     {
-        var reader = _context!.Input;
+        var output = _context!.Output;
+        var token = _sessionCts.Token;
+
         try
         {
-            while (!_sessionCts.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
-                var result = await reader.ReadAsync(_sessionCts.Token).ConfigureAwait(false);
+                OutboundCommand cmd;
+
+                // 1. Check Urgent Queue first
+                if (!_outboundUrgentQueue.Reader.TryRead(out cmd!))
+                {
+                    // If no urgent, wait for whichever comes first
+                    var urgentWait = _outboundUrgentQueue.Reader.WaitToReadAsync(token).AsTask();
+                    var normalWait = _outboundNormalQueue.Reader.WaitToReadAsync(token).AsTask();
+
+                    var readyTask = await Task.WhenAny(urgentWait, normalWait).ConfigureAwait(false);
+                    if (!await readyTask.ConfigureAwait(false))
+                    {
+                        break;
+                    }
+
+                    if (!_outboundUrgentQueue.Reader.TryRead(out cmd!) &&
+                        !_outboundNormalQueue.Reader.TryRead(out cmd!))
+                    {
+                        continue;
+                    }
+                }
+
+                // 2. Encode primary message
+                var commandsToComplete = new List<OutboundCommand>(8) { cmd };
+                _codec.Encode(cmd.Message, output);
+
+                // 3. Batching: drain any currently pending messages before triggering syscall flush
+                while (_outboundUrgentQueue.Reader.TryRead(out var queuedUrgent))
+                {
+                    commandsToComplete.Add(queuedUrgent);
+                    _codec.Encode(queuedUrgent.Message, output);
+                }
+
+                while (commandsToComplete.Count < 32 && _outboundNormalQueue.Reader.TryRead(out var queuedNormal))
+                {
+                    commandsToComplete.Add(queuedNormal);
+                    _codec.Encode(queuedNormal.Message, output);
+                }
+
+                // 4. Single consolidated FlushAsync
+                try
+                {
+                    var flushResult = await output.FlushAsync(token).ConfigureAwait(false);
+                    foreach (var c in commandsToComplete)
+                    {
+                        c.Completion.TrySetResult(true);
+                    }
+
+                    if (flushResult.IsCompleted || flushResult.IsCanceled)
+                    {
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Exception translatedEx = ex;
+                    if (ex is System.IO.IOException or System.Net.Sockets.SocketException)
+                    {
+                        translatedEx = new DeviceDisconnectedException("Hardware connection was lost during data transmission.", ex);
+                    }
+
+                    foreach (var c in commandsToComplete)
+                    {
+                        c.Completion.TrySetException(translatedEx);
+                    }
+                    throw;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal cooperative exit
+        }
+        catch (Exception ex)
+        {
+            _observer?.OnPacketTrace(new PacketTraceRecord(
+                DateTime.UtcNow, PacketDirection.Tx, TrafficKind.SpontaneousAlarm,
+                "IO_FLUSH_ERROR", ReadOnlyMemory<byte>.Empty, ex.Message, TimeSpan.Zero, LogLevel.Error));
+            OnConnectionClosed();
+        }
+    }
+
+    private async Task ReadLoopAsync()
+    {
+        var input = _context!.Input;
+        var token = _sessionCts.Token;
+
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                var result = await input.ReadAsync(token).ConfigureAwait(false);
                 var buffer = result.Buffer;
 
                 while (_codec.TryDecode(ref buffer, out var message))
                 {
-                    // Non-blocking priority enqueue into dedicated dispatch queue without stalling I/O pump
-                    if (!_dispatchQueue.Writer.TryWrite(message))
-                    {
-                        await _dispatchQueue.Writer.WriteAsync(message, _sessionCts.Token).ConfigureAwait(false);
-                    }
+                    Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
+                    await _dispatchQueue.Writer.WriteAsync(message, token).ConfigureAwait(false);
                 }
 
-                reader.AdvanceTo(buffer.Start, buffer.End);
+                input.AdvanceTo(buffer.Start, buffer.End);
                 if (result.IsCompleted || result.IsCanceled) break;
             }
         }
         catch (OperationCanceledException)
         {
-            // Normal cooperative cancellation - no error log needed
+            // Normal cooperative cancellation
         }
         catch (Exception ex)
         {
-            // Log unexpected read-loop terminations (Socket reset, broken pipe, codec crash)
             _observer?.OnPacketTrace(new PacketTraceRecord(
                 DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                "READ_LOOP_FAULT", ReadOnlyMemory<byte>.Empty, $"{ex.GetType().Name}: {ex.Message}", TimeSpan.Zero, LogLevel.Error));
+                "READ_LOOP_FAULT", ReadOnlyMemory<byte>.Empty,
+                $"{ex.GetType().Name}: {ex.Message}", TimeSpan.Zero, LogLevel.Error));
+            OnConnectionClosed();
         }
         finally
         {
@@ -263,6 +354,7 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
     private async Task DispatchLoopAsync()
     {
         var reader = _dispatchQueue.Reader;
+
         try
         {
             while (await reader.WaitToReadAsync(_sessionCts.Token).ConfigureAwait(false))
@@ -285,7 +377,7 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
         }
         catch (OperationCanceledException)
         {
-            // Normal cooperative cancellation - no error log needed
+            // Normal cooperative cancellation
         }
         catch (Exception ex)
         {
@@ -296,7 +388,6 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
         }
         finally
         {
-            // Drain remaining in-flight packets safely with isolation
             while (reader.TryRead(out var residualMessage))
             {
                 try
@@ -320,10 +411,10 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
 
         if (_heartbeatOptions?.IsPongResponse != null && _heartbeatOptions.IsPongResponse(message))
         {
-            // Handled as heartbeat pong
             return;
         }
 
+        // Autonomous / Unsolicited stream check
         if (_codec.IsAutonomousMessage(message))
         {
             _incomingStream.Writer.TryWrite(message);
@@ -333,15 +424,8 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
             return;
         }
 
-        if (!_codec.SupportsCorrelationId)
-        {
-            if (_currentFifoTcs != null && !_currentFifoTcs.Task.IsCompleted)
-            {
-                _currentFifoTcs.TrySetResult(message);
-                return;
-            }
-        }
-        else
+        // P1: Correlation Matching First (Lowest Tail Latency)
+        if (_codec.SupportsCorrelationId)
         {
             var cid = _codec.ExtractCorrelationId(message);
             if (cid != null && _pendingRequests.TryRemove(cid, out var tcs))
@@ -350,54 +434,66 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
                 return;
             }
         }
+        else
+        {
+            if (_currentFifoTcs != null && !_currentFifoTcs.Task.IsCompleted)
+            {
+                _currentFifoTcs.TrySetResult(message);
+                return;
+            }
+        }
 
-        // Publish to incoming stream channel if no request is awaiting response
+        // Fallback to incoming stream
         _incomingStream.Writer.TryWrite(message);
+        _observer?.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+            "STREAM", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
     }
 
     private async Task HeartbeatLoopAsync()
     {
         if (_heartbeatOptions == null) return;
+        var checkInterval = TimeSpan.FromMilliseconds(Math.Max(100, _heartbeatOptions.Interval.TotalMilliseconds / 2));
 
         try
         {
-            while (!_sessionCts.IsCancellationRequested)
+            while (!_sessionCts.Token.IsCancellationRequested)
             {
-                await Task.Delay(_heartbeatOptions.Interval, _sessionCts.Token).ConfigureAwait(false);
+                await Task.Delay(checkInterval, _sessionCts.Token).ConfigureAwait(false);
 
-                long lastTicks = Volatile.Read(ref _lastInboundTicks);
-                var elapsed = DateTime.UtcNow - new DateTime(lastTicks, DateTimeKind.Utc);
+                var lastTicks = Volatile.Read(ref _lastInboundTicks);
+                var elapsed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - lastTicks);
 
                 if (elapsed > _heartbeatOptions.Timeout)
                 {
-                    // Device is unresponsive: trigger immediate disconnect
                     _observer?.OnPacketTrace(new PacketTraceRecord(
                         DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                         "HEARTBEAT_TIMEOUT", ReadOnlyMemory<byte>.Empty,
-                        $"Device heartbeat timed out after {elapsed.TotalMilliseconds:F1}ms.", TimeSpan.Zero, LogLevel.Error));
+                        $"Heartbeat timeout. No inbound traffic for {elapsed.TotalMilliseconds:F0}ms (limit: {_heartbeatOptions.Timeout.TotalMilliseconds:F0}ms).",
+                        elapsed, LogLevel.Critical));
 
-                    _context?.Abort("Heartbeat timeout");
                     OnConnectionClosed();
                     break;
                 }
 
-                // Send Ping
+                // Send Ping via Outbound queue
                 try
                 {
                     var pingMsg = _heartbeatOptions.PingFactory();
-                    _codec.Encode(pingMsg, _context!.Output);
-                    await _context.Output.FlushAsync(_sessionCts.Token).ConfigureAwait(false);
+                    var cmd = new OutboundCommand(pingMsg, isUrgent: false);
+                    if (_outboundNormalQueue.Writer.TryWrite(cmd))
+                    {
+                        await cmd.Completion.Task.ConfigureAwait(false);
+                    }
                 }
                 catch (Exception)
                 {
-                    // Ping send failed, will be captured by connection closed
                     break;
                 }
             }
         }
         catch (OperationCanceledException)
         {
-            // Cooperative cancellation
         }
     }
 
@@ -413,6 +509,8 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
             }
             _pendingRequests.Clear();
             _incomingStream.Writer.TryComplete(ex);
+            _outboundNormalQueue.Writer.TryComplete(ex);
+            _outboundUrgentQueue.Writer.TryComplete(ex);
         }
     }
 
@@ -429,9 +527,9 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
         _sessionCts.Cancel();
         OnConnectionClosed();
 
-        // Graceful Join: wait up to 2 seconds for I/O pump and dispatch loop to complete
         var tasksToWait = new List<Task>();
         if (_readLoopTask != null) tasksToWait.Add(_readLoopTask);
+        if (_outboundPumpTask != null) tasksToWait.Add(_outboundPumpTask);
         if (_dispatchLoopTask != null) tasksToWait.Add(_dispatchLoopTask);
         if (_heartbeatTask != null) tasksToWait.Add(_heartbeatTask);
 
@@ -458,5 +556,18 @@ public sealed class KableSession<TMessage> : IDeviceSession<TMessage>
     public void Dispose()
     {
         DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    private sealed class OutboundCommand
+    {
+        public TMessage Message { get; }
+        public bool IsUrgent { get; }
+        public TaskCompletionSource<bool> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public OutboundCommand(TMessage message, bool isUrgent)
+        {
+            Message = message;
+            IsUrgent = isUrgent;
+        }
     }
 }

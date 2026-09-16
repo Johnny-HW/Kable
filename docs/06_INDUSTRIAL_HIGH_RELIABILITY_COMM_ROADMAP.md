@@ -144,3 +144,32 @@ graph TD
 - **Phase 3 (중장기 확장 계획)**:
   - `Kable.Integrations.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
   - `Kable.Integrations.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
+
+---
+
+## 6. 공식 라이브러리 스택 선정 및 상용 라이선스 거버넌스 (Licensing Governance)
+
+Kable의 확장 어댑터 개발 시 바퀴를 재발명(Zero-base 개발)하지 않고, 마이크로소프트 및 글로벌 오픈소스 재단이 유지보수하는 **공식 표준 라이브러리(Official Standard Stacks)**를 채택합니다.
+모든 채택 라이브러리는 상용 반도체/FA 장비에 탑재되어 판매될 때 **소스코드 공개 의무가 없는(Permissive) 상용 친화적 라이선스**를 충족합니다.
+
+### 6.1 기술별 채택 공식 라이브러리 및 라이선스 매트릭스
+
+| 기술 분류 | 채택 대상 공식 패키지 (NuGet) | 개발/관리 주체 | 라이선스 형태 | 소스코드 비공개 유지 가능 여부 | 상용 장비 탑재 적합성 |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **gRPC 클라이언트** | **`Grpc.Net.Client`** | Microsoft / gRPC Authors | **Apache-2.0** | **✅ 100% 가능 (No Copyleft)** | 최상 (Windows/Linux 공식 표준) |
+| **gRPC 서버** | **`Grpc.AspNetCore.Server`** | Microsoft / gRPC Authors | **Apache-2.0** | **✅ 100% 가능 (No Copyleft)** | 최상 (Kestrel 초고속 웹서버 기반) |
+| **Protobuf 직렬화** | **`Google.Protobuf`** | Google LLC | **BSD-3-Clause** | **✅ 100% 가능 (No Copyleft)** | 최상 (이진 바이너리 0-Allocation) |
+| **Protobuf 컴파일러** | **`Grpc.Tools`** | gRPC Authors | **Apache-2.0** | **✅ 100% 가능 (빌드타임 도구)** | 최상 (C# 클래스 소스 생성기) |
+| **OPC UA 상위 연동** | **`OPCFoundation.NetStandard.Opc.Ua`** | OPC Foundation 공식 | **OPC Foundation Dual (MIT 호환)** | **✅ 100% 가능** | 글로벌 스마트팩토리 표준 충족 |
+| **MQTT 텔레메트리** | **`MQTTnet`** | MQTTnet Community | **MIT** | **✅ 100% 가능** | 경량 IoT/센서 표준 |
+
+### 6.2 상용 장비 제조사 관점의 법적 안전성 (Legal Clearance)
+
+1. **소프트웨어 지적재산권(IP) 보호 (전염성 카피레프트 제로)**:
+   - 채택된 `Apache-2.0`, `MIT`, `BSD-3-Clause` 라이선스는 GPL/AGPL과 같은 전염성(Copyleft) 조항이 전무합니다.
+   - 장비 제어 시퀀스, 레시피 알고리즘, 독점 비즈니스 로직 소스코드를 외부에 공개할 법적 의무가 일절 발생하지 않으며, **순수 비공개 상용 바이너리(DLL/EXE)로 고객사에 납품 가능**합니다.
+2. **특허권 보호 (Patent Grant in Apache 2.0)**:
+   - `Apache-2.0` 라이선스는 구글 및 마이크로소프트가 해당 소프트웨어에 기여한 기술 특허를 사용자에게 **영구적·전 세계적·무상의 특허 사용권(Patent License)**으로 부여함을 명시하고 있어, 향후 잠재적 특허 분쟁 위험을 원천 차단합니다.
+3. **법적 준수 의무 (Compliance Requirement)**:
+   - 장비 납품 매뉴얼 또는 소프트웨어 정보(About 창, License.txt 고지 파일)에 해당 패키지의 **저작권 고지문(Copyright Notice) 및 라이선스 전문 텍스트를 포함**하는 것만으로 모든 법적 의무가 완전히 종결됩니다.
+

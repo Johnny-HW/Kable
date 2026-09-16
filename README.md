@@ -78,5 +78,10 @@ string reply = await client.QueryAsync("GET:PARAM?");
 
 ---
 
-## 📄 License
-MIT License
+## 📄 License & Governance
+
+- **Core Engine & Framework**: [Apache License 2.0](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/LICENSE)
+- **Third-Party Open-Source Notices**: [THIRD_PARTY_LICENSES.md](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/THIRD_PARTY_LICENSES.md)
+- **Detailed Compliance Guide**: [07. Open-Source Licensing & Compliance Guide](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/07_OPENSOURCE_LICENSING_AND_COMPLIANCE.md)
+- **Zero-Copyleft Guarantee**: 장비 제어 시퀀스 및 독점 레시피 알고리즘의 소스코드를 외부에 공개할 필요가 전혀 없으며, 100% 비공개 상용 바이너리로 안전하게 납품 가능합니다.
+

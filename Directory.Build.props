@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -6,7 +6,7 @@
     <Version>1.2.0</Version>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
     <TieredPGO>true</TieredPGO>

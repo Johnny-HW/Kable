@@ -58,3 +58,7 @@
 ### 6. [06. Industrial High Reliability Comm Roadmap](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP.md)
 - **13 Industrial Protocols Spectrum**: EtherCAT, gRPC, OPC UA, DDS, Named Pipe, Shared Memory(MMF), PROFINET IRT, EtherNet/IP CIP Safety 등 총망라.
 - **Kable Current vs Unsupported**: 현재 지원(`Serial`, `TCP`, `NamedPipe`)과 향후 로드맵(`gRPC`, `OPC UA`, `MMF`) 명세.
+
+### 7. [07. Open-Source Licensing & Compliance Guide](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/07_OPENSOURCE_LICENSING_AND_COMPLIANCE.md)
+- **Permissive License Matrix**: `Apache-2.0`, `MIT`, `BSD-3-Clause` 기반 100% 비공개 상용 장비 탑재 안전성 보증.
+- **Compliance Checklist**: 배포 시 `THIRD_PARTY_LICENSES.txt` 작성법 및 GPL/AGPL 블랙리스트 금지 규정.

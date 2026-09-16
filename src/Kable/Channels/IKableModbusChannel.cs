@@ -15,13 +15,25 @@ public interface IKableModbusChannel : IAsyncDisposable
     bool IsOpen { get; }
 
     /// <summary>
-    /// 채널 연결 개시
+    /// 채널 비동기 연결 개시
     /// </summary>
+    Task OpenAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// 채널 비동기 연결 해제
+    /// </summary>
+    Task CloseAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// [호환성 유지용 동기 메서드 - 가급적 OpenAsync 사용 권장]
+    /// </summary>
+    [Obsolete("Use OpenAsync instead to avoid UI deadlocks.")]
     void Open();
 
     /// <summary>
-    /// 채널 연결 해제
+    /// [호환성 유지용 동기 메서드 - 가급적 CloseAsync 사용 권장]
     /// </summary>
+    [Obsolete("Use CloseAsync instead to avoid UI deadlocks.")]
     void Close();
 
     /// <summary>

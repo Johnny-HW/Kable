@@ -66,11 +66,11 @@ public class KableModbusDeviceChannelTests
 
         Assert.False(channel.IsOpen);
 
-        channel.Open();
+        await channel.OpenAsync();
         Assert.True(channel.IsOpen);
         Assert.Equal(1, factory.ConnectCount);
 
-        channel.Close();
+        await channel.CloseAsync();
         Assert.False(channel.IsOpen);
         Assert.True(factory.Context.IsDisposed);
     }
