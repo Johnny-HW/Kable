@@ -1,7 +1,7 @@
 # Kable 오픈소스 라이선스 및 거버넌스 규정 (Open-Source Licensing & Compliance Guide)
 
 > **문서 상태**: 공식 승인 (Approved)  
-> **적용 대상**: `Kable.Core`, `Kable`, `Kable.Integrations.*`, `Kable.ConfigStudio`  
+> **적용 대상**: `Kable.Core`, `Kable`, `Kable.Grpc`, `Kable.SharedMemory`, `Kable.Modbus`, `Kable.Melsec`, `Kable.Mqtt`, `Kable.OpcUa`, `Kable.ConfigStudio`  
 > **표준 문서 번호**: `KBL-LIC-2026-V1`
 
 ---
@@ -9,7 +9,7 @@
 ## 1. 라이선스 정책 개요 (Overview)
 
 반도체, 디스플레이, 첨단 2차전지 공정 장비의 소프트웨어는 **핵심 제어 시퀀스, 독점 레시피 알고리즘, 공정 노하우**를 완벽하게 보호해야 합니다.
-`Kable` 프레임워크 및 향후 확장 생태계(`Kable.Integrations.*`)는 다음과 같은 **엄격한 라이선스 거버넌스 원칙**을 따릅니다:
+`Kable` 프레임워크 및 공식 확장 생태계(`Kable.*`)는 다음과 같은 **엄격한 라이선스 거버넌스 원칙**을 따릅니다:
 
 1. **전염성(Copyleft) 완전 배제 (Zero-Copyleft Guarantee)**:
    - GPL, LGPL, AGPL, SSPL 등 장비 제조사의 독점 소스코드 공개를 강제하는 라이선스를 가진 외부 라이브러리의 참조 및 번들링을 **원천 금지**합니다.
@@ -32,12 +32,16 @@
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **`System.IO.Pipelines`** | 0-GC 세션 파이프라인 (핵심) | Microsoft (.NET Foundation) | **MIT** | **❌ 없음** | 최상 (마이크로소프트 공식 런타임) |
 | **`System.IO.Ports`** | RS-232 / RS-422 / RS-485 통신 | Microsoft (.NET Foundation) | **MIT** | **❌ 없음** | 최상 (.NET 공식 하드웨어 드라이버) |
+| **`Microsoft.Extensions.*`** | DI, Options, ILogger 인터페이스 | Microsoft (.NET Foundation) | **MIT** | **❌ 없음** | 최상 (.NET 현대 표준 DI/로깅 프레임워크) |
+| **`Kable.SharedMemory`** | Windows MMF 기반 0-Copy IPC / 파형 버퍼 | Kable Authors (자체 구현) | **Apache-2.0** | **❌ 없음** | 최상 (OS 커널 MMF/Event 직접 제어) |
+| **`Kable.Modbus`** | Modbus-TCP / RTU 필드버스 제어기 | Kable Authors (자체 구현) | **Apache-2.0** | **❌ 없음** | 최상 (순수 0-GC MBAP 코덱 구현) |
+| **`Kable.Melsec`** | 미쓰비시 Q/iQ-R PLC SLMP 3E 통신 | Kable Authors (자체 구현) | **Apache-2.0** | **❌ 없음** | 최상 (미쓰비시 무료 오픈 규격 기반) |
 | **`Grpc.Net.Client`** | PC 간 통신 / 원격 시뮬레이터 연동 | Microsoft / gRPC Authors | **Apache-2.0** | **❌ 없음** | 최상 (HTTP/2 멀티플렉싱, 특허 보증) |
 | **`Grpc.AspNetCore.Server`**| 초고속 IPC / 장비 gRPC 호스트 | Microsoft / gRPC Authors | **Apache-2.0** | **❌ 없음** | 최상 (Kestrel 웹서버 엔진 기반) |
 | **`Google.Protobuf`** | Protobuf 이진 직렬화/역직렬화 | Google LLC | **BSD-3-Clause** | **❌ 없음** | 최상 (바이너리 0-Allocation) |
 | **`Grpc.Tools`** | 빌드 타임 C# 스텁/클라이언트 생성 | gRPC Authors | **Apache-2.0** | **❌ 없음** | 최상 (컴파일 단계 코드 생성기) |
-| **`OPCFoundation.NetStandard.Opc.Ua`** | Phase 3 스마트팩토리 연동 | OPC Foundation 공식 | **OPC Dual (MIT 호환)** | **❌ 없음** | 최상 (글로벌 표준 인증 라이브러리) |
-| **`MQTTnet`** | Phase 3 설비 텔레메트리/브로커 | MQTTnet Community | **MIT** | **❌ 없음** | 최상 (경량 IoT 메시징 표준) |
+| **`OPCFoundation.NetStandard.Opc.Ua`** | Phase 3 스마트팩토리 연동 (`Kable.OpcUa`) | OPC Foundation 공식 | **OPC Dual (MIT 호환)** | **❌ 없음** | 최상 (글로벌 표준 인증 라이브러리) |
+| **`MQTTnet`** | Phase 3 설비 텔레메트리/브로커 (`Kable.Mqtt`) | MQTTnet Community | **MIT** | **❌ 없음** | 최상 (경량 IoT 메시징 표준) |
 
 ---
 
@@ -106,12 +110,20 @@ This software incorporates components from the projects listed below:
    License: BSD 3-Clause License
    Copyright 2008 Google Inc. All rights reserved.
 
-4. System.IO.Pipelines / System.IO.Ports
+4. System.IO.Pipelines / System.IO.Ports / Microsoft.Extensions.*
    License: MIT License
    Copyright (c) .NET Foundation and Contributors
 
+5. MQTTnet (Kable.Mqtt)
+   License: MIT License
+   Copyright (c) 2016-2024 Christian Kratky and MQTTnet Contributors
+
+6. OPCFoundation.NetStandard.Opc.Ua (Kable.OpcUa)
+   License: OPC Foundation Dual License (MIT Compatible)
+   Copyright (c) 1996-2024 OPC Foundation, Inc.
+
 --------------------------------------------------------------------------------
-[Full License Texts Attached Below: Apache-2.0, BSD-3-Clause, MIT]
+[Full License Texts Attached Below: Apache-2.0, BSD-3-Clause, MIT, OPC Foundation Dual]
 --------------------------------------------------------------------------------
 ```
 
