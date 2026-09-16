@@ -4,7 +4,11 @@ public enum TransportType
 {
     Serial,
     Tcp,
-    NamedPipe
+    NamedPipe,
+    ModbusTcp,
+    MelsecSlmp,
+    Mqtt,
+    OpcUa
 }
 
 public enum CodecType

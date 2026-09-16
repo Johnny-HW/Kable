@@ -98,11 +98,15 @@
                         <StackPanel>
                             <TextBlock Text="2. 통신 선로 (Transport) 선택" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,10"/>
                             
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <RadioButton Content="Serial (RS-232/485)" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
-                                <RadioButton Content="TCP/IP 소켓" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
-                                <RadioButton Content="Named Pipe (IPC)" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
-                            </StackPanel>
+                            <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <RadioButton Content="Serial" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
+                                <RadioButton Content="TCP/IP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
+                                <RadioButton Content="Named Pipe" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
+                                <RadioButton Content="Modbus-TCP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsModbusTcp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.ModbusTcp}"/>
+                                <RadioButton Content="Melsec SLMP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMelsecSlmp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.MelsecSlmp}"/>
+                                <RadioButton Content="MQTT" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMqtt}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Mqtt}"/>
+                                <RadioButton Content="OPC UA" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsOpcUa}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.OpcUa}"/>
+                            </WrapPanel>
 
                             <!-- Serial Specific Settings -->
                             <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsSerial, Converter={StaticResource BoolToVis}}">

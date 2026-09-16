@@ -19,6 +19,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
     <ProjectReference Include="..\Kable\Kable.csproj" />
+    <ProjectReference Include="..\Kable.Modbus\Kable.Modbus.csproj" />
+    <ProjectReference Include="..\Kable.Melsec\Kable.Melsec.csproj" />
+    <ProjectReference Include="..\Kable.Mqtt\Kable.Mqtt.csproj" />
+    <ProjectReference Include="..\Kable.OpcUa\Kable.OpcUa.csproj" />
   </ItemGroup>
 
 </Project>
