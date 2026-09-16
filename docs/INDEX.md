@@ -47,7 +47,14 @@
 - **Traffic Classification**: `TrafficKind` (Periodic Telemetry vs. Aperiodic Command vs. Spontaneous Alarm).
 - **`ICommObserver`**: UI responsiveness guarantee via `DropOldest` bounded ringbuffer channels.
 
-### 4. [04. Implementation & Directory Layout](file:///d:/Johnny/Kable/docs/04_IMPLEMENTATION_LAYOUT.md)
+### 4. [04. Implementation & Directory Layout](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/04_IMPLEMENTATION_LAYOUT.md)
 - **Standalone Repository**: Clean separation of `src/Kable`, `src/Kable.Generators`, and `tests/`.
 - **Pure Namespaces**: `Kable.Core/Transports/Codecs/Engine/Exceptions/Observability/Generators`.
 - **Packaging**: NuGet package consumption guide and Dependency Injection registration.
+
+### 5. [05. Industrial Checksums Specification](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/05_INDUSTRIAL_CHECKSUMS.md)
+- **CRC & Checksum**: CRC-16 (Modbus, CCITT), XOR LRC, Two's Complement 0-allocation checksum implementations.
+
+### 6. [06. Industrial High Reliability Comm Roadmap](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP.md)
+- **13 Industrial Protocols Spectrum**: EtherCAT, gRPC, OPC UA, DDS, Named Pipe, Shared Memory(MMF), PROFINET IRT, EtherNet/IP CIP Safety 등 총망라.
+- **Kable Current vs Unsupported**: 현재 지원(`Serial`, `TCP`, `NamedPipe`)과 향후 로드맵(`gRPC`, `OPC UA`, `MMF`) 명세.
