@@ -160,7 +160,11 @@ graph TD
   - `System.IO.Pipelines` 기반 0-GC 세션 엔진.
   - 기본 Transport 어댑터 (`UseTcp`, `UseSerialPort`, `UseNamedPipe`).
   - 인메모리 `SpscRingBuffer<T>` 및 `ModbusRtuCodec` (CRC-16 자동화).
-- **v1.3.0 (Phase 2 통신 확장 완료)**:
+- **v1.3.0 (Phase 2 통신 및 필드버스 확장 완료)**:
+  - **`Kable.Modbus` (Modbus-TCP 필드버스 완료)**:
+    - MBAP 헤더(7바이트) 0-GC 스트림 프레이밍 및 Transaction ID(2바이트) 관리.
+    - `SupportsCorrelationId = true` 지원을 통한 동시 다중 비동기 요청(Pipelining) 락-프리 라우팅.
+    - 고수준 `ModbusTcpMaster` (FC03/FC04 레지스터 읽기, FC06/FC16 레지스터 쓰기, 예외 코드 자동 처리).
   - **`Kable.Grpc` (gRPC 터널링 브리지 완료)**:
     - 공식 `Grpc.Net.Client`, `Grpc.Core.Api`, `Google.Protobuf` (Apache-2.0 / BSD) 채택.
     - `StreamTunnel(stream KablePacket)` 전이중 양방향 스트리밍 프로토콜 규격(`kable_transport.proto`) 수립.
@@ -170,7 +174,8 @@ graph TD
     - Windows 커널 `MemoryMappedFile` 및 `EventWaitHandle` 기반 0-GC SPSC 원형 링버퍼 (`SharedMemoryRingBuffer`).
     - `IConnectionContext` 표준을 구현한 `SharedMemoryConnectionContext`로 `System.IO.Pipelines` 완전 호환 (초당 수십만 건 지령 왕복).
     - 초고주파(수 kHz 이상) 아날로그 센서 및 펌프 계측 텔레메트리 교환을 위한 전용 `SharedMemoryWaveformBuffer`.
-- **Phase 3 (중장기 확장 계획)**:
+- **Phase 3 (산업용 확장 계획)**:
+  - `Kable.Melsec`: 미쓰비시 PLC Q/iQ-R SLMP(MC 프로토콜) D/M/W 비트/워드 디바이스 0-Alloc 제어.
   - `Kable.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
   - `Kable.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
 
