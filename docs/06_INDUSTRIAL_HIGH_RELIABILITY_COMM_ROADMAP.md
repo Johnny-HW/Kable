@@ -1,9 +1,9 @@
 # 06. 산업용 고신뢰성 통신 기술 비교 및 Kable 아키텍처 연동 로드맵
 
 - **문서 번호**: KABLE-SPEC-06
-- **문서 버전**: v1.2.0
+- **문서 버전**: v1.3.0
 - **작성일**: 2026-09-16
-- **기준 Kable 버전**: v1.2.0
+- **기준 Kable 버전**: v1.3.0
 - **모듈 위치**: `02.SoftwareLib/01.Kable/docs/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP.md`
 
 ---
@@ -33,7 +33,7 @@
 | | **2. 프로세스 간 MMF SharedQueue** | 초고속 락프리 IPC | **Soft Real-Time** | **순수 구현 (무료)** | ❌ **프로세스 간 미지원** | **[Phase 2]** 별도 어댑터로 검토 |
 | | **3. Shared Memory (MMF Raw Bulk)**| 비전 영상, 파형 데이터 | **Best Effort** (대용량 전송) | **순수 구현 (무료)** | ❌ **미지원** | 초고속 파형 버퍼 어댑터 검토 |
 | **PC ↔ PC / 원격** | **4. Raw TCP Socket** | 일반 네트워크 장비 연동 | **Best Effort** | **OS 표준 (무료)** | **✅ 기본 제공** | `UseTcp()` 기본 탑재 |
-| | **5. gRPC (HTTP/2 + Protobuf)** | 분산 모듈 RPC / 원격 제어 | **Soft Real-Time** | **Apache-2.0 / BSD (무료)** | 🚀 **[Phase 2 개발 착수]** | `Kable.Integrations.Grpc` |
+| | **5. gRPC (HTTP/2 + Protobuf)** | 분산 모듈 RPC / 원격 제어 | **Soft Real-Time** | **Apache-2.0 / BSD (무료)** | **✅ [Phase 2 구현 완료]** | `Kable.Integrations.Grpc` (`System.IO.Pipelines` 브리지) |
 | | **6. OPC UA (IEC 62541)** | 설비-호스트, 스마트 캐비닛 | **Soft Real-Time** | **OPC Dual / MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.OpcUa` |
 | | **7. DDS (Data Distribution)** | 분산 실시간 제어 버스 | **Soft Real-Time** | **EDL-1.0 / BSD (무료)** | ❌ **직접 구현 제외** | 필요 시 CycloneDDS C# 바인딩 연동 |
 | | **8. MQTT (Sparkplug B)** | 센서/유틸리티 텔레메트리 | **Best Effort** | **MIT (무료)** | ❌ **미지원** | **[Phase 3]** `Kable.Integrations.Mqtt` |
@@ -156,12 +156,17 @@ graph TD
     CoreEngine --> Integrations
 ```
 
-- **v1.2.0 (현재 완료)**:
+- **v1.2.0 (초기 릴리스)**:
   - `System.IO.Pipelines` 기반 0-GC 세션 엔진.
   - 기본 Transport 어댑터 (`UseTcp`, `UseSerialPort`, `UseNamedPipe`).
   - 인메모리 `SpscRingBuffer<T>` 및 `ModbusRtuCodec` (CRC-16 자동화).
-- **Phase 2 (단기 확장 계획)**:
-  - `Kable.Integrations.Grpc`: PC 간 프로세스 격리 및 원격 시뮬레이터를 위한 gRPC 양방향 스트리밍 어댑터.
+- **v1.3.0 (현재 완료)**:
+  - **`Kable.Integrations.Grpc` 구현 완료**:
+    - 공식 `Grpc.Net.Client`, `Grpc.Core.Api`, `Google.Protobuf` (Apache-2.0 / BSD) 채택.
+    - `StreamTunnel(stream KablePacket)` 전이중 양방향 스트리밍 프로토콜 규격(`kable_transport.proto`) 수립.
+    - gRPC 스트림을 `System.IO.Pipelines`(`PipeReader`/`PipeWriter`)로 투명하게 연결하는 `GrpcConnectionContext` 및 `KableTransportServiceImpl` 구축.
+    - `KableSession<TMessage>`을 통한 요청-응답 왕복 및 파이프라이닝 통합 검증 완료.
+- **Phase 2 잔여 (단기 확장 계획)**:
   - `Kable.Integrations.SharedMemory`: 고주파 아날로그 파형 수집을 위한 프로세스 간 MMF 버퍼 채널.
 - **Phase 3 (중장기 확장 계획)**:
   - `Kable.Integrations.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.

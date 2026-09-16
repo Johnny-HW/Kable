@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package kable.transport;
+
+option csharp_namespace = "Kable.Integrations.Grpc.Protos";
+
+service KableTransportService {
+  rpc StreamTunnel(stream KablePacket) returns (stream KablePacket);
+}
+
+message KablePacket {
+  bytes payload = 1;
+  int64 sequence = 2;
+  string source_endpoint = 3;
+}
