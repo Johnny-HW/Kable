@@ -41,7 +41,7 @@
 | | **10. EtherCAT** | 초정밀 서보 모터 다축 제어 | **Hard Real-Time** | **GPL(SOEM) / 상용 라이선스** | 🚫 **[자체 마스터 개발 제외]** | 외부 상용 마스터(Beckhoff ADS 등) SDK 브리지 |
 | | **11. PROFINET ➔ S7 통신** | 지멘스 S7 PLC 데이터 연동 | **Soft Real-Time** | **MIT (`S7NetPlus`) (무료)** | 🔄 **[S7 이더넷 통신으로 대체]** | `Kable.Siemens` (S7 프로토콜) |
 | | **12. EtherNet/IP (비안전 CIP)**| 로크웰 PLC 태그 데이터 연동 | **Soft Real-Time** | **MIT / Apache (무료)** | 🔄 **[비안전 진단 태그로 대체]**<br/>*(⚠️ CIP Safety 안전 루프는 영구 제외)* | `Kable.EtherNetIP` (일반 CIP 태그) |
-| | **13. CC-Link ➔ SLMP (MC)** | 미쓰비시 PLC D/M 디바이스 | **Soft Real-Time** | **미쓰비시 무료 오픈 규격 (무료)** | 🔄 **[SLMP 오픈 규격으로 대체]**<br/>*(⚠️ TSN 전용 보드 스택은 영구 제외)* | `Kable.Melsec` (SLMP TCP) |
+| | **13. CC-Link ➔ SLMP (MC)** | 미쓰비시 PLC D/M 디바이스 | **Soft Real-Time** | **미쓰비시 무료 오픈 규격 (무료)** | **✅ [Phase 3 구현 완료]** | `Kable.Melsec` (SLMP 3E 바이너리 TCP) |
 
 > [!NOTE]
 > **실시간성 분류 기준**:
@@ -174,8 +174,11 @@ graph TD
     - Windows 커널 `MemoryMappedFile` 및 `EventWaitHandle` 기반 0-GC SPSC 원형 링버퍼 (`SharedMemoryRingBuffer`).
     - `IConnectionContext` 표준을 구현한 `SharedMemoryConnectionContext`로 `System.IO.Pipelines` 완전 호환 (초당 수십만 건 지령 왕복).
     - 초고주파(수 kHz 이상) 아날로그 센서 및 펌프 계측 텔레메트리 교환을 위한 전용 `SharedMemoryWaveformBuffer`.
-- **Phase 3 (산업용 확장 계획)**:
-  - `Kable.Melsec`: 미쓰비시 PLC Q/iQ-R SLMP(MC 프로토콜) D/M/W 비트/워드 디바이스 0-Alloc 제어.
+- **Phase 3 (산업용 필드버스 및 스마트 팩토리 확장)**:
+  - **`Kable.Melsec` (미쓰비시 SLMP / MC Protocol 3E 프레임 완료)**:
+    - SLMP 3E 바이너리 프레임(TCP) 0-GC 스트림 프레이밍 및 상태 머신.
+    - D(데이터), W(링크), R(파일), M(내부릴레이), X/Y(입출력) 디바이스 일괄 읽기(`ReadWordsAsync`) 및 쓰기(`WriteWordsAsync`).
+    - PLC EndCode(에러 코드) 자동 감지 및 예외 처리.
   - `Kable.OpcUa`: 스마트 팩토리 상위 연동용 OPC UA 클라이언트 어댑터.
   - `Kable.Mqtt`: 설비 텔레메트리 수집용 MQTT Sparkplug B 커넥터.
 
