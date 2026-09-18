@@ -11,6 +11,7 @@
     <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
     <TieredPGO>true</TieredPGO>
     <NoWarn>$(NoWarn);NU1901;NU1902;NU1903;NU1904</NoWarn>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <Optimize>true</Optimize>
