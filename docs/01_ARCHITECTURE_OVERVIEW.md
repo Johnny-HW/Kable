@@ -1,57 +1,79 @@
-# 01. Architecture Overview
+<!-- Kable Architecture Overview Document -->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6; max-width: 100%; margin: 0 auto;">
 
-> This document defines the core design philosophy, 3-tier layer structure, and class diagrams of the `Kable` unified reactive communication framework.
+  <!-- Hero Header Banner -->
+  <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0284c7 100%); border-radius: 14px; padding: 32px 28px; margin-bottom: 28px; color: #ffffff; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);">
+    <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px; color: #38bdf8; margin-bottom: 14px;">
+      <span>🏛️ 3-TIER LAYERED TOPOLOGY</span>
+    </div>
+    <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: #ffffff; border-bottom: none; padding-bottom: 0;">
+      01. Architecture Overview
+    </h1>
+    <p style="margin: 0; font-size: 14.5px; color: #94a3b8; max-width: 780px; line-height: 1.6;">
+      Core design philosophy, hybrid transaction routing, and formal class hierarchy combining <strong>Microsoft Bedrock's transport abstraction</strong> with <strong>RSocket reactive interaction patterns</strong>.
+    </p>
+    <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px;">
+      <span style="background: #0284c7; color: #ffffff; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">Bedrock Transport</span>
+      <span style="background: #059669; color: #ffffff; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">RSocket Interaction</span>
+      <span style="background: #6366f1; color: #ffffff; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">Hybrid Transaction Router</span>
+      <span style="background: #dc2626; color: #ffffff; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">Fail-Fast Watchdog</span>
+    </div>
+  </div>
 
----
+  <!-- 3-Tier Layer Summary Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 28px;">
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; border-top: 3px solid #2563eb;">
+      <div style="font-weight: 700; color: #1d4ed8; font-size: 14px; margin-bottom: 6px;">1. Upper: RSocket Interaction</div>
+      <div style="font-size: 12.5px; color: #475569; line-height: 1.5;">
+        Provides <code>RequestAsync</code>, <code>SendAsync</code>, <code>Stream</code>, and <code>SendUrgentAsync</code> (E-STOP) contracts on <code>IDeviceSession&lt;T&gt;</code>.
+      </div>
+    </div>
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; border-top: 3px solid #059669;">
+      <div style="font-weight: 700; color: #047857; font-size: 14px; margin-bottom: 6px;">2. Middle: Protocol Codec</div>
+      <div style="font-size: 12.5px; color: #475569; line-height: 1.5;">
+        Bidirectional zero-allocation framing and slicing (<code>ReadOnlySequence&lt;byte&gt;</code>) via <code>IProtocolCodec&lt;T&gt;</code>.
+      </div>
+    </div>
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; border-top: 3px solid #7c3aed;">
+      <div style="font-weight: 700; color: #6d28d9; font-size: 14px; margin-bottom: 6px;">3. Lower: Bedrock Transport</div>
+      <div style="font-size: 12.5px; color: #475569; line-height: 1.5;">
+        Unifies TCP, RS-232/485 serial, and NamedPipe IPC under a <code>PipeReader Input</code> and <code>PipeWriter Output</code> context.
+      </div>
+    </div>
+  </div>
 
-## 1. Core Architectural Philosophy: "Bedrock Transport + RSocket Interaction"
+  <!-- Section 1: Core Architectural Philosophy -->
+  <div style="margin-bottom: 30px;">
+    <h2 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 14px 0; display: flex; align-items: center; gap: 8px;">
+      <span style="background: #0284c7; width: 6px; height: 20px; border-radius: 3px; display: inline-block;"></span>
+      1. Core Architectural Philosophy
+    </h2>
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 1. Upper Layer: RSocket-Style Reactive Interaction API (IDeviceSession<T>)  │
-│    • RequestAsync<TRes>(req, timeout)  : Request-Response (Correlation + WD)│
-│    • SendAsync(msg)                    : One-Way Notification (Fire-Forget) │
-│    • Stream (IAsyncEnumerable<T>)      : Real-Time Telemetry Stream Ingestion│
-│    • SendUrgentAsync(msg)              : Out-Of-Band (OOB) Emergency E-STOP │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 2. Middle Layer: Bidirectional Protocol Codec (IProtocolCodec<T>)           │
-│    • Framing (\n, STX/ETX, Length Prefix) + Serialization (ASCII, Bin, JSON)│
-│    • Zero-Allocation Buffer Slicing via System.IO.Pipelines & ReadOnlySeq   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 3. Lower Layer: Bedrock Standard Transport Abstraction (IConnectionContext) │
-│    • PipeReader Input / PipeWriter Output                                   │
-│    • Socket (TCP Active/Passive), Serial (RS-232/485), NamedPipe (IPC)      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+    <p style="font-size: 13.5px; color: #334155; line-height: 1.6;">
+      <code>Kable</code> solves the four classic failure modes of industrial hardware software: <strong>thread starvation, heap fragmentation, interleaved response pollution, and UI stuttering</strong>.
+    </p>
 
-### 1.1 Lower: Bedrock Transport Abstraction (`Pipelines` / `ConnectionContext`)
-- Unifies all physical communication mediums (TCP sockets, COM ports, Windows NamedPipes) into a single abstraction: **"A single connection context (`IConnectionContext`) possessing an `Input` reader pipe and an `Output` writer pipe"**.
-- Built on `System.IO.Pipelines` to perform zero-allocation I/O without copying buffers, eliminating over 90% of Garbage Collector (GC) pressure.
+    <!-- Key Innovation Callout -->
+    <div style="background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 20px;">
+      <div style="font-weight: 700; color: #047857; font-size: 13.5px; margin-bottom: 4px;">💡 Hybrid Transaction Router & Fail-Fast Safety</div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 12.5px; color: #334155; line-height: 1.6;">
+        <li><strong>Preemptive FIFO Lock (SemaphoreSlim)</strong>: For legacy devices without correlation IDs, concurrent requests are serialized safely without frame collisions.</li>
+        <li><strong>Lock-Free Interleaving</strong>: For modern protocols with correlation tokens, requests are multiplexed concurrently at microsecond latencies.</li>
+        <li><strong>Fail-Fast Disconnection</strong>: Physical cable disconnect immediately fires <code>DeviceDisconnectedException</code>, driving equipment to safe-state without blind retries.</li>
+      </ul>
+    </div>
+  </div>
 
-### 1.2 Upper: RSocket-Style Interaction API (`IDeviceSession<T>`)
-- Regardless of whether the peer is remote laboratory hardware (ICP-MS, PLC) or a local process (MassHunter, ChemStation), interaction semantics are unified into 4 patterns:
-  1. **`RequestAsync`**: Transmit request and await response within a specified timeout (hybrid transaction routing with watchdog isolation).
-  2. **`SendAsync`**: One-way asynchronous notification or command (fire-and-forget).
-  3. **`Stream`**: Ingest continuous real-time measurement telemetry (`IAsyncEnumerable<T>`).
-  4. **`SendUrgentAsync`**: Out-of-band (OOB) transmission that bypasses queued transactions to trigger immediate emergency stops (E-STOP).
-
-### 1.3 [Key Innovation] Hybrid Transaction Router & Fail-Fast Safety Policy
-- **In-Flight Concurrency Protection (Hybrid Preemptive FIFO Lock)**:
-  - **Uncorrelated ASCII / Serial Instruments**: When multiple threads (e.g. periodic polling loop + manual UI commands) dispatch requests concurrently, an internal `SemaphoreSlim(1, 1)` FIFO lock serializes transmissions until previous responses arrive, eliminating response mismatch risks.
-  - **Correlated Modern Protocols / IPC**: Bypasses FIFO locks to enable lock-free parallel interleaving and pipelining via an internal correlation registry.
-  - **Spontaneous Alarm / Telemetry Routing**: Unsolicited telemetry packets arriving during request execution (`IsAutonomousMessage == true`) are diverted to the `Stream` channel rather than polluting pending request completion.
-- **Fail-Fast Disconnection Safety**:
-  - Upon link severance or cable detachment, all awaiting requests fail immediately with `DeviceDisconnectedException` without dangerous blind retransmission retries, enabling immediate safe-state transitions for hardware.
-
----
-
-## 2. Integrated Architecture Class Diagram
+  <!-- Section 2: Architecture Class Diagram -->
+  <div style="margin-bottom: 30px;">
+    <h2 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 14px 0; display: flex; align-items: center; gap: 8px;">
+      <span style="background: #0284c7; width: 6px; height: 20px; border-radius: 3px; display: inline-block;"></span>
+      2. Integrated Architecture Class Diagram
+    </h2>
 
 ```mermaid
 classDiagram
-    %% ==========================================
-    %% 1. Lower: Bedrock Connection Context (L4 Transport)
-    %% ==========================================
+    %% Transport Layer
     class IConnectionContext {
         <<interface>>
         +string ConnectionId
@@ -59,102 +81,57 @@ classDiagram
         +PipeReader Input
         +PipeWriter Output
         +CancellationToken ConnectionClosed
-        +Abort(string reason) void
+        +Abort(string reason)
     }
+    class TcpConnectionContext {
+        -Socket _socket
+        -NetworkStream _stream
+    }
+    class SerialPortConnectionContext {
+        -SerialPort _serialPort
+    }
+    class NamedPipeConnectionContext {
+        -NamedPipeClientStream _pipe
+    }
+    IConnectionContext <|.. TcpConnectionContext
+    IConnectionContext <|.. SerialPortConnectionContext
+    IConnectionContext <|.. NamedPipeConnectionContext
 
-    class IConnectionFactory {
-        <<interface>>
-        +ConnectAsync(CancellationToken ct) ValueTask~IConnectionContext~
-    }
-
-    class IConnectionListener {
-        <<interface>>
-        +AcceptAsync(CancellationToken ct) ValueTask~IConnectionContext~
-        +Stop() void
-    }
-
-    class TcpConnectionFactory {
-        -string _host
-        -int _port
-        +ConnectAsync() ValueTask~IConnectionContext~
-    }
-    class NamedPipeConnectionFactory {
-        -string _pipeName
-        +ConnectAsync() ValueTask~IConnectionContext~
-    }
-    class SerialPortConnectionFactory {
-        -string _portName
-        -int _baudRate
-        +ConnectAsync() ValueTask~IConnectionContext~
-    }
-
-    IConnectionFactory <|.. TcpConnectionFactory : TCP Active Client
-    IConnectionFactory <|.. NamedPipeConnectionFactory : Local IPC Client
-    IConnectionFactory <|.. SerialPortConnectionFactory : RS-232 / 485 Serial Port
-
-    class TcpConnectionListener {
-        -Socket _listenSocket
-        +AcceptAsync() ValueTask~IConnectionContext~
-    }
-    IConnectionListener <|.. TcpConnectionListener : TCP Passive Server Listener
-
-    %% ==========================================
-    %% 2. Middle: Protocol Codec Layer
-    %% ==========================================
-    class IProtocolCodec~TMessage~ {
+    %% Codec Layer
+    class IProtocolCodec~T~ {
         <<interface>>
         +bool SupportsCorrelationId
-        +TryDecode(ref ReadOnlySequence~byte~, out TMessage) bool
-        +Encode(TMessage message, IBufferWriter~byte~) void
-        +ExtractCorrelationId(TMessage message) string
-        +IsAutonomousMessage(TMessage message) bool
+        +bool TryDecode(ref ReadOnlySequence buffer, out T message)
+        +void Encode(T message, IBufferWriter output)
+        +string ExtractCorrelationId(T message)
+        +bool IsAutonomousMessage(T message)
     }
-
     class AsciiLineCodec {
         -byte _delimiter
         -int _maxFrameSize
-        +bool SupportsCorrelationId: false
-        +TryDecode() bool
-        +Encode() void
-        +IsAutonomousMessage() bool
     }
-    class BinaryLengthPrefixedCodec {
-        +bool SupportsCorrelationId: false
-        +TryDecode() bool
-        +Encode() void
-    }
+    IProtocolCodec <|.. AsciiLineCodec
 
-    IProtocolCodec <|.. AsciiLineCodec : Delimiter Framing (\n)
-    IProtocolCodec <|.. BinaryLengthPrefixedCodec : Binary Length Prefix Framing
-
-    %% ==========================================
-    %% 3. Upper: RSocket Interaction Session
-    %% ==========================================
-    class IDeviceSession~TMessage~ {
+    %% Session Layer
+    class IDeviceSession~T~ {
         <<interface>>
         +bool IsConnected
-        +IAsyncEnumerable~TMessage~ Stream
-        +SendAsync(TMessage message, CancellationToken ct) ValueTask
-        +RequestAsync~TResponse~(TMessage request, TimeSpan timeout, CancellationToken ct) ValueTask~TResponse~
-        +SendUrgentAsync(TMessage urgentMessage) ValueTask
-        +StartAsync(CancellationToken ct) ValueTask
-        +StopAsync() ValueTask
+        +IAsyncEnumerable~T~ Stream
+        +ValueTask SendAsync(T message)
+        +ValueTask~TResponse~ RequestAsync(T request, TimeSpan timeout)
+        +ValueTask SendUrgentAsync(T urgentMessage)
     }
-
-    class KableSession~TMessage~ {
-        -IConnectionFactory _connectionFactory
-        -IProtocolCodec~TMessage~ _codec
+    class KableSession~T~ {
+        -IConnectionContext _context
+        -IProtocolCodec~T~ _codec
         -SemaphoreSlim _fifoLock
         -ConcurrentDictionary _pendingRequests
-        -IConnectionContext _context
-        +StartAsync() ValueTask
-        +RequestAsync() ValueTask~TResponse~
-        +SendAsync() ValueTask
-        +SendUrgentAsync() ValueTask
     }
-
     IDeviceSession <|.. KableSession
-    KableSession o-- IConnectionFactory : Injects Physical Transport
-    KableSession o-- IProtocolCodec : Injects Framing & Codec
-    KableSession --> IConnectionContext : Bedrock Pipeline I/O Control
+    KableSession o-- IConnectionContext
+    KableSession o-- IProtocolCodec
 ```
+
+  </div>
+
+</div>
