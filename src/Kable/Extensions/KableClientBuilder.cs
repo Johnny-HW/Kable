@@ -13,6 +13,19 @@ public sealed class KableClientBuilder<TMessage>
     private IConnectionFactory? _factory;
     private IProtocolCodec<TMessage>? _codec;
     private ICommObserver? _observer;
+    private string _deviceId = "DEFAULT";
+
+    public KableClientBuilder<TMessage> UseDeviceId(string deviceId)
+    {
+        _deviceId = deviceId ?? "DEFAULT";
+        return this;
+    }
+
+    public KableClientBuilder<TMessage> WithDeviceId(string deviceId)
+    {
+        _deviceId = deviceId ?? "DEFAULT";
+        return this;
+    }
 
     public KableClientBuilder<TMessage> UseTcp(string host, int port)
     {
@@ -55,6 +68,12 @@ public sealed class KableClientBuilder<TMessage>
         return this;
     }
 
+    public KableClientBuilder<TMessage> WithObserver(ICommObserver observer)
+    {
+        _observer = observer;
+        return this;
+    }
+
     public IDeviceSession<TMessage> Build()
     {
         if (_factory == null)
@@ -63,6 +82,6 @@ public sealed class KableClientBuilder<TMessage>
         if (_codec == null)
             throw new InvalidOperationException("ProtocolCodec must be configured (e.g. UseCodec).");
 
-        return new KableSession<TMessage>(_factory, _codec, _observer);
+        return new KableSession<TMessage>(_factory, _codec, _observer, deviceId: _deviceId);
     }
 }

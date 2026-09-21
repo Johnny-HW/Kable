@@ -28,6 +28,10 @@ public enum LogLevel
 
 public readonly struct PacketTraceRecord
 {
+    private static long _globalSequence;
+
+    public long SequenceNo { get; }
+    public string DeviceId { get; }
     public DateTime TimestampUtc { get; }
     public PacketDirection Direction { get; }
     public TrafficKind Kind { get; }
@@ -45,8 +49,12 @@ public readonly struct PacketTraceRecord
         ReadOnlyMemory<byte> rawBytes,
         string? parsedText,
         TimeSpan latency,
-        LogLevel level = LogLevel.Information)
+        LogLevel level = LogLevel.Information,
+        string deviceId = "DEFAULT",
+        long? sequenceNo = null)
     {
+        SequenceNo = sequenceNo ?? System.Threading.Interlocked.Increment(ref _globalSequence);
+        DeviceId = deviceId ?? "DEFAULT";
         TimestampUtc = timestampUtc;
         Direction = direction;
         Kind = kind;

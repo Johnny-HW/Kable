@@ -199,6 +199,16 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
         return false;
     }
 
+    /// <summary>
+    /// 세션 재시작 없이 기본 명령 타임아웃을 동적으로 핫 리로드(Hot-Reload)합니다.
+    /// </summary>
+    public void UpdateDefaultCommandTimeout(TimeSpan newTimeout)
+    {
+        ThrowIfDisposed();
+        if (newTimeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(newTimeout), "Timeout must be positive.");
+        _configBase.DefaultCommandTimeout = newTimeout;
+    }
+
     protected void ThrowIfDisposed()
     {
         if (_disposed) throw new ObjectDisposedException(GetType().FullName);

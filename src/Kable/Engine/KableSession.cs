@@ -53,6 +53,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
     private int _isConnected;
     private long _lastInboundTicks;
 
+    public string DeviceId { get; }
     public bool IsConnected => Volatile.Read(ref _isConnected) == 1;
 
     public async IAsyncEnumerable<TMessage> GetStreamAsync([EnumeratorCancellation] CancellationToken ct = default)
@@ -73,12 +74,14 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
         IConnectionFactory connectionFactory,
         IProtocolCodec<TMessage> codec,
         ICommObserver? observer = null,
-        HeartbeatOptions<TMessage>? heartbeatOptions = null)
+        HeartbeatOptions<TMessage>? heartbeatOptions = null,
+        string deviceId = "DEFAULT")
     {
         _connectionFactory = connectionFactory;
         _codec = codec;
         _observer = observer;
         _heartbeatOptions = heartbeatOptions;
+        DeviceId = deviceId ?? "DEFAULT";
     }
 
     public async ValueTask StartAsync(CancellationToken ct = default)
