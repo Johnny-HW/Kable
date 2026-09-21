@@ -31,11 +31,14 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     private string _manualCommandText = string.Empty;
 
     [ObservableProperty]
+    private string _commandSearchText = string.Empty;
+
+    [ObservableProperty]
     private SettingParameterModel? _selectedSetting;
 
     public ObservableCollection<PacketDisplayModel> Packets { get; } = new();
 
-    public ObservableCollection<SettingParameterModel> SettingParameters { get; } = new()
+    public ObservableCollection<SettingParameterModel> AllSettingParameters { get; } = new()
     {
         new SettingParameterModel
         {
@@ -72,6 +75,8 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         }
     };
 
+    public ObservableCollection<SettingParameterModel> FilteredSettingParameters { get; } = new();
+
     public ChannelReader<PacketTraceRecord> CommandStream => throw new NotSupportedException();
     public ChannelReader<PacketTraceRecord> PeriodicStream => throw new NotSupportedException();
     public ChannelReader<PacketTraceRecord> AlarmStream => throw new NotSupportedException();
@@ -82,7 +87,30 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     {
         _dispatcher = dispatcher ?? (Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher);
         _maxLogCount = maxLogCount;
-        _selectedSetting = SettingParameters[0];
+        RefreshFilteredCommands();
+        _selectedSetting = FilteredSettingParameters.Count > 0 ? FilteredSettingParameters[0] : null;
+    }
+
+    partial void OnCommandSearchTextChanged(string value)
+    {
+        RefreshFilteredCommands();
+    }
+
+    public void RefreshFilteredCommands()
+    {
+        FilteredSettingParameters.Clear();
+        string query = CommandSearchText?.Trim() ?? string.Empty;
+
+        foreach (var p in AllSettingParameters)
+        {
+            if (string.IsNullOrWhiteSpace(query) ||
+                p.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                p.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                p.CommandPrefix.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                FilteredSettingParameters.Add(p);
+            }
+        }
     }
 
     public void OnPacketTrace(in PacketTraceRecord trace)

@@ -6,59 +6,56 @@
              xmlns:vm="clr-namespace:Kable.UI.Wpf.ViewModels"
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
-             d:DesignHeight="680" d:DesignWidth="900">
+             d:DesignHeight="720" d:DesignWidth="1100">
     <Grid Background="#FFFFFF">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /> <!-- 1. Toolbar -->
-            <RowDefinition Height="Auto" /> <!-- 2. Parameter Setting & Auto-Conversion Panel -->
-            <RowDefinition Height="3*" />   <!-- 3. Packet List Grid -->
-            <RowDefinition Height="Auto" /> <!-- Splitter -->
-            <RowDefinition Height="2*" />   <!-- 4. Hex Dump / Inspector -->
-            <RowDefinition Height="Auto" /> <!-- 5. Manual Command Injection Bar -->
+            <RowDefinition Height="Auto" /> <!-- 1. Compact Unified Top Toolbar -->
+            <RowDefinition Height="*" />     <!-- 2. Master-Detail Work Area (Left: Commands, Right: Log & Hex) -->
+            <RowDefinition Height="Auto" /> <!-- 3. Manual Command Injection Bar -->
         </Grid.RowDefinitions>
 
-        <!-- 1. Toolbar -->
-        <Border Grid.Row="0" Background="#F8FAFC" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+        <!-- 1. Compact Unified Top Toolbar -->
+        <Border Grid.Row="0" Background="#F8FAFC" Padding="14,8" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <TextBlock Text="{loc:Loc Header_CommandConsole}" Foreground="#0071E3" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:Loc Header_CommandConsole}" Foreground="#0071E3" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <Border Background="#E0F2FE" CornerRadius="6" Padding="6,2" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <TextBlock Text="수시(Aperiodic) 명령 전용 통신 콘솔" Foreground="#0369A1" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="⚡ 수시(Aperiodic) 명령 전용 통신 콘솔" Foreground="#0369A1" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
-                    <Button Content="{loc:Loc Btn_Pause}" 
-                            Command="{Binding TogglePauseCommand}" 
-                            Padding="12,6" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#334155" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                    <Button Content="{loc:Loc Btn_Pause}" Command="{Binding TogglePauseCommand}" 
+                            Padding="12,5" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#334155" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="CornerRadius" Value="6"/>
                             </Style>
                         </Button.Resources>
                     </Button>
                     <Button Content="{loc:Loc Btn_Clear}" Command="{Binding ClearLogsCommand}" 
-                            Padding="12,6" Margin="0,0,8,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                            Padding="12,5" Margin="0,0,8,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="CornerRadius" Value="6"/>
                             </Style>
                         </Button.Resources>
                     </Button>
                     <Button Content="💾 Export Log" Command="{Binding ExportToFileCommand}" 
-                            Padding="12,6" Margin="0,0,12,0" Background="#EFF6FF" Foreground="#0071E3" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
+                            Padding="12,5" Margin="0,0,12,0" Background="#EFF6FF" Foreground="#0071E3" FontWeight="Bold" FontSize="11" BorderThickness="0" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="CornerRadius" Value="6"/>
                             </Style>
                         </Button.Resources>
                     </Button>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#64748B" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <!-- Right: Packet Log Quick Filter -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#64748B" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="160" 
-                             Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,4">
+                             Background="#FFFFFF" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Padding="8,4" FontSize="11">
                         <TextBox.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="8"/>
+                                <Setter Property="CornerRadius" Value="6"/>
                             </Style>
                         </TextBox.Resources>
                     </TextBox>
@@ -66,214 +63,284 @@
             </DockPanel>
         </Border>
 
-        <!-- 2. Parameter Setting & Auto-Conversion Panel (Apple Clean White Box) -->
-        <Border Grid.Row="1" Background="#FFFFFF" Padding="14,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Grid>
+        <!-- 2. Master-Detail Work Area: Left (Commands/Presets) & Right (Log + Hex Dump) -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <!-- Left Pane: Searchable Command Preset & Parameter Control (380px ~ 500px) -->
+                <ColumnDefinition Width="420" MinWidth="320" MaxWidth="600"/>
+                <!-- Splitter -->
+                <ColumnDefinition Width="6"/>
+                <!-- Right Pane: Packet Log Stream & Hex Dump -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT PANE: Searchable Command Panel -->
+            <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Search & Filter Bar -->
+                        <RowDefinition Height="*"/>    <!-- Scrollable Command Cards -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Command Search Box -->
+                    <Border Grid.Row="0" Background="#FFFFFF" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,6">
+                                <TextBlock Text="🎛️ 명령 &amp; 파라미터 제어" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding FilteredSettingParameters.Count, StringFormat='{}{0}개 등록'}" 
+                                           DockPanel.Dock="Right" Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <Grid>
+                                <TextBox Text="{Binding CommandSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Padding="28,6,8,6" FontSize="12">
+                                    <TextBox.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                        </Style>
+                                    </TextBox.Resources>
+                                </TextBox>
+                                <TextBlock Text="🔍" Foreground="#94A3B8" VerticalAlignment="Center" Margin="8,0,0,0" IsHitTestVisible="False"/>
+                                <TextBlock Text="명령어 검색 (예: TEMP, PRESS, FLOW...)" 
+                                           Foreground="#94A3B8" VerticalAlignment="Center" Margin="30,0,0,0" IsHitTestVisible="False" FontSize="11">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CommandSearchText}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Scrollable Setting Cards -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8">
+                        <ItemsControl ItemsSource="{Binding FilteredSettingParameters}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,8">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.04" Color="#000000"/>
+                                        </Border.Effect>
+                                        <StackPanel>
+                                            <!-- Card Header: Name & Command Prefix Badge -->
+                                            <DockPanel LastChildFill="True" Margin="0,0,0,8">
+                                                <Border Background="#EFF6FF" CornerRadius="5" Padding="5,2" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding CommandPrefix}" Foreground="#1D4ED8" FontFamily="Consolas, Courier New" FontSize="10" FontWeight="Bold"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            </DockPanel>
+
+                                            <!-- Slider + Numeric Value Box -->
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="65"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Slider Grid.Column="0" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" 
+                                                        Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
+                                                        SmallChange="{Binding Step}" LargeChange="{Binding Step}"
+                                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                                                <TextBox Grid.Column="1" Text="{Binding Value, StringFormat='{}{0:F1}', UpdateSourceTrigger=PropertyChanged}" 
+                                                         Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" Padding="4,2" 
+                                                         FontWeight="Bold" Foreground="#0071E3" TextAlignment="Right" VerticalAlignment="Center" FontSize="11">
+                                                    <TextBox.Resources>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="CornerRadius" Value="4"/>
+                                                        </Style>
+                                                    </TextBox.Resources>
+                                                </TextBox>
+
+                                                <TextBlock Grid.Column="2" Text="{Binding Unit}" Foreground="#64748B" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            </Grid>
+
+                                            <!-- Converted Hex Protocol Preview Box -->
+                                            <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="6,4" Margin="0,0,0,8">
+                                                <DockPanel LastChildFill="True">
+                                                    <TextBlock Text="환산값:" Foreground="#475569" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding ConvertedPayloadPreview}" Foreground="#0F172A" 
+                                                               FontFamily="Consolas, Courier New" FontSize="10" FontWeight="SemiBold" 
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                            </Border>
+
+                                            <!-- Bottom Action Button & Status -->
+                                            <DockPanel LastChildFill="True">
+                                                <Button Content="명령 주입 (Send)" 
+                                                        Command="{Binding DataContext.ApplySettingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        DockPanel.Dock="Right" Padding="12,5" Background="#0071E3" Foreground="White" 
+                                                        FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
+                                                    <Button.Resources>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="CornerRadius" Value="6"/>
+                                                        </Style>
+                                                    </Button.Resources>
+                                                </Button>
+
+                                                <TextBlock Text="{Binding LastAckMessage}" Foreground="#94A3B8" FontSize="10" 
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- SPLITTER -->
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="#E2E8F0" ResizeDirection="Columns" Cursor="SizeWE"/>
+
+            <!-- RIGHT PANE: Packet List (Top) + Hex Dump (Bottom) -->
+            <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="3*" MinHeight="150"/> <!-- Packet List -->
+                    <RowDefinition Height="6"/>                  <!-- Splitter -->
+                    <RowDefinition Height="2*" MinHeight="100"/> <!-- Hex Inspector -->
                 </Grid.RowDefinitions>
 
-                <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="⚡ 수시 명령어 셋 &amp; 물리값 자동 환산(EU ➔ Raw Hex) 슬라이더 제어" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
-                    <TextBlock Text="물리 단위를 슬라이더로 조절하면 프로토콜 규격 값으로 자동 환산되어 장비로 주입됩니다." 
-                               Foreground="#64748B" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                </DockPanel>
+                <!-- Packet List Grid -->
+                <DataGrid Grid.Row="0" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
+                          IsReadOnly="True"
+                          Style="{StaticResource IosDataGridStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="55">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="95">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                    <Setter Property="Foreground" Value="#475569"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_Dir}" Binding="{Binding Direction}" Width="70">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="TX ➡">
+                                            <Setter Property="Foreground" Value="#0071E3"/>
+                                        </Trigger>
+                                        <Trigger Property="Text" Value="RX ⬅">
+                                            <Setter Property="Foreground" Value="#34C759"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="90">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontWeight" Value="Medium"/>
+                                    <Setter Property="Foreground" Value="#1E293B"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_Type}" Binding="{Binding Kind}" Width="120">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#0F172A"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_Bytes}" Binding="{Binding Length}" Width="60">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="0,0,8,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_Latency}" Binding="{Binding LatencyMs}" Width="75">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                    <Setter Property="Foreground" Value="#D97706"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="0,0,8,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{loc:Loc Col_PayloadPreview}" Binding="{Binding AsciiPreview}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                    <Setter Property="Foreground" Value="#0F172A"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
 
-                <!-- Setting Cards ItemsControl -->
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding SettingParameters}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid Columns="3"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="4">
-                                <StackPanel>
-                                    <!-- Title & Parameter ID -->
-                                    <DockPanel LastChildFill="True" Margin="0,0,0,6">
-                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center"/>
-                                    </DockPanel>
+                <!-- Row Splitter -->
+                <GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="#E2E8F0" ResizeDirection="Rows" Cursor="SizeNS"/>
 
-                                    <!-- Slider & Direct Input Field -->
-                                    <Grid Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="65"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <!-- Slider -->
-                                        <Slider Grid.Column="0" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" 
-                                                Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}" 
-                                                SmallChange="{Binding Step}" LargeChange="{Binding Step}"
-                                                VerticalAlignment="Center" Margin="0,0,8,0"/>
-
-                                        <!-- Value Box -->
-                                        <TextBox Grid.Column="1" Text="{Binding Value, StringFormat='{}{0:F1}', UpdateSourceTrigger=PropertyChanged}" 
-                                                 Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" Padding="4,2" 
-                                                 FontWeight="Bold" Foreground="#0071E3" TextAlignment="Right" VerticalAlignment="Center"/>
-
-                                        <!-- Unit Label -->
-                                        <TextBlock Grid.Column="2" Text="{Binding Unit}" Foreground="#64748B" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
-                                    </Grid>
-
-                                    <!-- Auto-Conversion Badge: EU -> Raw Count & Hex Register Display -->
-                                    <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <DockPanel LastChildFill="True">
-                                            <TextBlock Text="환산 프로토콜:" Foreground="#1E40AF" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                            <TextBlock Text="{Binding ConvertedPayloadPreview}" Foreground="#1D4ED8" 
-                                                       FontFamily="Consolas, Courier New" FontSize="10" FontWeight="Bold" 
-                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                        </DockPanel>
-                                    </Border>
-
-                                    <!-- Bottom Action & Status -->
-                                    <DockPanel LastChildFill="True">
-                                        <Button Content="명령 주입 (Send)" 
-                                                Command="{Binding DataContext.ApplySettingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"
-                                                DockPanel.Dock="Right" Padding="12,5" Background="#0071E3" Foreground="White" 
-                                                FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
-                                            <Button.Resources>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="CornerRadius" Value="6"/>
-                                                </Style>
-                                            </Button.Resources>
-                                        </Button>
-
-                                        <TextBlock Text="{Binding LastAckMessage}" Foreground="#94A3B8" FontSize="10" 
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
-                                    </DockPanel>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- Hex Dump / Inspector -->
+                <Border Grid.Row="2" Background="#F8FAFC" Padding="10" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,4">
+                            <TextBlock Text="🔍 Hex Dump &amp; Byte Inspector" FontWeight="Bold" FontSize="11" Foreground="#475569"/>
+                            <TextBlock Text="{Binding SelectedPacket.Length, StringFormat='Total: {0} Bytes'}" DockPanel.Dock="Right" FontSize="10" Foreground="#94A3B8"/>
+                        </DockPanel>
+                        <TextBox Grid.Row="1" Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue='목록에서 패킷을 선택하면 바이트 상세가 표시됩니다.'}" 
+                                 FontFamily="Consolas, Courier New" FontSize="12" Foreground="#0F172A"
+                                 Background="Transparent" BorderThickness="0"
+                                 IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                    </Grid>
+                </Border>
             </Grid>
-        </Border>
+        </Grid>
 
-        <!-- 3. Packet List Grid -->
-        <DataGrid Grid.Row="2" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
-                  IsReadOnly="True"
-                  Style="{StaticResource IosDataGridStyle}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="60">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#64748B"/>
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="100">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#475569"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Dir}" Binding="{Binding Direction}" Width="75">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Style.Triggers>
-                                <Trigger Property="Text" Value="TX ➡">
-                                    <Setter Property="Foreground" Value="#0071E3"/>
-                                </Trigger>
-                                <Trigger Property="Text" Value="RX ⬅">
-                                    <Setter Property="Foreground" Value="#34C759"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="100">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontWeight" Value="Medium"/>
-                            <Setter Property="Foreground" Value="#1E293B"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Type}" Binding="{Binding Kind}" Width="120">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Bytes}" Binding="{Binding Length}" Width="65">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#64748B"/>
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Setter Property="Margin" Value="0,0,10,0"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Latency}" Binding="{Binding LatencyMs}" Width="80">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#D97706"/>
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Setter Property="Margin" Value="0,0,10,0"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_PayloadPreview}" Binding="{Binding AsciiPreview}" Width="*">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <!-- Grid Splitter -->
-        <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="#E2E8F0" ResizeDirection="Rows"/>
-
-        <!-- 4. Hex Dump / Inspector -->
-        <Border Grid.Row="4" Background="#F8FAFC" Padding="12" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
-            <TextBox Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue=''}" 
-                     FontFamily="Consolas, Courier New" FontSize="12" Foreground="#0F172A"
-                     Background="Transparent" BorderThickness="0"
-                     IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-        </Border>
-
-        <!-- 5. Manual Command Injection Bar -->
-        <Border Grid.Row="5" Background="#FFFFFF" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+        <!-- 3. Manual Command Injection Bar -->
+        <Border Grid.Row="2" Background="#FFFFFF" Padding="12,8" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <DockPanel>
+                <TextBlock Text="수동 전송:" FontWeight="Bold" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <Button Content="{loc:Loc Btn_SendManual}" Command="{Binding SendManualCommandCommand}" 
-                        DockPanel.Dock="Right" Padding="16,8" Margin="10,0,0,0"
-                        Background="#0071E3" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        DockPanel.Dock="Right" Padding="14,6" Margin="8,0,0,0"
+                        Background="#0071E3" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
                     <Button.Resources>
                         <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="8"/>
+                            <Setter Property="CornerRadius" Value="6"/>
                         </Style>
                     </Button.Resources>
                 </Button>
                 <TextBox Text="{Binding ManualCommandText, UpdateSourceTrigger=PropertyChanged}" 
-                         Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="10,6"
+                         Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,5"
                          FontFamily="Consolas, Courier New" FontSize="12">
                     <TextBox.Resources>
                         <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="8"/>
+                            <Setter Property="CornerRadius" Value="6"/>
                         </Style>
                     </TextBox.Resources>
                 </TextBox>
