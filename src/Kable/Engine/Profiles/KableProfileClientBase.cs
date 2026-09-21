@@ -74,7 +74,8 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
 
                 if (!_client.IsConnected) continue;
 
-                var response = await _client.QueryAsync(rawCommand, TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+                var queryTimeout = _configBase.DefaultCommandTimeout <= TimeSpan.Zero ? TimeSpan.FromSeconds(2) : _configBase.DefaultCommandTimeout;
+                var response = await _client.QueryAsync(rawCommand, queryTimeout, ct).ConfigureAwait(false);
                 _latestCache[key] = (response, DateTime.UtcNow);
 #else
         while (!ct.IsCancellationRequested)
@@ -85,7 +86,8 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
 
                 if (!_client.IsConnected) continue;
 
-                var response = await _client.QueryAsync(rawCommand, TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+                var queryTimeout = _configBase.DefaultCommandTimeout <= TimeSpan.Zero ? TimeSpan.FromSeconds(2) : _configBase.DefaultCommandTimeout;
+                var response = await _client.QueryAsync(rawCommand, queryTimeout, ct).ConfigureAwait(false);
                 _latestCache[key] = (response, DateTime.UtcNow);
 #endif
 
