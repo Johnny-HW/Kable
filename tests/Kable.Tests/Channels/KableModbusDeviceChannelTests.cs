@@ -92,7 +92,7 @@ public class KableModbusDeviceChannelTests
     {
         var factory = new MockTestConnectionFactory();
         await using var channel = new KableModbusDeviceChannel(factory, "TEST_UNIT");
-        channel.Open();
+        await channel.OpenAsync();
 
         byte[] requestPdu = [0x01, 0x05, 0x00, 0x01, 0xFF, 0x00];
 

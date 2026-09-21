@@ -90,6 +90,7 @@ public sealed class OpcUaClientBridge : IOpcUaClientBridge
 
         _configuration ??= await CreateDefaultConfigurationAsync(_autoAcceptUntrustedCertificates).ConfigureAwait(false);
 
+#pragma warning disable CS0618
         var endpoint = CoreClientUtils.SelectEndpoint(_configuration, _endpointUrl, useSecurity: false);
         var endpointConfiguration = EndpointConfiguration.Create(_configuration);
         var configuredEndpoint = new ConfiguredEndpoint(null, endpoint, endpointConfiguration);
@@ -102,6 +103,7 @@ public sealed class OpcUaClientBridge : IOpcUaClientBridge
             sessionTimeout: 60000,
             identity: new UserIdentity(new AnonymousIdentityToken()),
             preferredLocales: null).ConfigureAwait(false);
+#pragma warning restore CS0618
     }
 
     /// <summary>

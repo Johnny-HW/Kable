@@ -54,6 +54,7 @@ public struct WaveformBufferHeader
 /// <summary>
 /// 초당 수천~수만 회의 고주파 파형 샘플을 Zero-Copy로 교환하는 SPSC MMF 파형 버퍼.
 /// </summary>
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
 {
     private readonly MemoryMappedFile _mmf;
@@ -116,8 +117,7 @@ public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
         }
 
         long totalBytes = 256 + ((long)capacityPowerOfTwo * sizeof(WaveformSample));
-        string mmfName = $"{bufferName}_wave_mmf";
-        string evtName = $"{bufferName}_wave_evt";
+        var (mmfName, evtName) = GetKernelObjectNames(bufferName);
 
         var mmf = MemoryMappedFile.CreateOrOpen(mmfName, totalBytes, MemoryMappedFileAccess.ReadWrite);
         var accessor = mmf.CreateViewAccessor(0, totalBytes, MemoryMappedFileAccess.ReadWrite);
@@ -132,8 +132,7 @@ public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
 
     public static SharedMemoryWaveformBuffer Open(string bufferName)
     {
-        string mmfName = $"{bufferName}_wave_mmf";
-        string evtName = $"{bufferName}_wave_evt";
+        var (mmfName, evtName) = GetKernelObjectNames(bufferName);
 
         var mmf = MemoryMappedFile.OpenExisting(mmfName, MemoryMappedFileRights.ReadWrite);
         var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.ReadWrite);
@@ -145,6 +144,10 @@ public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
 
         return new SharedMemoryWaveformBuffer(mmf, accessor, ptr, dataEvt, isCreator: false, 0);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (string MmfName, string EvtName) GetKernelObjectNames(string bufferName)
+        => ($"{bufferName}_wave_mmf", $"{bufferName}_wave_evt");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryWrite(in WaveformSample sample)

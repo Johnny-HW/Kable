@@ -119,8 +119,15 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
     {
         EnsureConnected();
         var cmd = new OutboundCommand(message, isUrgent: false);
-        await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
-        await cmd.Completion.Task.ConfigureAwait(false);
+        try
+        {
+            await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
+            await cmd.Completion.Task.ConfigureAwait(false);
+        }
+        catch (ChannelClosedException cce)
+        {
+            throw new DeviceDisconnectedException("Hardware connection has been disconnected.", cce);
+        }
 
         _observer?.OnPacketTrace(new PacketTraceRecord(
             DateTime.UtcNow, PacketDirection.Tx, TrafficKind.AperiodicCommand,
@@ -141,8 +148,15 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
                 _currentFifoTcs = tcs;
 
                 var cmd = new OutboundCommand(request, isUrgent: false);
-                await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
-                await cmd.Completion.Task.ConfigureAwait(false);
+                try
+                {
+                    await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
+                    await cmd.Completion.Task.ConfigureAwait(false);
+                }
+                catch (ChannelClosedException cce)
+                {
+                    throw new DeviceDisconnectedException("Hardware connection has been disconnected.", cce);
+                }
 
                 using var timeoutCts = new CancellationTokenSource(timeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
@@ -187,8 +201,15 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
             try
             {
                 var cmd = new OutboundCommand(request, isUrgent: false);
-                await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
-                await cmd.Completion.Task.ConfigureAwait(false);
+                try
+                {
+                    await _outboundNormalQueue.Writer.WriteAsync(cmd, ct).ConfigureAwait(false);
+                    await cmd.Completion.Task.ConfigureAwait(false);
+                }
+                catch (ChannelClosedException cce)
+                {
+                    throw new DeviceDisconnectedException("Hardware connection has been disconnected.", cce);
+                }
 
                 using var timeoutCts = new CancellationTokenSource(timeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);

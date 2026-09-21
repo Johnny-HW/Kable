@@ -77,6 +77,43 @@ await client.SendLineAsync("SET:PARAM=1");
 string reply = await client.QueryAsync("GET:PARAM?");
 ```
 
+### 4. Type-Safe Device Profile Manager (`KableProfileManager`)
+
+Automate background periodic polling and thread-safe aperiodic commands using device-specific Enums with zero memory-leak UI data binding:
+
+```csharp
+using Kable.Engine.Profiles;
+
+// Define your equipment protocol commands via Enums
+public enum RobotTelemetry { Status, ArmPosition, VacuumPressure }
+public enum RobotControl   { ServoOn, MoveHome, PickWafer }
+
+var config = new KableProfileConfig<RobotTelemetry, RobotControl>
+{
+    Host = "192.168.0.100",
+    Port = 9000
+};
+
+// Register background telemetry polling (independent non-drifting timers)
+config.AddPeriodic(RobotTelemetry.Status, "?STATUS", TimeSpan.FromMilliseconds(100));
+config.AddPeriodic(RobotTelemetry.VacuumPressure, "?VACUUM", TimeSpan.FromMilliseconds(50));
+
+// Register aperiodic control commands
+config.AddAperiodic(RobotControl.ServoOn, "CMD:SERVO=1");
+config.AddAperiodic(RobotControl.MoveHome, "CMD:HOME");
+
+await using var client = await KableProfileManager.ConnectAsync(config);
+
+// Zero-latency instant cache lookup
+string? currentStatus = client.GetLatest(RobotTelemetry.Status);
+
+// Safe ViewModel binding: Weak reference prevents memory leaks upon View close
+client.SubscribeWeak(viewModel, (vm, cmd, data) => vm.UpdateTelemetry(cmd, data));
+
+// Thread-safe command execution seamlessly arbitrated with background polling
+string result = await client.ExecuteAsync(RobotControl.ServoOn);
+```
+
 ---
 
 ## 📄 License & Governance
@@ -84,5 +121,5 @@ string reply = await client.QueryAsync("GET:PARAM?");
 - **Core Engine & Framework**: [Apache License 2.0](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/LICENSE)
 - **Third-Party Open-Source Notices**: [THIRD_PARTY_LICENSES.md](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/THIRD_PARTY_LICENSES.md)
 - **Detailed Compliance Guide**: [07. Open-Source Licensing & Compliance Guide](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/07_OPENSOURCE_LICENSING_AND_COMPLIANCE.md)
-- **Zero-Copyleft Guarantee**: 장비 제어 시퀀스 및 독점 레시피 알고리즘의 소스코드를 외부에 공개할 필요가 전혀 없으며, 100% 비공개 상용 바이너리로 안전하게 납품 가능합니다.
+- **Zero-Copyleft Guarantee**: No obligation to disclose your proprietary equipment control sequences or recipe algorithms. Fully permissive and safe for 100% closed-source commercial binary distribution.
 

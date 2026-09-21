@@ -82,6 +82,34 @@ public static class KableSimple
     }
 
     /// <summary>
+    /// 로컬 고속 IPC인 Named Pipe를 연결하고 KableSimple 클라이언트를 시작합니다.
+    /// </summary>
+    public static async ValueTask<IKableSimpleClient> OpenNamedPipeAsync(
+        string pipeName,
+        string serverName = ".",
+        int timeoutMs = 5000,
+        byte delimiter = 0x0A,
+        Encoding? encoding = null,
+        ICommObserver? observer = null,
+        CancellationToken ct = default)
+    {
+        var codec = new AsciiLineCodec(delimiter, encoding);
+        var builder = new KableClientBuilder<string>()
+            .UseNamedPipe(pipeName, serverName, timeoutMs)
+            .UseCodec(codec);
+
+        if (observer != null)
+        {
+            builder.UseObserver(observer);
+        }
+
+        var session = builder.Build();
+        var client = new KableSimpleClient(session, observer);
+        await client.InitializeAsync(ct).ConfigureAwait(false);
+        return client;
+    }
+
+    /// <summary>
     /// 기존 구성된 IDeviceSession&lt;string&gt;을 심플 클라이언트 래퍼로 감싸 시작합니다.
     /// </summary>
     public static async ValueTask<IKableSimpleClient> FromSessionAsync(

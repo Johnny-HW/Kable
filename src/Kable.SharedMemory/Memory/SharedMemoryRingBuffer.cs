@@ -43,6 +43,7 @@ public struct MmfRingBufferHeader
 /// <summary>
 /// 프로세스 간 공유 메모리(MMF) 기반의 Lock-Free SPSC 원형 바이트 버퍼.
 /// </summary>
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public unsafe sealed class SharedMemoryRingBuffer : IDisposable
 {
     private readonly MemoryMappedFile _mmf;
@@ -112,9 +113,7 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
         }
 
         long totalSize = 256 + capacityPowerOfTwo;
-        string mmfName = $"{bufferName}_mmf";
-        string dataEvtName = $"{bufferName}_data_evt";
-        string spaceEvtName = $"{bufferName}_space_evt";
+        var (mmfName, dataEvtName, spaceEvtName) = GetKernelObjectNames(bufferName);
 
         var mmf = MemoryMappedFile.CreateOrOpen(mmfName, totalSize, MemoryMappedFileAccess.ReadWrite);
         var accessor = mmf.CreateViewAccessor(0, totalSize, MemoryMappedFileAccess.ReadWrite);
@@ -133,9 +132,7 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
     /// </summary>
     public static SharedMemoryRingBuffer Open(string bufferName)
     {
-        string mmfName = $"{bufferName}_mmf";
-        string dataEvtName = $"{bufferName}_data_evt";
-        string spaceEvtName = $"{bufferName}_space_evt";
+        var (mmfName, dataEvtName, spaceEvtName) = GetKernelObjectNames(bufferName);
 
         var mmf = MemoryMappedFile.OpenExisting(mmfName, MemoryMappedFileRights.ReadWrite);
         var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.ReadWrite);
@@ -148,6 +145,10 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
 
         return new SharedMemoryRingBuffer(mmf, accessor, ptr, dataEvt, spaceEvt, isCreator: false, 0);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (string MmfName, string DataEvtName, string SpaceEvtName) GetKernelObjectNames(string bufferName)
+        => ($"{bufferName}_mmf", $"{bufferName}_data_evt", $"{bufferName}_space_evt");
 
     /// <summary>
     /// 버퍼에 바이트 데이터를 기록(Produce)합니다.

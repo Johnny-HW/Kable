@@ -80,7 +80,10 @@ public sealed partial class KableSession<TMessage>
                 catch (Exception flushEx)
                 {
                     Exception translatedEx = flushEx;
-                    if (flushEx is InvalidOperationException || flushEx.InnerException is System.Net.Sockets.SocketException)
+                    if (flushEx is InvalidOperationException ||
+                        flushEx is System.IO.IOException ||
+                        flushEx.InnerException is System.Net.Sockets.SocketException ||
+                        flushEx.InnerException is System.IO.IOException)
                     {
                         translatedEx = new DeviceDisconnectedException("Transport disconnected during outbound flush.", flushEx);
                     }
