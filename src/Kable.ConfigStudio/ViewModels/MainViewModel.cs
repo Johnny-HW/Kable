@@ -12,7 +12,27 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kable.ConfigStudio.Models;
 
+using System.Globalization;
+using Kable.Core;
+using Kable.Localization;
+using Kable.Observability;
+using Kable.UI.Wpf.ViewModels;
+
 namespace Kable.ConfigStudio.ViewModels;
+
+public sealed class LanguageOption
+{
+    public string DisplayName { get; }
+    public string CultureCode { get; }
+
+    public LanguageOption(string displayName, string cultureCode)
+    {
+        DisplayName = displayName;
+        CultureCode = cultureCode;
+    }
+
+    public override string ToString() => DisplayName;
+}
 
 public partial class MainViewModel : ObservableObject
 {
@@ -22,6 +42,22 @@ public partial class MainViewModel : ObservableObject
     public IReadOnlyList<int> AvailableBaudRates { get; } = new[] { 9600, 19200, 38400, 57600, 115200 };
     public IReadOnlyList<string> AvailableParities { get; } = new[] { "None", "Odd", "Even" };
     public IReadOnlyList<string> AvailableStopBits { get; } = new[] { "One", "Two" };
+
+    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } = new[]
+    {
+        new LanguageOption("🇰🇷 한국어 (KO)", "ko-KR"),
+        new LanguageOption("🇺🇸 English (EN)", "en-US"),
+        new LanguageOption("🇹🇼 繁體中文 (ZH-TW)", "zh-TW"),
+        new LanguageOption("🇨🇳 简体中文 (ZH-CN)", "zh-CN"),
+        new LanguageOption("🇯🇵 日本語 (JA)", "ja-JP"),
+        new LanguageOption("🇩🇪 Deutsch (DE)", "de-DE"),
+        new LanguageOption("🇪🇸 Español (ES)", "es-ES")
+    };
+
+    [ObservableProperty]
+    private LanguageOption _selectedLanguage;
+
+    public CommTerminalViewModel Terminal { get; } = new();
 
     [ObservableProperty]
     private ObservableCollection<string> _detectedComPorts = new();
@@ -51,8 +87,50 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
+        _selectedLanguage = AvailableLanguages[0]; // Default Korean
+        KableLocalizer.Instance.SetCulture(CultureInfo.GetCultureInfo(_selectedLanguage.CultureCode));
+
+        Terminal.ManualSendRequested += async (cmd) =>
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [TX] 수동 명령 송신: {cmd}");
+            var txBytes = Encoding.UTF8.GetBytes(cmd);
+            Terminal.OnPacketTrace(new PacketTraceRecord(
+                DateTime.UtcNow,
+                PacketDirection.Tx,
+                TrafficKind.AperiodicCommand,
+                "MANUAL_CMD",
+                txBytes,
+                cmd,
+                TimeSpan.Zero,
+                LogLevel.Information,
+                Profile.DeviceName));
+
+            await Task.Delay(50);
+
+            string echoResp = $"ACK:{cmd}";
+            var rxBytes = Encoding.UTF8.GetBytes(echoResp);
+            Terminal.OnPacketTrace(new PacketTraceRecord(
+                DateTime.UtcNow,
+                PacketDirection.Rx,
+                TrafficKind.AperiodicCommand,
+                "MANUAL_ACK",
+                rxBytes,
+                echoResp,
+                TimeSpan.FromMilliseconds(50),
+                LogLevel.Information,
+                Profile.DeviceName));
+        };
+
         RefreshComPorts();
         UpdateTomlPreview();
+    }
+
+    partial void OnSelectedLanguageChanged(LanguageOption value)
+    {
+        if (value != null)
+        {
+            KableLocalizer.Instance.SetCulture(CultureInfo.GetCultureInfo(value.CultureCode));
+        }
     }
 
     [RelayCommand]
@@ -221,6 +299,70 @@ public partial class MainViewModel : ObservableObject
             TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] {Profile.Transport} 기본 프레임 에코 시뮬레이션 성공");
             TestStatus = $"🔷 [MOCK 성공] {Profile.Transport} 가상 루프백 테스트 완료";
         }
+
+        // Kable.UI.Wpf 컴포넌트 실시간 반응 검증용 패킷 주입
+        // 1. 수시 명령 (Aperiodic Tx/Rx)
+        var cmdTx = Encoding.UTF8.GetBytes($"READ_CONFIG {Profile.DeviceName}");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow,
+            PacketDirection.Tx,
+            TrafficKind.AperiodicCommand,
+            "REQ_CFG",
+            cmdTx,
+            $"READ_CONFIG {Profile.DeviceName}",
+            TimeSpan.Zero,
+            LogLevel.Information,
+            Profile.DeviceName));
+
+        var cmdRx = Encoding.UTF8.GetBytes($"CONFIG_DATA STATUS=READY;BAUD={Profile.BaudRate}");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow,
+            PacketDirection.Rx,
+            TrafficKind.AperiodicCommand,
+            "RESP_CFG",
+            cmdRx,
+            $"CONFIG_DATA STATUS=READY;BAUD={Profile.BaudRate}",
+            TimeSpan.FromMilliseconds(12.4),
+            LogLevel.Information,
+            Profile.DeviceName));
+
+        // 2. 상시 텔레메트리 (Periodic Telemetry 50Hz)
+        var telBytes1 = Encoding.UTF8.GetBytes("TEMP: 24.8 C");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow,
+            PacketDirection.Rx,
+            TrafficKind.PeriodicTelemetry,
+            "Chamber_Temperature",
+            telBytes1,
+            "24.8",
+            TimeSpan.FromMilliseconds(1.2),
+            LogLevel.Information,
+            Profile.DeviceName));
+
+        var telBytes2 = Encoding.UTF8.GetBytes("PRESS: 101.3 kPa");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow,
+            PacketDirection.Rx,
+            TrafficKind.PeriodicTelemetry,
+            "Line_Pressure",
+            telBytes2,
+            "101.3",
+            TimeSpan.FromMilliseconds(1.1),
+            LogLevel.Information,
+            Profile.DeviceName));
+
+        // 3. 실시간 알람 (Spontaneous Alarm)
+        var almBytes = Encoding.UTF8.GetBytes("ALM_001: TEMPERATURE_HIGH_WARNING");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow,
+            PacketDirection.Rx,
+            TrafficKind.SpontaneousAlarm,
+            "ALM_OVERTEMP",
+            almBytes,
+            "Chamber temperature high threshold warning (24.8C)",
+            TimeSpan.Zero,
+            LogLevel.Warning,
+            Profile.DeviceName));
 
         TestResultColor = "#89B4FA";
     }

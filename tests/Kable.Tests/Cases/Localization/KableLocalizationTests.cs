@@ -97,6 +97,43 @@ public sealed class KableLocalizationTests
     }
 
     [Fact]
+    public void Localizer_ShouldTranslateToSpanish()
+    {
+        var localizer = KableLocalizer.Instance;
+        localizer.SetCulture(new CultureInfo("es-ES"));
+
+        var msg = localizer.GetErrorMessage(KableErrorCode.DeviceTimeout, "READ", 3000);
+        Assert.Contains("El comando 'READ' agotó el tiempo de espera tras 3000ms", msg);
+
+        var discMsg = localizer.GetErrorMessage(KableErrorCode.DeviceDisconnected);
+        Assert.Contains("La conexión de hardware se ha desconectado", discMsg);
+    }
+
+    [Fact]
+    public void Localizer_ShouldTranslateUiStringsDynamicallyAcrossLanguages()
+    {
+        var localizer = KableLocalizer.Instance;
+
+        // Korean
+        localizer.SetCulture(new CultureInfo("ko-KR"));
+        Assert.Equal("💬 수시 명령 통신 (Aperiodic)", localizer.GetString("Header_CommandConsole"));
+        Assert.Equal("순번(#)", localizer.GetString("Col_Seq"));
+        Assert.Equal("수동 명령 전송", localizer.GetString("Btn_SendManual"));
+
+        // English
+        localizer.SetCulture(new CultureInfo("en-US"));
+        Assert.Equal("💬 Aperiodic Commands", localizer.GetString("Header_CommandConsole"));
+        Assert.Equal("#", localizer.GetString("Col_Seq"));
+        Assert.Equal("Send Manual Command", localizer.GetString("Btn_SendManual"));
+
+        // Spanish
+        localizer.SetCulture(new CultureInfo("es-ES"));
+        Assert.Equal("💬 Comandos Aperiódicos", localizer.GetString("Header_CommandConsole"));
+        Assert.Equal("#", localizer.GetString("Col_Seq"));
+        Assert.Equal("Enviar Comando Manual", localizer.GetString("Btn_SendManual"));
+    }
+
+    [Fact]
     public void LocalizedException_ReturnsLocalizedMessage()
     {
         var localizer = KableLocalizer.Instance;

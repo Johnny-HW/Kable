@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Kable.Melsec\Kable.Melsec.csproj" />
     <ProjectReference Include="..\Kable.Mqtt\Kable.Mqtt.csproj" />
     <ProjectReference Include="..\Kable.OpcUa\Kable.OpcUa.csproj" />
+    <ProjectReference Include="..\Kable.UI.Wpf\Kable.UI.Wpf.csproj" />
   </ItemGroup>
 
 </Project>

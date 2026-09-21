@@ -5,8 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Kable.ConfigStudio.ViewModels"
         xmlns:models="clr-namespace:Kable.ConfigStudio.Models"
+        xmlns:ui="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf"
+        xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization;assembly=Kable.UI.Wpf"
         mc:Ignorable="d"
-        Title="🔌 Kable Connection Config Studio (통신 채널 간편 빌더)" Height="760" Width="1050"
+        Title="🔌 Kable Connection Config Studio" Height="820" Width="1120"
         WindowStartupLocation="CenterScreen" Background="#11111B">
     <Window.DataContext>
         <vm:MainViewModel/>
@@ -46,10 +48,19 @@
         <Border Grid.Row="0" Background="{StaticResource BgDark}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="🔌 Kable Connection Config Studio" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentOrange}"/>
-                    <TextBlock Text="C# 코드 수정 없이 콤보박스 선택과 통신 테스트로 TOML 설정 파일을 자동 생성하는 비주얼 도구" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                    <TextBlock Text="{loc:Loc Header_CommInspector}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentOrange}"/>
+                    <TextBlock Text="Kable Real-Time High-Performance Hardware Communication Studio" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Dynamic Language Selector -->
+                    <Border Background="#313244" CornerRadius="4" Padding="6,2" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🌐 " VerticalAlignment="Center"/>
+                            <ComboBox ItemsSource="{Binding AvailableLanguages}" SelectedItem="{Binding SelectedLanguage}" 
+                                      Background="#313244" Foreground="{StaticResource TextPrimary}" BorderThickness="0" 
+                                      Width="160" Padding="4,2"/>
+                        </StackPanel>
+                    </Border>
                     <Border Background="#313244" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                         <TextBlock Text="Engine: Kable v1.2.0" Foreground="{StaticResource AccentBlue}" FontWeight="Bold"/>
                     </Border>
@@ -73,21 +84,21 @@
                     <!-- Device Info -->
                     <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="1. 장치 식별 및 설명" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
+                            <TextBlock Text="{loc:Loc Header_DeviceInfo}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
                             <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="110"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="장치 식별자:" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{loc:Loc Lbl_DeviceId}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1" Text="{Binding Profile.DeviceName, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
                             </Grid>
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="110"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="장치 설명:" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{loc:Loc Lbl_Description}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1" Text="{Binding Profile.Description, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
                             </Grid>
                         </StackPanel>
@@ -96,7 +107,7 @@
                     <!-- Transport Selection -->
                     <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="2. 통신 선로 (Transport) 선택" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,10"/>
+                            <TextBlock Text="{loc:Loc Header_TransportSelection}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,10"/>
                             
                             <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
                                 <RadioButton Content="Serial" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
@@ -251,14 +262,14 @@
                     <!-- Codec & Router Settings -->
                     <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
                         <StackPanel>
-                            <TextBlock Text="3. 패킷 코덱(Codec) 및 트랜잭션 라우터" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
+                            <TextBlock Text="{loc:Loc Header_CodecRouter}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
                             <UniformGrid Columns="2">
                                 <StackPanel Margin="0,0,4,0">
-                                    <TextBlock Text="프레이밍 코덱 (Codec):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                    <TextBlock Text="Codec:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding AvailableCodecs}" SelectedItem="{Binding Profile.Codec}" Padding="6,4"/>
                                 </StackPanel>
                                 <StackPanel Margin="4,0,0,0">
-                                    <TextBlock Text="트랜잭션 라우터:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
+                                    <TextBlock Text="Router:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding AvailableRouters}" SelectedItem="{Binding Profile.Router}" Padding="6,4"/>
                                 </StackPanel>
                             </UniformGrid>
@@ -267,39 +278,31 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- RIGHT: Live Loopback Test & TOML Output -->
+            <!-- RIGHT: Live CommTerminalView (Decoupled Components) & TOML Output -->
             <Grid Grid.Column="1" Margin="8,0,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="180"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="180"/>
                 </Grid.RowDefinitions>
 
                 <!-- Connection Test Bar -->
                 <Border Grid.Row="0" Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="4. 현장 통신 진단 및 시뮬레이션" FontWeight="Bold" Foreground="{StaticResource AccentYellow}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{loc:Loc Header_LiveTest}" FontWeight="Bold" Foreground="{StaticResource AccentYellow}" Margin="0,0,0,8"/>
                         <Grid Margin="0,0,0,8">
                             <TextBlock Text="{Binding TestStatus}" Foreground="{Binding TestResultColor}" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </Grid>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="⚡ 실제 장비 연결 진단 (Live Test)" Command="{Binding RunLiveTestCommand}" Padding="12,6" Margin="0,0,8,0" Background="{StaticResource AccentYellow}" Foreground="#11111B" FontWeight="Bold" Cursor="Hand"/>
-                            <Button Content="🔬 오프라인 시뮬레이션 (Mock Loopback)" Command="{Binding RunMockSimulationCommand}" Padding="12,6" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
+                            <Button Content="{loc:Loc Btn_RunLiveTest}" Command="{Binding RunLiveTestCommand}" Padding="12,6" Margin="0,0,8,0" Background="{StaticResource AccentYellow}" Foreground="#11111B" FontWeight="Bold" Cursor="Hand"/>
+                            <Button Content="{loc:Loc Btn_RunSimulation}" Command="{Binding RunMockSimulationCommand}" Padding="12,6" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-
-                <!-- Packet Trace Box -->
-                <Border Grid.Row="1" Background="{StaticResource BgDark}" CornerRadius="8" Padding="10" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="📡 패킷 송수신 트레이스 로그 (Tri-Stream Channel)" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,0,0,4"/>
-                        <ListBox Grid.Row="1" ItemsSource="{Binding TraceLog}" Background="{StaticResource BgInput}" Foreground="{StaticResource AccentGreen}" FontFamily="Consolas" FontSize="11"/>
-                    </Grid>
+                <!-- Modular Tri-Stream Comm Terminal (Aperiodic / Periodic / Alarms) -->
+                <Border Grid.Row="1" Background="{StaticResource BgDark}" CornerRadius="8" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" ClipToBounds="True">
+                    <ui:CommTerminalView DataContext="{Binding Terminal}"/>
                 </Border>
 
                 <!-- Generated TOML Preview -->
@@ -310,8 +313,8 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" Margin="0,0,0,6">
-                            <TextBlock Text="📄 자동 생성된 TOML 설정 미리보기" FontWeight="Bold" Foreground="{StaticResource AccentGreen}" VerticalAlignment="Center"/>
-                            <Button Content="🔄 갱신" Command="{Binding UpdateTomlPreviewCommand}" DockPanel.Dock="Right" Padding="6,2" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
+                            <TextBlock Text="{loc:Loc Header_TomlPreview}" FontWeight="Bold" Foreground="{StaticResource AccentGreen}" VerticalAlignment="Center"/>
+                            <Button Content="{loc:Loc Btn_Refresh}" Command="{Binding UpdateTomlPreviewCommand}" DockPanel.Dock="Right" Padding="6,2" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
                         </DockPanel>
                         <TextBox Grid.Row="1" Text="{Binding GeneratedTomlPreview}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
                     </Grid>
@@ -322,8 +325,8 @@
         <!-- 3. Bottom Action Bar -->
         <Border Grid.Row="2" Background="{StaticResource BgDark}" CornerRadius="8" Padding="12" Margin="0,12,0,0" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
             <DockPanel>
-                <TextBlock Text="설정은 config/ 폴더에 표준 TOML 파일로 즉시 저장되며, Kable 세션 생성 시 1줄로 로드됩니다." Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                <Button Content="💾 설정 저장 및 TOML 파일 생성" Command="{Binding SaveToFileCommand}" DockPanel.Dock="Right" Padding="20,8" Background="{StaticResource AccentBlue}" Foreground="#11111B" FontWeight="Bold" FontSize="14" Cursor="Hand"/>
+                <TextBlock Text="Kable Configuration Studio — Real-Time Multi-Protocol Engine" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                <Button Content="{loc:Loc Btn_SaveConfig}" Command="{Binding SaveToFileCommand}" DockPanel.Dock="Right" Padding="20,8" Background="{StaticResource AccentBlue}" Foreground="#11111B" FontWeight="Bold" FontSize="14" Cursor="Hand"/>
             </DockPanel>
         </Border>
     </Grid>

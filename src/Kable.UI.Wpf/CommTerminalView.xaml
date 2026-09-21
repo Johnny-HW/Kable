@@ -3,88 +3,45 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:vm="clr-namespace:Kable.UI.Wpf.ViewModels"
+             xmlns:local="clr-namespace:Kable.UI.Wpf"
+             xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
-             d:DesignHeight="550" d:DesignWidth="850">
+             d:DesignHeight="600" d:DesignWidth="900">
     <Grid Background="#1E1E1E">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /> <!-- Toolbar -->
-            <RowDefinition Height="3*" />   <!-- Packet List -->
-            <RowDefinition Height="Auto" /> <!-- Splitter -->
-            <RowDefinition Height="2*" />   <!-- Hex Dump / Inspector -->
-            <RowDefinition Height="Auto" /> <!-- Manual Command Bar -->
-        </Grid.RowDefinitions>
-
-        <!-- 1. Toolbar -->
-        <Border Grid.Row="0" Background="#2D2D30" Padding="8,6" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
-            <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <TextBlock Text="⚡ Kable Comm Inspector" Foreground="#007ACC" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                    <Button Content="{Binding IsPaused, Converter={x:Null}, FallbackValue='Pause'}" 
-                            Command="{Binding TogglePauseCommand}" 
-                            Padding="10,4" Margin="0,0,6,0" Background="#3E3E42" Foreground="White" BorderThickness="0"/>
-                    <Button Content="Clear" Command="{Binding ClearLogsCommand}" 
-                            Padding="10,4" Margin="0,0,12,0" Background="#3E3E42" Foreground="White" BorderThickness="0"/>
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <TextBlock Text="Filter:" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="160" 
-                             Background="#252526" Foreground="White" BorderBrush="#3F3F46" Padding="4,2"/>
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- 2. Packet List Grid -->
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
-                  AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#2D2D30"
-                  Background="#1E1E1E" RowBackground="#1E1E1E" AlternatingRowBackground="#252526"
-                  Foreground="#DCDCDC" BorderThickness="0" SelectionMode="Single"
-                  FontFamily="Segoe UI" FontSize="12">
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#2D2D30"/>
-                    <Setter Property="Foreground" Value="#AAAAAA"/>
-                    <Setter Property="Padding" Value="6,4"/>
+        <TabControl Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Background" Value="#252526"/>
+                    <Setter Property="Foreground" Value="#CCCCCC"/>
                     <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                    <Setter Property="BorderBrush" Value="#3F3F46"/>
+                    <Setter Property="Padding" Value="14,8"/>
+                    <Setter Property="Margin" Value="0,0,2,0"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#1E1E1E"/>
+                            <Setter Property="Foreground" Value="#007ACC"/>
+                            <Setter Property="BorderThickness" Value="0,2,0,0"/>
+                            <Setter Property="BorderBrush" Value="#007ACC"/>
+                        </Trigger>
+                    </Style.Triggers>
                 </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="#" Binding="{Binding SequenceNo}" Width="50"/>
-                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="90"/>
-                <DataGridTextColumn Header="Dir" Binding="{Binding Direction}" Width="65"/>
-                <DataGridTextColumn Header="Device" Binding="{Binding DeviceId}" Width="90"/>
-                <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="110"/>
-                <DataGridTextColumn Header="Bytes" Binding="{Binding Length}" Width="55"/>
-                <DataGridTextColumn Header="Latency" Binding="{Binding LatencyMs}" Width="75"/>
-                <DataGridTextColumn Header="Payload Preview" Binding="{Binding AsciiPreview}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+            </TabControl.Resources>
 
-        <!-- Grid Splitter -->
-        <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch" Background="#3F3F46" ResizeDirection="Rows"/>
+            <!-- 1. 수시 명령 콘솔 탭 (Aperiodic Commands) -->
+            <TabItem Header="{loc:Loc Header_CommandConsole}">
+                <local:CommandConsoleView DataContext="{Binding CommandConsole}"/>
+            </TabItem>
 
-        <!-- 3. Hex Dump / Inspector -->
-        <Border Grid.Row="3" Background="#181818" Padding="8">
-            <TextBox Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue='Select a packet to inspect hex dump...'}" 
-                     FontFamily="Consolas, Courier New" FontSize="12" Foreground="#85E89D"
-                     Background="Transparent" BorderThickness="0"
-                     IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-        </Border>
+            <!-- 2. 상시 텔레메트리 스트림 탭 (Periodic Telemetry) -->
+            <TabItem Header="{loc:Loc Header_PeriodicTelemetry}">
+                <local:TelemetryStreamView DataContext="{Binding TelemetryStream}"/>
+            </TabItem>
 
-        <!-- 4. Manual Command Injection Bar -->
-        <Border Grid.Row="4" Background="#2D2D30" Padding="8" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
-            <DockPanel>
-                <Button Content="Send Manual Command" Command="{Binding SendManualCommandCommand}" 
-                        DockPanel.Dock="Right" Padding="12,4" Margin="8,0,0,0"
-                        Background="#007ACC" Foreground="White" FontWeight="SemiBold" BorderThickness="0"/>
-                <TextBox Text="{Binding ManualCommandText, UpdateSourceTrigger=PropertyChanged}" 
-                         Background="#252526" Foreground="White" BorderBrush="#3F3F46" Padding="6,4"
-                         FontFamily="Consolas" FontSize="12"/>
-            </DockPanel>
-        </Border>
+            <!-- 3. 실시간 알람 탭 (Active Alarms) -->
+            <TabItem Header="{loc:Loc Header_Alarms}">
+                <local:AlarmListView DataContext="{Binding AlarmList}"/>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>
