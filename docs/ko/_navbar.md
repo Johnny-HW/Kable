@@ -1,6 +1,6 @@
 <!-- docs/_navbar.md -->
 
-* 🌐 Language / Idioma
+* 🌐 Languages
   * [English](/en/)
   * [한국어 (Korean)](/ko/)
   * [繁體中文 (Traditional Chinese)](/zh-tw/)
