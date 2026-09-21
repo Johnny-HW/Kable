@@ -44,50 +44,60 @@
 
         <!-- 2. Alarm List Grid -->
         <DataGrid Grid.Row="1" ItemsSource="{Binding Alarms}"
-                  AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
-                  Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
-                  Foreground="#0F172A" BorderThickness="0" SelectionMode="Single"
-                  FontFamily="Segoe UI" FontSize="12">
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#F8FAFC"/>
-                    <Setter Property="Foreground" Value="#64748B"/>
-                    <Setter Property="Padding" Value="10,8"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Setter Property="Height" Value="34"/>
-                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F1F5F9"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#FEE2E2"/>
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
+                  Style="{StaticResource IosDataGridStyle}">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="{loc:Loc Col_AlarmCode}" Binding="{Binding AlarmCode}" Width="140" FontWeight="Bold"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Severity}" Binding="{Binding Severity}" Width="90">
+                <DataGridTextColumn Header="{loc:Loc Col_AlarmCode}" Binding="{Binding AlarmCode}" Width="150" FontWeight="Bold">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#DC2626"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Severity}" Binding="{Binding Severity}" Width="100">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{Binding SeverityColor}"/>
                             <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="100"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="100"/>
-                <DataGridTextColumn Header="{loc:Loc Col_State}" Binding="{Binding State}" Width="80"/>
-                <DataGridTextColumn Header="{loc:Loc Col_AlarmMessage}" Binding="{Binding Message}" Width="*"/>
+                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="110">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#64748B"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="110">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Medium"/>
+                            <Setter Property="Foreground" Value="#1E293B"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_State}" Binding="{Binding State}" Width="85">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#475569"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_AlarmMessage}" Binding="{Binding Message}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

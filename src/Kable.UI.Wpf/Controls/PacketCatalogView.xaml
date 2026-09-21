@@ -71,37 +71,39 @@
                 <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
             </Border.Effect>
             <DataGrid ItemsSource="{Binding PacketCatalog}" 
-                      AutoGenerateColumns="False" CanUserAddRows="False"
-                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
-                      Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
-                      Foreground="#0F172A" BorderThickness="0" SelectionMode="Single"
-                      FontFamily="Segoe UI" FontSize="12">
-                <DataGrid.ColumnHeaderStyle>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#F1F5F9"/>
-                        <Setter Property="Foreground" Value="#475569"/>
-                        <Setter Property="Padding" Value="10,6"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                    </Style>
-                </DataGrid.ColumnHeaderStyle>
+                      Style="{StaticResource IosDataGridStyle}">
                 <DataGrid.Columns>
                     <!-- Enable Checkbox -->
-                    <DataGridCheckBoxColumn Header="활성" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                    <DataGridCheckBoxColumn Header="활성" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
 
                     <!-- Packet ID -->
-                    <DataGridTextColumn Header="패킷 ID" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="120" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="패킷 ID" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                <Setter Property="Foreground" Value="#0F172A"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
                     <!-- Name -->
-                    <DataGridTextColumn Header="명칭 (Name)" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="160"/>
+                    <DataGridTextColumn Header="명칭 (Name)" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="160">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="#1E293B"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
                     <!-- Traffic Kind (상시 vs 수시 vs 알람) -->
                     <DataGridTemplateColumn Header="트래픽 구분 (Traffic Kind)" Width="170">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ComboBox SelectedItem="{Binding Kind, UpdateSourceTrigger=PropertyChanged}" 
-                                          Style="{StaticResource IosComboBoxStyle}" Height="30" FontSize="11">
+                                          Style="{StaticResource IosComboBoxStyle}" Height="30" FontSize="11" Margin="0,2">
                                     <obs:TrafficKind>AperiodicCommand</obs:TrafficKind>
                                     <obs:TrafficKind>PeriodicTelemetry</obs:TrafficKind>
                                     <obs:TrafficKind>SpontaneousAlarm</obs:TrafficKind>
@@ -111,33 +113,51 @@
                     </DataGridTemplateColumn>
 
                     <!-- Interval (ms) - For Periodic -->
-                    <DataGridTextColumn Header="주기 (ms)" Binding="{Binding IntervalMs, UpdateSourceTrigger=PropertyChanged}" Width="80">
+                    <DataGridTextColumn Header="주기 (ms)" Binding="{Binding IntervalMs, UpdateSourceTrigger=PropertyChanged}" Width="85">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#0071E3"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
                                 <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="Margin" Value="0,0,8,0"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="0,0,12,0"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
                     <!-- Unit -->
-                    <DataGridTextColumn Header="단위" Binding="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" Width="65"/>
+                    <DataGridTextColumn Header="단위" Binding="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" Width="70">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#64748B"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
                     <!-- Base Value -->
-                    <DataGridTextColumn Header="가상 기준값" Binding="{Binding SimulatedBaseValue, UpdateSourceTrigger=PropertyChanged}" Width="90">
+                    <DataGridTextColumn Header="가상 기준값" Binding="{Binding SimulatedBaseValue, UpdateSourceTrigger=PropertyChanged}" Width="95">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#0F172A"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="Margin" Value="0,0,8,0"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="0,0,12,0"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
                     <!-- Command Payload / Template -->
-                    <DataGridTextColumn Header="송신 페이로드 / 포맷" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                    <DataGridTextColumn Header="송신 페이로드 / 포맷" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                                <Setter Property="Foreground" Value="#475569"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

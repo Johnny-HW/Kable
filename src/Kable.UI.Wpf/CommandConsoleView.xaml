@@ -134,43 +134,32 @@
 
         <!-- 3. Packet List Grid -->
         <DataGrid Grid.Row="2" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
-                  AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
-                  Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
-                  Foreground="#0F172A" BorderThickness="0" SelectionMode="Single"
-                  FontFamily="Segoe UI" FontSize="12">
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#F8FAFC"/>
-                    <Setter Property="Foreground" Value="#64748B"/>
-                    <Setter Property="Padding" Value="10,8"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Setter Property="Height" Value="34"/>
-                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F1F5F9"/>
-                        </Trigger>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#E0F2FE"/>
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
+                  Style="{StaticResource IosDataGridStyle}">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="55"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="90"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Dir}" Binding="{Binding Direction}" Width="65">
+                <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="60">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#64748B"/>
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#475569"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Dir}" Binding="{Binding Direction}" Width="75">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
                             <Style.Triggers>
                                 <Trigger Property="Text" Value="TX ➡">
                                     <Setter Property="Foreground" Value="#0071E3"/>
@@ -182,11 +171,54 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="90"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Type}" Binding="{Binding Kind}" Width="110"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Bytes}" Binding="{Binding Length}" Width="60"/>
-                <DataGridTextColumn Header="{loc:Loc Col_Latency}" Binding="{Binding LatencyMs}" Width="75"/>
-                <DataGridTextColumn Header="{loc:Loc Col_PayloadPreview}" Binding="{Binding AsciiPreview}" Width="*"/>
+                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Medium"/>
+                            <Setter Property="Foreground" Value="#1E293B"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Type}" Binding="{Binding Kind}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Bytes}" Binding="{Binding Length}" Width="65">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#64748B"/>
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="Margin" Value="0,0,10,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Latency}" Binding="{Binding LatencyMs}" Width="80">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#D97706"/>
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="Margin" Value="0,0,10,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_PayloadPreview}" Binding="{Binding AsciiPreview}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
         </DataGrid>
 
