@@ -266,10 +266,21 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_TomlPreview"] = "📄 Auto-Generated TOML Preview",
 
             ["Nav_Config"] = "⚙️ Comm Config",
+            ["Nav_Packets"] = "📋 Packet Catalog",
             ["Nav_Inspector"] = "💬 Aperiodic Commands",
             ["Nav_Telemetry"] = "📈 Telemetry",
             ["Nav_Alarms"] = "🚨 Alarms",
             ["Nav_Export"] = "📄 Config Export",
+
+            ["Header_PacketCatalog"] = "Hardware Packet Catalog & Traffic Classification",
+            ["Lbl_TrafficType"] = "Traffic Type:",
+            ["Lbl_Aperiodic"] = "Aperiodic (Command)",
+            ["Lbl_Periodic"] = "Periodic (Telemetry)",
+            ["Lbl_Alarm"] = "Alarm",
+            ["Lbl_IntervalMs"] = "Interval (ms):",
+            ["Btn_SimStart"] = "▶️ Start Simulation",
+            ["Btn_SimStop"] = "⏹️ Stop Simulation",
+            ["Btn_AddPacket"] = "➕ Add Packet",
 
             ["Col_Seq"] = "#",
             ["Col_Time"] = "Time",
@@ -333,10 +344,21 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_TomlPreview"] = "📄 자동 생성된 TOML 설정 미리보기",
 
             ["Nav_Config"] = "⚙️ 통신 설정 (Config)",
+            ["Nav_Packets"] = "📋 패킷 카탈로그 (Packets)",
             ["Nav_Inspector"] = "💬 수시 명령 (Aperiodic)",
             ["Nav_Telemetry"] = "📈 상시 텔레메트리 (Telemetry)",
             ["Nav_Alarms"] = "🚨 실시간 알람 (Alarms)",
             ["Nav_Export"] = "📄 설정 내보내기 (Export)",
+
+            ["Header_PacketCatalog"] = "통신 패킷 사전 및 상시/수시 트래픽 분류 설정",
+            ["Lbl_TrafficType"] = "트래픽 구분:",
+            ["Lbl_Aperiodic"] = "수시 명령 (Aperiodic)",
+            ["Lbl_Periodic"] = "상시 텔레메트리 (Periodic)",
+            ["Lbl_Alarm"] = "자발적 경보 (Alarm)",
+            ["Lbl_IntervalMs"] = "주기(ms):",
+            ["Btn_SimStart"] = "▶️ 시뮬레이터 가동 (스트리밍)",
+            ["Btn_SimStop"] = "⏹️ 시뮬레이터 정지",
+            ["Btn_AddPacket"] = "➕ 새 패킷 추가",
 
             ["Col_Seq"] = "순번(#)",
             ["Col_Time"] = "수신시각",

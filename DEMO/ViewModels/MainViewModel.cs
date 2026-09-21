@@ -15,6 +15,7 @@ using Kable.Core;
 using Kable.Localization;
 using Kable.Observability;
 using Kable.UI.Wpf.Models;
+using Kable.UI.Wpf.Services;
 using Kable.UI.Wpf.ViewModels;
 
 namespace Kable.ConfigStudio.ViewModels;
@@ -34,17 +35,19 @@ public partial class MainViewModel : ObservableObject
     private LanguageOption _selectedLanguage;
 
     [ObservableProperty]
-    private int _selectedNavIndex = 0; // 0: Config, 1: LiveInspector, 2: Telemetry, 3: Alarms, 4: TomlExport
+    private int _selectedNavIndex = 0; // 0: Config, 1: Packets, 2: LiveInspector, 3: Telemetry, 4: Alarms, 5: TomlExport
 
     public bool IsNavConfig => SelectedNavIndex == 0;
-    public bool IsNavInspector => SelectedNavIndex == 1;
-    public bool IsNavTelemetry => SelectedNavIndex == 2;
-    public bool IsNavAlarms => SelectedNavIndex == 3;
-    public bool IsNavExport => SelectedNavIndex == 4;
+    public bool IsNavPackets => SelectedNavIndex == 1;
+    public bool IsNavInspector => SelectedNavIndex == 2;
+    public bool IsNavTelemetry => SelectedNavIndex == 3;
+    public bool IsNavAlarms => SelectedNavIndex == 4;
+    public bool IsNavExport => SelectedNavIndex == 5;
 
     partial void OnSelectedNavIndexChanged(int value)
     {
         OnPropertyChanged(nameof(IsNavConfig));
+        OnPropertyChanged(nameof(IsNavPackets));
         OnPropertyChanged(nameof(IsNavInspector));
         OnPropertyChanged(nameof(IsNavTelemetry));
         OnPropertyChanged(nameof(IsNavAlarms));
@@ -58,6 +61,56 @@ public partial class MainViewModel : ObservableObject
         {
             SelectedNavIndex = idx;
         }
+    }
+
+    // Packet Catalog Collection
+    [ObservableProperty]
+    private ObservableCollection<PacketCatalogItem> _packetCatalog = new()
+    {
+        new PacketCatalogItem { Id = "REQ_STATUS", Name = "장비 상태 조회", Kind = TrafficKind.AperiodicCommand, CommandPayload = "GET_STATUS", ResponseTemplate = "STATUS: READY", IntervalMs = 0, Unit = "", SimulatedBaseValue = 0 },
+        new PacketCatalogItem { Id = "CHAMBER_TEMP", Name = "Chamber 챔버 온도", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "TEMP:{VAL}", IntervalMs = 100, Unit = "°C", SimulatedBaseValue = 24.8 },
+        new PacketCatalogItem { Id = "LINE_PRESSURE", Name = "라인 공급 압력", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "PRESS:{VAL}", IntervalMs = 100, Unit = "kPa", SimulatedBaseValue = 101.3 },
+        new PacketCatalogItem { Id = "FLOW_RATE", Name = "약액 공급 유량", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "FLOW:{VAL}", IntervalMs = 50, Unit = "mL/min", SimulatedBaseValue = 12.5 },
+        new PacketCatalogItem { Id = "ALM_OVERTEMP", Name = "과열 감지 경보", Kind = TrafficKind.SpontaneousAlarm, CommandPayload = "", ResponseTemplate = "ALM_001: OVERTEMP", IntervalMs = 0, Unit = "", SimulatedBaseValue = 0 }
+    };
+
+    [ObservableProperty]
+    private bool _isSimulatorRunning;
+
+    private VirtualDeviceSimulator? _simulator;
+
+    [RelayCommand]
+    public void ToggleSimulation()
+    {
+        _simulator?.Toggle();
+        IsSimulatorRunning = _simulator?.IsRunning ?? false;
+        if (IsSimulatorRunning)
+        {
+            TestStatus = "🟢 [가상 시뮬레이터 가동 중] 상시 패킷 고속 스트리밍 전송 중...";
+            TestResultColor = "#A6E3A1";
+        }
+        else
+        {
+            TestStatus = "⏹️ [가상 시뮬레이터 정지됨]";
+            TestResultColor = "#A6ADC8";
+        }
+    }
+
+    [RelayCommand]
+    public void AddPacketItem()
+    {
+        int count = PacketCatalog.Count + 1;
+        PacketCatalog.Add(new PacketCatalogItem
+        {
+            Id = $"CUSTOM_PKT_{count}",
+            Name = $"사용자 정의 패킷 {count}",
+            Kind = TrafficKind.PeriodicTelemetry,
+            CommandPayload = "",
+            ResponseTemplate = "{VAL}",
+            IntervalMs = 200,
+            Unit = "V",
+            SimulatedBaseValue = 5.0
+        });
     }
 
     public CommTerminalViewModel Terminal { get; } = new();
@@ -126,6 +179,11 @@ public partial class MainViewModel : ObservableObject
 
         RefreshComPorts();
         UpdateTomlPreview();
+
+        _simulator = new VirtualDeviceSimulator(
+            Terminal,
+            () => PacketCatalog,
+            () => Profile.DeviceName);
     }
 
     partial void OnSelectedLanguageChanged(LanguageOption value)

@@ -36,6 +36,30 @@
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Simulation Streaming Toggle Button -->
+                    <Button Command="{Binding ToggleSimulationCommand}" 
+                            Padding="14,6" Margin="0,0,12,0" FontWeight="Bold" FontSize="12" Cursor="Hand" BorderThickness="0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#252538"/>
+                                <Setter Property="Foreground" Value="#A6ADC8"/>
+                                <Setter Property="Content" Value="🔬 가상 시뮬레이터 시작"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSimulatorRunning}" Value="True">
+                                        <Setter Property="Background" Value="#A6E3A1"/>
+                                        <Setter Property="Foreground" Value="#11111B"/>
+                                        <Setter Property="Content" Value="🟢 상시 스트리밍 중 (가동)"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="12"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
                     <!-- Reusable Language Selector Component -->
                     <controls:LanguageSelectorControl Margin="0,0,12,0"/>
 
@@ -63,25 +87,30 @@
                              IsChecked="{Binding IsNavConfig, Mode=OneWay}"
                              Command="{Binding SetNavCommand}" CommandParameter="0"/>
 
-                <!-- 1. 수시 명령 콘솔 -->
-                <RadioButton Content="{loc:Loc Nav_Inspector}" Style="{StaticResource IosNavRadioBtn}"
-                             IsChecked="{Binding IsNavInspector, Mode=OneWay}"
+                <!-- 1. 패킷/명령 카탈로그 (상시/수시 설정) -->
+                <RadioButton Content="{loc:Loc Nav_Packets}" Style="{StaticResource IosNavRadioBtn}" 
+                             IsChecked="{Binding IsNavPackets, Mode=OneWay}"
                              Command="{Binding SetNavCommand}" CommandParameter="1"/>
 
-                <!-- 2. 상시 텔레메트리 -->
-                <RadioButton Content="{loc:Loc Nav_Telemetry}" Style="{StaticResource IosNavRadioBtn}"
-                             IsChecked="{Binding IsNavTelemetry, Mode=OneWay}"
+                <!-- 2. 수시 명령 콘솔 -->
+                <RadioButton Content="{loc:Loc Nav_Inspector}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavInspector, Mode=OneWay}"
                              Command="{Binding SetNavCommand}" CommandParameter="2"/>
 
-                <!-- 3. 실시간 알람 -->
-                <RadioButton Content="{loc:Loc Nav_Alarms}" Style="{StaticResource IosNavRadioBtn}"
-                             IsChecked="{Binding IsNavAlarms, Mode=OneWay}"
+                <!-- 3. 상시 텔레메트리 -->
+                <RadioButton Content="{loc:Loc Nav_Telemetry}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavTelemetry, Mode=OneWay}"
                              Command="{Binding SetNavCommand}" CommandParameter="3"/>
 
-                <!-- 4. TOML 내보내기 -->
+                <!-- 4. 실시간 알람 -->
+                <RadioButton Content="{loc:Loc Nav_Alarms}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavAlarms, Mode=OneWay}"
+                             Command="{Binding SetNavCommand}" CommandParameter="4"/>
+
+                <!-- 5. TOML 내보내기 -->
                 <RadioButton Content="{loc:Loc Nav_Export}" Style="{StaticResource IosNavRadioBtn}"
                              IsChecked="{Binding IsNavExport, Mode=OneWay}"
-                             Command="{Binding SetNavCommand}" CommandParameter="4"/>
+                             Command="{Binding SetNavCommand}" CommandParameter="5"/>
             </StackPanel>
         </Border>
 
@@ -90,16 +119,19 @@
             <!-- Screen 0: Connection Configuration -->
             <views:ConnectionConfigView Visibility="{Binding IsNavConfig, Converter={StaticResource BoolToVis}}"/>
 
-            <!-- Screen 1: Live Aperiodic Command Inspector -->
+            <!-- Screen 1: Packet Catalog & Traffic Classification -->
+            <controls:PacketCatalogView Visibility="{Binding IsNavPackets, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- Screen 2: Live Aperiodic Command Inspector -->
             <views:LiveInspectorView Visibility="{Binding IsNavInspector, Converter={StaticResource BoolToVis}}"/>
 
-            <!-- Screen 2: High-rate Telemetry Stream Dashboard -->
+            <!-- Screen 3: High-rate Telemetry Stream Dashboard -->
             <views:TelemetryDashboardView Visibility="{Binding IsNavTelemetry, Converter={StaticResource BoolToVis}}"/>
 
-            <!-- Screen 3: Spontaneous Alarm Monitor -->
+            <!-- Screen 4: Spontaneous Alarm Monitor -->
             <views:AlarmMonitorView Visibility="{Binding IsNavAlarms, Converter={StaticResource BoolToVis}}"/>
 
-            <!-- Screen 4: TOML Config Preview & Save -->
+            <!-- Screen 5: TOML Config Preview & Save -->
             <views:TomlExportView Visibility="{Binding IsNavExport, Converter={StaticResource BoolToVis}}"/>
         </Grid>
     </Grid>

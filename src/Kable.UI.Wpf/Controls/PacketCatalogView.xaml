@@ -1,0 +1,144 @@
+<UserControl x:Class="Kable.UI.Wpf.Controls.PacketCatalogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:models="clr-namespace:Kable.UI.Wpf.Models"
+             xmlns:obs="clr-namespace:Kable.Observability;assembly=Kable.Core"
+             xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Action Header Bar -->
+            <RowDefinition Height="*"/>    <!-- DataGrid of Packets -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Top Action & Simulation Status Bar -->
+        <Border Grid.Row="0" Background="#1E1E2E" CornerRadius="16" Padding="16" Margin="0,0,0,12" BorderBrush="#313244" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.2" Color="#000000"/>
+            </Border.Effect>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:Loc Header_PacketCatalog}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource KableAccentBlue}" Margin="0,0,0,4"/>
+                    <TextBlock Text="장비가 송수신하는 패킷을 정의하고, 상시(Periodic) 및 수시(Aperiodic) 주기와 시뮬레이션 값을 관리합니다." 
+                               Foreground="{StaticResource KableTextSecondary}" FontSize="11"/>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Simulation Toggle Pill Button -->
+                    <Button Command="{Binding ToggleSimulationCommand}" 
+                            Padding="16,8" Margin="0,0,10,0" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#A6E3A1"/>
+                                <Setter Property="Foreground" Value="#11111B"/>
+                                <Setter Property="Content" Value="{loc:Loc Btn_SimStart}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSimulatorRunning}" Value="True">
+                                        <Setter Property="Background" Value="#F38BA8"/>
+                                        <Setter Property="Foreground" Value="#FFFFFF"/>
+                                        <Setter Property="Content" Value="{loc:Loc Btn_SimStop}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="10"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <Button Content="{loc:Loc Btn_AddPacket}" Command="{Binding AddPacketItemCommand}" 
+                            Style="{StaticResource IosSecondaryButtonStyle}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 2. Packet Catalog Grid -->
+        <Border Grid.Row="1" Background="#1E1E2E" CornerRadius="16" BorderBrush="#313244" BorderThickness="1" Padding="12" ClipToBounds="True">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+            </Border.Effect>
+            <DataGrid ItemsSource="{Binding PacketCatalog}" 
+                      AutoGenerateColumns="False" CanUserAddRows="False"
+                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#313244"
+                      Background="#181926" RowBackground="#1E1E2E" AlternatingRowBackground="#24273A"
+                      Foreground="#CDD6F4" BorderThickness="0" SelectionMode="Single"
+                      FontFamily="Segoe UI" FontSize="12">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#252538"/>
+                        <Setter Property="Foreground" Value="#A6ADC8"/>
+                        <Setter Property="Padding" Value="10,6"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="BorderBrush" Value="#313244"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <!-- Enable Checkbox -->
+                    <DataGridCheckBoxColumn Header="활성" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+
+                    <!-- Packet ID -->
+                    <DataGridTextColumn Header="패킷 ID" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="120" FontWeight="Bold"/>
+
+                    <!-- Name -->
+                    <DataGridTextColumn Header="명칭 (Name)" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="160"/>
+
+                    <!-- Traffic Kind (상시 vs 수시 vs 알람) -->
+                    <DataGridTemplateColumn Header="트래픽 구분 (Traffic Kind)" Width="170">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <ComboBox SelectedItem="{Binding Kind, UpdateSourceTrigger=PropertyChanged}" 
+                                          Style="{StaticResource IosComboBoxStyle}" Height="30" FontSize="11">
+                                    <obs:TrafficKind>AperiodicCommand</obs:TrafficKind>
+                                    <obs:TrafficKind>PeriodicTelemetry</obs:TrafficKind>
+                                    <obs:TrafficKind>SpontaneousAlarm</obs:TrafficKind>
+                                </ComboBox>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Interval (ms) - For Periodic -->
+                    <DataGridTextColumn Header="주기 (ms)" Binding="{Binding IntervalMs, UpdateSourceTrigger=PropertyChanged}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#F9E2AF"/>
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                <Setter Property="Margin" Value="0,0,8,0"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Unit -->
+                    <DataGridTextColumn Header="단위" Binding="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" Width="65"/>
+
+                    <!-- Base Value -->
+                    <DataGridTextColumn Header="가상 기준값" Binding="{Binding SimulatedBaseValue, UpdateSourceTrigger=PropertyChanged}" Width="90">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#89B4FA"/>
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                <Setter Property="Margin" Value="0,0,8,0"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Command Payload / Template -->
+                    <DataGridTextColumn Header="송신 페이로드 / 포맷" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>
