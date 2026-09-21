@@ -10,6 +10,7 @@ using Kable.Exceptions;
 using Kable.Tests.Fixtures;
 using Xunit;
 
+[Collection("HardwareTransportTests")]
 public class WatchdogTimeoutAndDisconnectTests
 {
     [Theory]
@@ -43,6 +44,7 @@ public class WatchdogTimeoutAndDisconnectTests
         await session.StartAsync();
 
         var pendingTask = session.RequestAsync<string>("WAITING_CMD", TimeSpan.FromSeconds(5)).AsTask();
+        await Task.Delay(50);
 
         factory.Context.Abort("Physical Cable Disconnected");
 

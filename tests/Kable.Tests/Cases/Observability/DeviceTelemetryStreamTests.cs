@@ -25,8 +25,11 @@ public class DeviceTelemetryStreamTests
             return received;
         });
 
-        // 잠시 대기하여 구독 채널 등록 보장
-        await Task.Delay(50);
+        // 구독 채널 등록 대기 (최대 1초)
+        for (int i = 0; i < 20 && stream.SubscriberCount == 0; i++)
+        {
+            await Task.Delay(25);
+        }
         Assert.Equal(1, stream.SubscriberCount);
 
         stream.Publish(10);

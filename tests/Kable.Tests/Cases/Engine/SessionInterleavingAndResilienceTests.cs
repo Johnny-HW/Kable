@@ -62,6 +62,7 @@ public sealed class CorrelationIdLineCodec : IProtocolCodec<string>
     }
 }
 
+[Collection("HardwareTransportTests")]
 public class SessionInterleavingAndResilienceTests
 {
     [Fact]
@@ -391,6 +392,9 @@ public class SessionInterleavingAndResilienceTests
         {
             tasks[i] = session.RequestAsync<string>($"CID_{i}:CMD", TimeSpan.FromSeconds(10)).AsTask();
         }
+
+        // Allow all 50 caller tasks to enqueue and enter pending wait
+        await Task.Delay(50);
 
         // Abrupt physical disconnect
         factory.Context.Abort("Physical disconnect triggered");
