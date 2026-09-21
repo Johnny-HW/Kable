@@ -7,7 +7,7 @@
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
              d:DesignHeight="550" d:DesignWidth="850">
-    <Grid Background="#1E1E1E">
+    <Grid Background="#FFFFFF">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /> <!-- Toolbar -->
             <RowDefinition Height="3*" />   <!-- Packet List -->
@@ -17,21 +17,39 @@
         </Grid.RowDefinitions>
 
         <!-- 1. Toolbar -->
-        <Border Grid.Row="0" Background="#2D2D30" Padding="8,6" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#F8FAFC" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <DockPanel LastChildFill="False">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <TextBlock Text="{loc:Loc Header_CommandConsole}" Foreground="#007ACC" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <TextBlock Text="{loc:Loc Header_CommandConsole}" Foreground="#0071E3" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,16,0"/>
                     <Button Content="{loc:Loc Btn_Pause}" 
                             Command="{Binding TogglePauseCommand}" 
-                            Padding="10,4" Margin="0,0,6,0" Background="#3E3E42" Foreground="White" BorderThickness="0"/>
+                            Padding="12,6" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#334155" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                     <Button Content="{loc:Loc Btn_Clear}" Command="{Binding ClearLogsCommand}" 
-                            Padding="10,4" Margin="0,0,12,0" Background="#3E3E42" Foreground="White" BorderThickness="0"/>
+                            Padding="12,6" Margin="0,0,12,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="160" 
-                             Background="#252526" Foreground="White" BorderBrush="#3F3F46" Padding="4,2"/>
+                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#64748B" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="180" 
+                             Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,4">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -39,20 +57,35 @@
         <!-- 2. Packet List Grid -->
         <DataGrid Grid.Row="1" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
                   AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#2D2D30"
-                  Background="#1E1E1E" RowBackground="#1E1E1E" AlternatingRowBackground="#252526"
-                  Foreground="#DCDCDC" BorderThickness="0" SelectionMode="Single"
+                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                  Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
+                  Foreground="#0F172A" BorderThickness="0" SelectionMode="Single"
                   FontFamily="Segoe UI" FontSize="12">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#2D2D30"/>
-                    <Setter Property="Foreground" Value="#AAAAAA"/>
-                    <Setter Property="Padding" Value="6,4"/>
+                    <Setter Property="Background" Value="#F8FAFC"/>
+                    <Setter Property="Foreground" Value="#64748B"/>
+                    <Setter Property="Padding" Value="10,8"/>
                     <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                    <Setter Property="BorderBrush" Value="#3F3F46"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
                 </Style>
             </DataGrid.ColumnHeaderStyle>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Height" Value="34"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#E0F2FE"/>
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="55"/>
                 <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="90"/>
@@ -66,25 +99,37 @@
         </DataGrid>
 
         <!-- Grid Splitter -->
-        <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch" Background="#3F3F46" ResizeDirection="Rows"/>
+        <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch" Background="#E2E8F0" ResizeDirection="Rows"/>
 
         <!-- 3. Hex Dump / Inspector -->
-        <Border Grid.Row="3" Background="#181818" Padding="8">
+        <Border Grid.Row="3" Background="#F8FAFC" Padding="12" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <TextBox Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue=''}" 
-                     FontFamily="Consolas, Courier New" FontSize="12" Foreground="#85E89D"
+                     FontFamily="Consolas, Courier New" FontSize="12" Foreground="#0F172A"
                      Background="Transparent" BorderThickness="0"
                      IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
         </Border>
 
         <!-- 4. Manual Command Injection Bar -->
-        <Border Grid.Row="4" Background="#2D2D30" Padding="8" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
+        <Border Grid.Row="4" Background="#FFFFFF" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <DockPanel>
                 <Button Content="{loc:Loc Btn_SendManual}" Command="{Binding SendManualCommandCommand}" 
-                        DockPanel.Dock="Right" Padding="12,4" Margin="8,0,0,0"
-                        Background="#007ACC" Foreground="White" FontWeight="SemiBold" BorderThickness="0"/>
+                        DockPanel.Dock="Right" Padding="16,8" Margin="10,0,0,0"
+                        Background="#0071E3" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
                 <TextBox Text="{Binding ManualCommandText, UpdateSourceTrigger=PropertyChanged}" 
-                         Background="#252526" Foreground="White" BorderBrush="#3F3F46" Padding="6,4"
-                         FontFamily="Consolas" FontSize="12"/>
+                         Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="10,6"
+                         FontFamily="Consolas, Courier New" FontSize="12">
+                    <TextBox.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
             </DockPanel>
         </Border>
     </Grid>

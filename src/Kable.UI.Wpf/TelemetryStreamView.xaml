@@ -7,29 +7,47 @@
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
              d:DesignHeight="550" d:DesignWidth="850">
-    <Grid Background="#1E1E1E">
+    <Grid Background="#FFFFFF">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /> <!-- Toolbar -->
             <RowDefinition Height="*" />     <!-- Telemetry In-Place Grid -->
         </Grid.RowDefinitions>
 
         <!-- 1. Toolbar -->
-        <Border Grid.Row="0" Background="#2D2D30" Padding="8,6" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#F8FAFC" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <DockPanel LastChildFill="False">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <TextBlock Text="{loc:Loc Header_PeriodicTelemetry}" Foreground="#A6E3A1" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <TextBlock Text="{loc:Loc Header_PeriodicTelemetry}" Foreground="#0071E3" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,16,0"/>
                     <Button Content="{loc:Loc Btn_Pause}" 
                             Command="{Binding TogglePauseCommand}" 
-                            Padding="10,4" Margin="0,0,6,0" Background="#3E3E42" Foreground="White" BorderThickness="0"/>
+                            Padding="12,6" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#334155" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                     <Button Content="{loc:Loc Btn_Clear}" 
                             Command="{Binding ClearTelemetryCommand}" 
-                            Padding="10,4" Margin="0,0,12,0" Background="#3E3E42" Foreground="White" BorderThickness="0"/>
+                            Padding="12,6" Margin="0,0,12,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="160" 
-                             Background="#252526" Foreground="White" BorderBrush="#3F3F46" Padding="4,2"/>
+                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#64748B" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="180" 
+                             Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,4">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -37,26 +55,41 @@
         <!-- 2. Telemetry In-Place Grid -->
         <DataGrid Grid.Row="1" ItemsSource="{Binding TelemetryItems}"
                   AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#2D2D30"
-                  Background="#1E1E1E" RowBackground="#1E1E1E" AlternatingRowBackground="#252526"
-                  Foreground="#DCDCDC" BorderThickness="0" SelectionMode="Single"
+                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                  Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
+                  Foreground="#0F172A" BorderThickness="0" SelectionMode="Single"
                   FontFamily="Segoe UI" FontSize="13">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#2D2D30"/>
-                    <Setter Property="Foreground" Value="#AAAAAA"/>
-                    <Setter Property="Padding" Value="8,6"/>
+                    <Setter Property="Background" Value="#F8FAFC"/>
+                    <Setter Property="Foreground" Value="#64748B"/>
+                    <Setter Property="Padding" Value="12,10"/>
                     <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                    <Setter Property="BorderBrush" Value="#3F3F46"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
                 </Style>
             </DataGrid.ColumnHeaderStyle>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Height" Value="38"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#E0F2FE"/>
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{loc:Loc Col_Parameter}" Binding="{Binding ParameterName}" Width="220" FontWeight="SemiBold"/>
                 <DataGridTextColumn Header="{loc:Loc Col_Value}" Binding="{Binding Value}" Width="*">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#89B4FA"/>
+                            <Setter Property="Foreground" Value="#0071E3"/>
                             <Setter Property="FontWeight" Value="Bold"/>
                             <Setter Property="FontFamily" Value="Consolas, Courier New"/>
                         </Style>
@@ -66,9 +99,10 @@
                 <DataGridTextColumn Header="{loc:Loc Col_Frequency}" Binding="{Binding FrequencyHz, StringFormat='{}{0:F1} Hz'}" Width="130">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#F9E2AF"/>
+                            <Setter Property="Foreground" Value="#D97706"/>
                             <Setter Property="HorizontalAlignment" Value="Right"/>
                             <Setter Property="Margin" Value="0,0,12,0"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>

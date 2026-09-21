@@ -7,22 +7,22 @@
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
-    <Grid Background="#1E1E1E">
-        <TabControl Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
+    <Grid Background="#FFFFFF">
+        <TabControl Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <TabControl.Resources>
                 <Style TargetType="TabItem">
-                    <Setter Property="Background" Value="#252526"/>
-                    <Setter Property="Foreground" Value="#CCCCCC"/>
+                    <Setter Property="Background" Value="#F8FAFC"/>
+                    <Setter Property="Foreground" Value="#64748B"/>
                     <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="Padding" Value="14,8"/>
-                    <Setter Property="Margin" Value="0,0,2,0"/>
+                    <Setter Property="Padding" Value="16,10"/>
+                    <Setter Property="Margin" Value="0,0,4,0"/>
                     <Setter Property="BorderThickness" Value="0"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#1E1E1E"/>
-                            <Setter Property="Foreground" Value="#007ACC"/>
+                            <Setter Property="Background" Value="#FFFFFF"/>
+                            <Setter Property="Foreground" Value="#0071E3"/>
                             <Setter Property="BorderThickness" Value="0,2,0,0"/>
-                            <Setter Property="BorderBrush" Value="#007ACC"/>
+                            <Setter Property="BorderBrush" Value="#0071E3"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
