@@ -37,6 +37,9 @@ public partial class CommTerminalViewModel : ObservableObject, ICommObserver
 
     public void OnPacketTrace(in PacketTraceRecord trace)
     {
+        // 모든 원본 패킷(상시, 수시, 알람)을 공통 원본 로그 스트림에 전달
+        TelemetryStream.RawLogStream.OnPacketTrace(in trace);
+
         switch (trace.Kind)
         {
             case TrafficKind.AperiodicCommand:
