@@ -16,8 +16,14 @@ public class MqttTelemetryTests
     [Fact]
     public async Task MqttTelemetryPublisher_PublishMetric_BrokerReceivesValidJson()
     {
-        // 1. 임베디드 인메모리 MQTT 서버 기동 (동적 포트 할당 또는 루프백 18883)
-        int testPort = 18883;
+        // 1. 임베디드 인메모리 MQTT 서버 기동 (동적 포트 할당)
+        int testPort;
+        using (var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0))
+        {
+            l.Start();
+            testPort = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
+            l.Stop();
+        }
         var mqttFactory = new MqttFactory();
         var serverOptions = new MqttServerOptionsBuilder()
             .WithDefaultEndpoint()
@@ -27,51 +33,61 @@ public class MqttTelemetryTests
         using var mqttServer = mqttFactory.CreateMqttServer(serverOptions);
         await mqttServer.StartAsync();
 
-        var receivedTcs = new TaskCompletionSource<string>();
-
-        // 2. 수신용 테스트 클라이언트 (Subscriber)
-        using var subscriberClient = mqttFactory.CreateMqttClient();
-        var subOptions = new MqttClientOptionsBuilder()
-            .WithTcpServer("127.0.0.1", testPort)
-            .WithClientId("TestSubscriber")
-            .Build();
-
-        subscriberClient.ApplicationMessageReceivedAsync += e =>
+        try
         {
-            string payloadString = System.Text.Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment);
-            receivedTcs.TrySetResult(payloadString);
-            return Task.CompletedTask;
-        };
+            var receivedTcs = new TaskCompletionSource<string>();
 
-        await subscriberClient.ConnectAsync(subOptions);
-        await subscriberClient.SubscribeAsync("kable/telemetry/#");
+            // 2. 수신용 테스트 클라이언트 (Subscriber)
+            using var subscriberClient = mqttFactory.CreateMqttClient();
+            var subOptions = new MqttClientOptionsBuilder()
+                .WithTcpServer("127.0.0.1", testPort)
+                .WithClientId("TestSubscriber")
+                .Build();
 
-        // 3. Kable MqttTelemetryPublisher 발행 (Publisher)
-        var publisher = MqttTelemetryPublisher.CreateTcp(
-            host: "127.0.0.1",
-            port: testPort,
-            clientId: "KableTestPublisher",
-            topicPrefix: "kable/telemetry");
+            subscriberClient.ApplicationMessageReceivedAsync += e =>
+            {
+                string payloadString = System.Text.Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment);
+                receivedTcs.TrySetResult(payloadString);
+                return Task.CompletedTask;
+            };
 
-        await publisher.StartAsync();
+            await subscriberClient.ConnectAsync(subOptions);
+            await subscriberClient.SubscribeAsync("kable/telemetry/#");
 
-        var metric = new TelemetryMetric("pump_pressure", 4.25);
-        await publisher.PublishMetricAsync(metric);
+            // 3. Kable MqttTelemetryPublisher 발행 (Publisher)
+            var publisher = MqttTelemetryPublisher.CreateTcp(
+                host: "127.0.0.1",
+                port: testPort,
+                clientId: "KableTestPublisher",
+                topicPrefix: "kable/telemetry");
 
-        // 4. 수신 검증
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        timeoutCts.Token.Register(() => receivedTcs.TrySetCanceled());
+            try
+            {
+                await publisher.StartAsync();
 
-        string receivedJson = await receivedTcs.Task;
-        Assert.NotNull(receivedJson);
+                var metric = new TelemetryMetric("pump_pressure", 4.25);
+                await publisher.PublishMetricAsync(metric);
 
-        using var doc = JsonDocument.Parse(receivedJson);
-        Assert.Equal("pump_pressure", doc.RootElement.GetProperty("name").GetString());
-        Assert.Equal(4.25, doc.RootElement.GetProperty("value").GetDouble());
+                // 4. 수신 검증
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                timeoutCts.Token.Register(() => receivedTcs.TrySetCanceled());
 
-        // 5. 정리
-        await publisher.DisposeAsync();
-        await subscriberClient.DisconnectAsync();
-        await mqttServer.StopAsync();
+                string receivedJson = await receivedTcs.Task;
+                Assert.NotNull(receivedJson);
+
+                using var doc = JsonDocument.Parse(receivedJson);
+                Assert.Equal("pump_pressure", doc.RootElement.GetProperty("name").GetString());
+                Assert.Equal(4.25, doc.RootElement.GetProperty("value").GetDouble());
+            }
+            finally
+            {
+                await publisher.DisposeAsync();
+                await subscriberClient.DisconnectAsync();
+            }
+        }
+        finally
+        {
+            await mqttServer.StopAsync();
+        }
     }
 }

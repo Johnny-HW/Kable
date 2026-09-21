@@ -24,13 +24,21 @@ public sealed class GrpcTransportIntegrationTests
     {
         var service = new KableTransportServiceImpl();
 
+        int grpcPort;
+        using (var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0))
+        {
+            l.Start();
+            grpcPort = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
+            l.Stop();
+        }
+
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.ConfigureKestrel(options =>
                 {
                     // HTTP/2 without TLS for local testing
-                    options.Listen(System.Net.IPAddress.Loopback, 50051, listenOptions =>
+                    options.Listen(System.Net.IPAddress.Loopback, grpcPort, listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http2;
                     });
@@ -52,7 +60,7 @@ public sealed class GrpcTransportIntegrationTests
             .Build();
 
         await host.StartAsync();
-        return (host, "http://127.0.0.1:50051", service);
+        return (host, $"http://127.0.0.1:{grpcPort}", service);
     }
 
     [Fact]
@@ -65,44 +73,49 @@ public sealed class GrpcTransportIntegrationTests
 
         var clientFinished = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var serverAcceptTask = Task.Run(async () =>
+        try
         {
-            await using var serverCtx = await serverService.AcceptAsync(cts.Token);
-            var readResult = await serverCtx.Input.ReadAsync(cts.Token);
-            var received = Encoding.ASCII.GetString(System.Buffers.BuffersExtensions.ToArray(readResult.Buffer));
-            serverCtx.Input.AdvanceTo(readResult.Buffer.End);
+            var serverAcceptTask = Task.Run(async () =>
+            {
+                await using var serverCtx = await serverService.AcceptAsync(cts.Token);
+                var readResult = await serverCtx.Input.ReadAsync(cts.Token);
+                var received = Encoding.ASCII.GetString(System.Buffers.BuffersExtensions.ToArray(readResult.Buffer));
+                serverCtx.Input.AdvanceTo(readResult.Buffer.End);
 
-            // Echo back with prefix
-            var echo = "ECHO:" + received;
-            await serverCtx.Output.WriteAsync(Encoding.ASCII.GetBytes(echo), cts.Token);
-            await serverCtx.Output.FlushAsync(cts.Token);
+                // Echo back with prefix
+                var echo = "ECHO:" + received;
+                await serverCtx.Output.WriteAsync(Encoding.ASCII.GetBytes(echo), cts.Token);
+                await serverCtx.Output.FlushAsync(cts.Token);
 
-            // Keep server context alive until client assertions complete
-            await Task.WhenAny(clientFinished.Task, Task.Delay(5000, cts.Token));
-            return received;
-        });
+                // Keep server context alive until client assertions complete
+                await Task.WhenAny(clientFinished.Task, Task.Delay(5000, cts.Token));
+                return received;
+            });
 
-        // Client connect
-        var clientFactory = new GrpcClientFactory(address);
-        await using var clientCtx = await clientFactory.ConnectAsync(cts.Token);
+            // Client connect
+            var clientFactory = new GrpcClientFactory(address);
+            await using var clientCtx = await clientFactory.ConnectAsync(cts.Token);
 
-        // Act: Client writes message
-        var message = "HELLO_GRPC_PIPELINES\n";
-        await clientCtx.Output.WriteAsync(Encoding.ASCII.GetBytes(message), cts.Token);
-        await clientCtx.Output.FlushAsync(cts.Token);
+            // Act: Client writes message
+            var message = "HELLO_GRPC_PIPELINES\n";
+            await clientCtx.Output.WriteAsync(Encoding.ASCII.GetBytes(message), cts.Token);
+            await clientCtx.Output.FlushAsync(cts.Token);
 
-        var serverReceived = await serverAcceptTask;
-        serverReceived.Should().Be("HELLO_GRPC_PIPELINES\n");
+            var serverReceived = await serverAcceptTask;
+            serverReceived.Should().Be("HELLO_GRPC_PIPELINES\n");
 
-        // Read echo on client
-        var clientReadResult = await clientCtx.Input.ReadAsync(cts.Token);
-        var clientReceived = Encoding.ASCII.GetString(System.Buffers.BuffersExtensions.ToArray(clientReadResult.Buffer));
-        clientCtx.Input.AdvanceTo(clientReadResult.Buffer.End);
+            // Read echo on client
+            var clientReadResult = await clientCtx.Input.ReadAsync(cts.Token);
+            var clientReceived = Encoding.ASCII.GetString(System.Buffers.BuffersExtensions.ToArray(clientReadResult.Buffer));
+            clientCtx.Input.AdvanceTo(clientReadResult.Buffer.End);
 
-        clientReceived.Should().Be("ECHO:HELLO_GRPC_PIPELINES\n");
-        clientFinished.TrySetResult(true);
-
-        await host.StopAsync();
+            clientReceived.Should().Be("ECHO:HELLO_GRPC_PIPELINES\n");
+            clientFinished.TrySetResult(true);
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
     }
 
     [Fact]
@@ -143,14 +156,19 @@ public sealed class GrpcTransportIntegrationTests
         await using var session = new KableSession<string>(clientFactory, codec);
         await session.StartAsync(cts.Token);
 
-        // Act
-        var response = await session.RequestAsync<string>("GET_STATUS", TimeSpan.FromSeconds(5), cts.Token);
+        try
+        {
+            // Act
+            var response = await session.RequestAsync<string>("GET_STATUS", TimeSpan.FromSeconds(5), cts.Token);
 
-        // Assert
-        response.Should().Be("STATUS_OK");
-        sessionFinished.TrySetResult(true);
-
-        await session.StopAsync();
-        await host.StopAsync();
+            // Assert
+            response.Should().Be("STATUS_OK");
+            sessionFinished.TrySetResult(true);
+        }
+        finally
+        {
+            await session.StopAsync();
+            await host.StopAsync();
+        }
     }
 }
