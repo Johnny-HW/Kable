@@ -17,13 +17,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
-    <ProjectReference Include="..\Kable\Kable.csproj" />
-    <ProjectReference Include="..\Kable.Modbus\Kable.Modbus.csproj" />
-    <ProjectReference Include="..\Kable.Melsec\Kable.Melsec.csproj" />
-    <ProjectReference Include="..\Kable.Mqtt\Kable.Mqtt.csproj" />
-    <ProjectReference Include="..\Kable.OpcUa\Kable.OpcUa.csproj" />
-    <ProjectReference Include="..\Kable.UI.Wpf\Kable.UI.Wpf.csproj" />
+    <ProjectReference Include="..\src\Kable.Core\Kable.Core.csproj" />
+    <ProjectReference Include="..\src\Kable\Kable.csproj" />
+    <ProjectReference Include="..\src\Kable.Modbus\Kable.Modbus.csproj" />
+    <ProjectReference Include="..\src\Kable.Melsec\Kable.Melsec.csproj" />
+    <ProjectReference Include="..\src\Kable.Mqtt\Kable.Mqtt.csproj" />
+    <ProjectReference Include="..\src\Kable.OpcUa\Kable.OpcUa.csproj" />
+    <ProjectReference Include="..\src\Kable.UI.Wpf\Kable.UI.Wpf.csproj" />
   </ItemGroup>
 
 </Project>
