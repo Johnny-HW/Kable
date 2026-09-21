@@ -29,7 +29,26 @@ public partial class SettingParameterModel : ObservableObject
     private string _unit = string.Empty;
 
     [ObservableProperty]
+    private double _scaleFactor = 10.0; // 예: 0.1도 단위인 경우 x10
+
+    [ObservableProperty]
     private string _lastAckMessage = "대기 중";
 
-    public string BuildPayload() => $"{CommandPrefix}={Value:F1}";
+    // 자동 환산된 Raw 정수값 (레지스터 / DAC Count)
+    public int RawValue => (int)Math.Round(Value * ScaleFactor);
+
+    // 자동 환산된 16진수 Hex 포맷 (예: 0x01C2)
+    public string HexRawValue => $"0x{RawValue:X4}";
+
+    // 자동 환산된 전송 프로토콜 페이로드 미리보기
+    public string ConvertedPayloadPreview => $"{CommandPrefix}={Value:F1} (Raw: {HexRawValue} / {RawValue})";
+
+    partial void OnValueChanged(double value)
+    {
+        OnPropertyChanged(nameof(RawValue));
+        OnPropertyChanged(nameof(HexRawValue));
+        OnPropertyChanged(nameof(ConvertedPayloadPreview));
+    }
+
+    public string BuildPayload() => $"{CommandPrefix}={Value:F1} RAW={HexRawValue}";
 }

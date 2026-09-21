@@ -6,11 +6,11 @@
              xmlns:vm="clr-namespace:Kable.UI.Wpf.ViewModels"
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
-             d:DesignHeight="650" d:DesignWidth="900">
+             d:DesignHeight="680" d:DesignWidth="900">
     <Grid Background="#FFFFFF">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /> <!-- 1. Toolbar -->
-            <RowDefinition Height="Auto" /> <!-- 2. Parameter Setting & Mutation Control Panel -->
+            <RowDefinition Height="Auto" /> <!-- 2. Parameter Setting & Auto-Conversion Panel -->
             <RowDefinition Height="3*" />   <!-- 3. Packet List Grid -->
             <RowDefinition Height="Auto" /> <!-- Splitter -->
             <RowDefinition Height="2*" />   <!-- 4. Hex Dump / Inspector -->
@@ -23,7 +23,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <TextBlock Text="{loc:Loc Header_CommandConsole}" Foreground="#0071E3" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,16,0"/>
                     <Border Background="#E0F2FE" CornerRadius="6" Padding="6,2" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <TextBlock Text="상시 패킷 제외됨 (수시/설정 통신 전용)" Foreground="#0369A1" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="수시(Aperiodic) 명령 전용 통신 콘솔" Foreground="#0369A1" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
                     <Button Content="{loc:Loc Btn_Pause}" 
                             Command="{Binding TogglePauseCommand}" 
@@ -58,7 +58,7 @@
             </DockPanel>
         </Border>
 
-        <!-- 2. Parameter Setting & Mutation Control Panel (Apple Clean White Box) -->
+        <!-- 2. Parameter Setting & Auto-Conversion Panel (Apple Clean White Box) -->
         <Border Grid.Row="1" Background="#FFFFFF" Padding="14,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.RowDefinitions>
@@ -67,8 +67,8 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="⚙️ 장비 파라미터 제어 및 Setting 변경" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
-                    <TextBlock Text="설정값을 변경하고 전송하면 장비에 명령이 주입되고 관련 텔레메트리 기준값이 실시간으로 갱신됩니다." 
+                    <TextBlock Text="⚡ 수시 명령어 셋 &amp; 물리값 자동 환산(EU ➔ Raw Hex) 슬라이더 제어" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    <TextBlock Text="물리 단위를 슬라이더로 조절하면 프로토콜 규격 값으로 자동 환산되어 장비로 주입됩니다." 
                                Foreground="#64748B" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </DockPanel>
 
@@ -83,8 +83,12 @@
                         <DataTemplate>
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="4">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="11" Foreground="#1E293B" Margin="0,0,0,6"/>
-                                    
+                                    <!-- Title & Parameter ID -->
+                                    <DockPanel LastChildFill="True" Margin="0,0,0,6">
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="11" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <!-- Slider & Direct Input Field -->
                                     <Grid Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -107,12 +111,22 @@
                                         <TextBlock Grid.Column="2" Text="{Binding Unit}" Foreground="#64748B" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                     </Grid>
 
+                                    <!-- Auto-Conversion Badge: EU -> Raw Count & Hex Register Display -->
+                                    <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
+                                        <DockPanel LastChildFill="True">
+                                            <TextBlock Text="환산 프로토콜:" Foreground="#1E40AF" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBlock Text="{Binding ConvertedPayloadPreview}" Foreground="#1D4ED8" 
+                                                       FontFamily="Consolas, Courier New" FontSize="10" FontWeight="Bold" 
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Border>
+
                                     <!-- Bottom Action & Status -->
                                     <DockPanel LastChildFill="True">
-                                        <Button Content="설정 전송 (Apply)" 
+                                        <Button Content="명령 주입 (Send)" 
                                                 Command="{Binding DataContext.ApplySettingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
-                                                DockPanel.Dock="Right" Padding="10,4" Background="#0071E3" Foreground="White" 
+                                                DockPanel.Dock="Right" Padding="12,5" Background="#0071E3" Foreground="White" 
                                                 FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
                                             <Button.Resources>
                                                 <Style TargetType="Border">
