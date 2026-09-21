@@ -8,31 +8,16 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Kable.ConfigStudio.Models;
-
-using System.Globalization;
 using Kable.Core;
 using Kable.Localization;
 using Kable.Observability;
+using Kable.UI.Wpf.Models;
 using Kable.UI.Wpf.ViewModels;
 
 namespace Kable.ConfigStudio.ViewModels;
-
-public sealed class LanguageOption
-{
-    public string DisplayName { get; }
-    public string CultureCode { get; }
-
-    public LanguageOption(string displayName, string cultureCode)
-    {
-        DisplayName = displayName;
-        CultureCode = cultureCode;
-    }
-
-    public override string ToString() => DisplayName;
-}
 
 public partial class MainViewModel : ObservableObject
 {
@@ -43,16 +28,7 @@ public partial class MainViewModel : ObservableObject
     public IReadOnlyList<string> AvailableParities { get; } = new[] { "None", "Odd", "Even" };
     public IReadOnlyList<string> AvailableStopBits { get; } = new[] { "One", "Two" };
 
-    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } = new[]
-    {
-        new LanguageOption("🇰🇷 한국어 (KO)", "ko-KR"),
-        new LanguageOption("🇺🇸 English (EN)", "en-US"),
-        new LanguageOption("🇹🇼 繁體中文 (ZH-TW)", "zh-TW"),
-        new LanguageOption("🇨🇳 简体中文 (ZH-CN)", "zh-CN"),
-        new LanguageOption("🇯🇵 日本語 (JA)", "ja-JP"),
-        new LanguageOption("🇩🇪 Deutsch (DE)", "de-DE"),
-        new LanguageOption("🇪🇸 Español (ES)", "es-ES")
-    };
+    public IReadOnlyList<LanguageOption> AvailableLanguages { get; } = LanguageOption.DefaultLanguages;
 
     [ObservableProperty]
     private LanguageOption _selectedLanguage;

@@ -1,4 +1,4 @@
-namespace Kable.ConfigStudio.Models;
+namespace Kable.UI.Wpf.Models;
 
 public enum TransportType
 {
@@ -75,4 +75,3 @@ public sealed class KableProfileModel
     public int TimeoutMs { get; set; } = 1000;
     public int HeartbeatIntervalMs { get; set; } = 5000;
 }
-
