@@ -32,7 +32,7 @@ public sealed class KableLocalizationTests
     }
 
     [Fact]
-    public void Localizer_ShouldTranslateToChinese()
+    public void Localizer_ShouldTranslateToChineseSimplified()
     {
         var localizer = KableLocalizer.Instance;
         localizer.SetCulture(new CultureInfo("zh-CN"));
@@ -42,6 +42,58 @@ public sealed class KableLocalizationTests
 
         var protoMsg = localizer.GetErrorMessage(KableErrorCode.ProtocolViolation, "Invalid header");
         Assert.Contains("发生协议违规: Invalid header", protoMsg);
+    }
+
+    [Fact]
+    public void Localizer_ShouldTranslateToChineseTraditional()
+    {
+        var localizer = KableLocalizer.Instance;
+        localizer.SetCulture(new CultureInfo("zh-TW"));
+
+        var msg = localizer.GetErrorMessage(KableErrorCode.DeviceTimeout, "READ", 3000);
+        Assert.Contains("指令 'READ' 在 3000ms 後回應逾時", msg);
+
+        var discMsg = localizer.GetErrorMessage(KableErrorCode.DeviceDisconnected);
+        Assert.Contains("硬體連線已中斷", discMsg);
+    }
+
+    [Fact]
+    public void Localizer_ShouldTranslateToJapanese()
+    {
+        var localizer = KableLocalizer.Instance;
+        localizer.SetCulture(new CultureInfo("ja-JP"));
+
+        var msg = localizer.GetErrorMessage(KableErrorCode.DeviceTimeout, "READ", 3000);
+        Assert.Contains("コマンド 'READ' の応答が 3000ms 待機後にタイムアウトしました", msg);
+
+        var discMsg = localizer.GetErrorMessage(KableErrorCode.DeviceDisconnected);
+        Assert.Contains("ハードウェア接続が切断されました", discMsg);
+    }
+
+    [Fact]
+    public void Localizer_ShouldTranslateToGerman()
+    {
+        var localizer = KableLocalizer.Instance;
+        localizer.SetCulture(new CultureInfo("de-DE"));
+
+        var msg = localizer.GetErrorMessage(KableErrorCode.DeviceTimeout, "READ", 3000);
+        Assert.Contains("Befehl 'READ' hat nach 3000ms eine Zeitüberschreitung verursacht", msg);
+
+        var discMsg = localizer.GetErrorMessage(KableErrorCode.DeviceDisconnected);
+        Assert.Contains("Hardware-Verbindung wurde getrennt", discMsg);
+    }
+
+    [Fact]
+    public void Localizer_ShouldTranslateToFrench()
+    {
+        var localizer = KableLocalizer.Instance;
+        localizer.SetCulture(new CultureInfo("fr-FR"));
+
+        var msg = localizer.GetErrorMessage(KableErrorCode.DeviceTimeout, "READ", 3000);
+        Assert.Contains("La commande 'READ' a expiré après 3000ms", msg);
+
+        var discMsg = localizer.GetErrorMessage(KableErrorCode.DeviceDisconnected);
+        Assert.Contains("La connexion matérielle a été interrompue", discMsg);
     }
 
     [Fact]
