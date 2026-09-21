@@ -32,7 +32,7 @@
                             DockPanel.Dock="Right" Style="{StaticResource IosSecondaryButtonStyle}"/>
                 </DockPanel>
                 <TextBox Grid.Row="1" Text="{Binding GeneratedTomlPreview}" 
-                         Background="#252538" Foreground="#CDD6F4" FontFamily="Consolas, Courier New" FontSize="13" 
+                         Background="#F8FAFC" Foreground="#0F172A" FontFamily="Consolas, Courier New" FontSize="13" 
                          BorderThickness="0" Padding="14" IsReadOnly="True" VerticalScrollBarVisibility="Auto">
                     <TextBox.Resources>
                         <Style TargetType="Border">
@@ -44,12 +44,12 @@
         </Border>
 
         <!-- Bottom Action Bar Card -->
-        <Border Grid.Row="1" Background="#1E1E2E" CornerRadius="16" Padding="18,14" BorderBrush="#313244" BorderThickness="1">
+        <Border Grid.Row="1" Background="#FFFFFF" CornerRadius="16" Padding="18,14" BorderBrush="#E2E8F0" BorderThickness="1">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.2" Color="#000000"/>
             </Border.Effect>
             <DockPanel>
-                <TextBlock Text="Kable Real-Time Multi-Protocol Engine — Verified Profile" Foreground="{StaticResource KableTextSecondary}" VerticalAlignment="Center" FontWeight="Medium"/>
+                <TextBlock Text="Kable Real-Time Multi-Protocol Engine ??Verified Profile" Foreground="{StaticResource KableTextSecondary}" VerticalAlignment="Center" FontWeight="Medium"/>
                 <Button Content="{loc:Loc Btn_SaveConfig}" Command="{Binding SaveToFileCommand}" 
                         DockPanel.Dock="Right" Style="{StaticResource IosPrimaryButtonStyle}" FontSize="14" Padding="24,10"/>
             </DockPanel>

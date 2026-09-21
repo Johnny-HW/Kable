@@ -13,7 +13,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Border Background="#1E1E2E" CornerRadius="16" Padding="16" BorderBrush="#313244" BorderThickness="1">
+    <Border Background="#FFFFFF" CornerRadius="16" Padding="16" BorderBrush="#E2E8F0" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.2" Color="#000000"/>
         </Border.Effect>
