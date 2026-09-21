@@ -413,7 +413,9 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="GridLinesVisibility" Value="None"/>
         <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="IsReadOnly" Value="True"/>
         <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserDeleteRows" Value="False"/>
         <Setter Property="CanUserResizeRows" Value="False"/>
         <Setter Property="SelectionMode" Value="Single"/>
         <Setter Property="HeadersVisibility" Value="Column"/>

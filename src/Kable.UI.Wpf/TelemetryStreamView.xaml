@@ -54,6 +54,7 @@
 
         <!-- 2. Telemetry In-Place Grid -->
         <DataGrid Grid.Row="1" ItemsSource="{Binding TelemetryItems}"
+                  IsReadOnly="True"
                   Style="{StaticResource IosDataGridStyle}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{loc:Loc Col_Parameter}" Binding="{Binding ParameterName}" Width="240">

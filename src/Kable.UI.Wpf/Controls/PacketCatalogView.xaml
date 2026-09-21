@@ -71,13 +71,14 @@
                 <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
             </Border.Effect>
             <DataGrid ItemsSource="{Binding PacketCatalog}" 
+                      IsReadOnly="False"
                       Style="{StaticResource IosDataGridStyle}">
                 <DataGrid.Columns>
                     <!-- Enable Checkbox -->
                     <DataGridCheckBoxColumn Header="활성" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
 
-                    <!-- Packet ID -->
-                    <DataGridTextColumn Header="패킷 ID" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold">
+                    <!-- Packet ID (Read Only Key) -->
+                    <DataGridTextColumn Header="패킷 ID" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold" IsReadOnly="True">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="FontFamily" Value="Consolas, Courier New"/>

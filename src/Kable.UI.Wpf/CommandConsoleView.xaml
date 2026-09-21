@@ -148,6 +148,7 @@
 
         <!-- 3. Packet List Grid -->
         <DataGrid Grid.Row="2" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
+                  IsReadOnly="True"
                   Style="{StaticResource IosDataGridStyle}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="60">
