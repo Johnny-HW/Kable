@@ -20,7 +20,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                     <TextBlock Text="{loc:Loc Header_CommandConsole}" Foreground="#0071E3" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <Border Background="#E0F2FE" CornerRadius="6" Padding="6,2" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <TextBlock Text="⚡ 수시(Aperiodic) 명령 전용 통신 콘솔" Foreground="#0369A1" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="{loc:Loc Header_CommandSubTitle}" Foreground="#0369A1" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
                     <Button Content="{loc:Loc Btn_Pause}" Command="{Binding TogglePauseCommand}" 
                             Padding="12,5" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#334155" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
@@ -38,7 +38,7 @@
                             </Style>
                         </Button.Resources>
                     </Button>
-                    <Button Content="💾 Export Log" Command="{Binding ExportToFileCommand}" 
+                    <Button Content="{loc:Loc Btn_ExportLog}" Command="{Binding ExportToFileCommand}" 
                             Padding="12,5" Margin="0,0,12,0" Background="#EFF6FF" Foreground="#0071E3" FontWeight="Bold" FontSize="11" BorderThickness="0" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">
@@ -86,33 +86,33 @@
                     <Border Grid.Row="0" Background="#FFFFFF" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,6">
-                                <TextBlock Text="🎛️ 명령 &amp; 파라미터 제어" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding FilteredSettingParameters.Count, StringFormat='{}{0}개 등록'}" 
+                                <TextBlock Text="{loc:Loc Header_CommandPresets}" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding FilteredSettingParameters.Count, StringFormat='{}{0} items'}" 
                                            DockPanel.Dock="Right" Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
                             </DockPanel>
                             <Grid>
                                 <TextBox Text="{Binding CommandSearchText, UpdateSourceTrigger=PropertyChanged}"
                                          Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Padding="28,6,8,6" FontSize="12">
-                                    <TextBox.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="8"/>
-                                        </Style>
-                                    </TextBox.Resources>
-                                </TextBox>
+                                     <TextBox.Resources>
+                                         <Style TargetType="Border">
+                                             <Setter Property="CornerRadius" Value="8"/>
+                                         </Style>
+                                     </TextBox.Resources>
+                                 </TextBox>
                                 <TextBlock Text="🔍" Foreground="#94A3B8" VerticalAlignment="Center" Margin="8,0,0,0" IsHitTestVisible="False"/>
-                                <TextBlock Text="명령어 검색 (예: TEMP, PRESS, FLOW...)" 
+                                <TextBlock Text="{loc:Loc Lbl_SearchCommands}" 
                                            Foreground="#94A3B8" VerticalAlignment="Center" Margin="30,0,0,0" IsHitTestVisible="False" FontSize="11">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding CommandSearchText}" Value="">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                     <TextBlock.Style>
+                                         <Style TargetType="TextBlock">
+                                             <Setter Property="Visibility" Value="Collapsed"/>
+                                             <Style.Triggers>
+                                                 <DataTrigger Binding="{Binding CommandSearchText}" Value="">
+                                                     <Setter Property="Visibility" Value="Visible"/>
+                                                 </DataTrigger>
+                                             </Style.Triggers>
+                                         </Style>
+                                     </TextBlock.Style>
+                                 </TextBlock>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -164,7 +164,7 @@
                                             <!-- Converted Hex Protocol Preview Box -->
                                             <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="6,4" Margin="0,0,0,8">
                                                 <DockPanel LastChildFill="True">
-                                                    <TextBlock Text="환산값:" Foreground="#475569" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{loc:Loc Lbl_ConvertedPreview}" Foreground="#475569" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0"/>
                                                     <TextBlock Text="{Binding ConvertedPayloadPreview}" Foreground="#0F172A" 
                                                                FontFamily="Consolas, Courier New" FontSize="10" FontWeight="SemiBold" 
                                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
@@ -173,7 +173,7 @@
 
                                             <!-- Bottom Action Button & Status -->
                                             <DockPanel LastChildFill="True">
-                                                <Button Content="명령 주입 (Send)" 
+                                                <Button Content="{loc:Loc Btn_InjectSend}" 
                                                         Command="{Binding DataContext.ApplySettingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         DockPanel.Dock="Right" Padding="12,5" Background="#0071E3" Foreground="White" 
@@ -310,10 +310,10 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" Margin="0,0,0,4">
-                            <TextBlock Text="🔍 Hex Dump &amp; Byte Inspector" FontWeight="Bold" FontSize="11" Foreground="#475569"/>
+                            <TextBlock Text="{loc:Loc Header_HexInspectorByte}" FontWeight="Bold" FontSize="11" Foreground="#475569"/>
                             <TextBlock Text="{Binding SelectedPacket.Length, StringFormat='Total: {0} Bytes'}" DockPanel.Dock="Right" FontSize="10" Foreground="#94A3B8"/>
                         </DockPanel>
-                        <TextBox Grid.Row="1" Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue='목록에서 패킷을 선택하면 바이트 상세가 표시됩니다.'}" 
+                        <TextBox Grid.Row="1" Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue='Select a packet from the list to inspect byte details.'}" 
                                  FontFamily="Consolas, Courier New" FontSize="12" Foreground="#0F172A"
                                  Background="Transparent" BorderThickness="0"
                                  IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
@@ -325,7 +325,7 @@
         <!-- 3. Manual Command Injection Bar -->
         <Border Grid.Row="2" Background="#FFFFFF" Padding="12,8" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <DockPanel>
-                <TextBlock Text="수동 전송:" FontWeight="Bold" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="{loc:Loc Lbl_ManualSend}" FontWeight="Bold" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <Button Content="{loc:Loc Btn_SendManual}" Command="{Binding SendManualCommandCommand}" 
                         DockPanel.Dock="Right" Padding="14,6" Margin="8,0,0,0"
                         Background="#0071E3" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">

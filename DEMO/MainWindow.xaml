@@ -146,12 +146,12 @@
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="#F1F5F9"/>
                                     <Setter Property="Foreground" Value="#334155"/>
-                                    <Setter Property="Content" Value="🔬 가상 시뮬레이터 시작"/>
+                                    <Setter Property="Content" Value="{loc:Loc Btn_StartSim}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSimulatorRunning}" Value="True">
                                             <Setter Property="Background" Value="#34C759"/>
                                             <Setter Property="Foreground" Value="#FFFFFF"/>
-                                            <Setter Property="Content" Value="🟢 스트리밍 중"/>
+                                            <Setter Property="Content" Value="{loc:Loc Btn_StreamingActive}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

@@ -325,7 +325,33 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Lbl_StatusIdle"] = "Idle (No test executed)",
             ["Lbl_StatusTesting"] = "Connecting and running loopback ping...",
             ["Lbl_StatusSuccess"] = "Communication verified! Latency: {0:F2} ms",
-            ["Lbl_StatusFailed"] = "Communication test failed: {0}"
+            ["Lbl_StatusFailed"] = "Communication test failed: {0}",
+
+            // Command Console & Packet Catalog Specific Keys
+            ["Header_CommandSubTitle"] = "⚡ Dedicated Aperiodic Command Console",
+            ["Header_CommandPresets"] = "🎛️ Command & Parameter Presets",
+            ["Lbl_SearchCommands"] = "Search commands (e.g. TEMP, PRESS, FLOW...)",
+            ["Lbl_ConvertedPreview"] = "Converted:",
+            ["Btn_InjectSend"] = "Inject (Send)",
+            ["Lbl_SelectPacketHint"] = "Select a packet from the list to inspect byte details.",
+            ["Lbl_ManualSend"] = "Manual Send:",
+            ["Btn_ExportLog"] = "💾 Export Log",
+            ["Header_HexInspectorByte"] = "🔍 Hex Dump & Byte Inspector",
+            ["Header_RawPacketStream"] = "📡 Raw Packet Stream Log",
+            ["Lbl_RawPacketHint"] = "Click a packet row above to view full byte inspection.",
+            ["Lbl_RegisteredCount"] = "{0} registered",
+            ["Btn_StartSim"] = "🔬 Start Virtual Simulator",
+            ["Btn_StreamingActive"] = "🟢 Streaming Active",
+            ["Btn_RefreshPorts"] = "🔄 Refresh Ports",
+            ["Lbl_TomlFooter"] = "Kable Real-Time Multi-Protocol Engine • Verified Profile",
+            ["Col_Active"] = "Active",
+            ["Col_PacketId"] = "Packet ID",
+            ["Col_PacketName"] = "Name",
+            ["Col_TrafficKind"] = "Traffic Kind",
+            ["Col_Interval"] = "Interval (ms)",
+            ["Col_SimulatedBase"] = "Base Value",
+            ["Col_PayloadFormat"] = "Payload / Format",
+            ["Lbl_PacketCatalogDesc"] = "Define hardware packets, configure Periodic/Aperiodic traffic kinds, and set simulation values."
         };
 
         // 2. Korean
@@ -403,7 +429,33 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Lbl_StatusIdle"] = "대기 중 (통신 테스트 미실시)",
             ["Lbl_StatusTesting"] = "통신 연결 및 루프백 핑 시험 중...",
             ["Lbl_StatusSuccess"] = "통신 연결 정상 검증 완료! 지연시간: {0:F2} ms",
-            ["Lbl_StatusFailed"] = "통신 연결 진단 실패: {0}"
+            ["Lbl_StatusFailed"] = "통신 연결 진단 실패: {0}",
+
+            // Command Console & Packet Catalog Specific Keys
+            ["Header_CommandSubTitle"] = "⚡ 수시(Aperiodic) 명령 전용 통신 콘솔",
+            ["Header_CommandPresets"] = "🎛️ 명령 & 파라미터 제어",
+            ["Lbl_SearchCommands"] = "명령어 검색 (예: TEMP, PRESS, FLOW...)",
+            ["Lbl_ConvertedPreview"] = "환산값:",
+            ["Btn_InjectSend"] = "명령 주입 (Send)",
+            ["Lbl_SelectPacketHint"] = "목록에서 패킷을 선택하면 바이트 상세가 표시됩니다.",
+            ["Lbl_ManualSend"] = "수동 전송:",
+            ["Btn_ExportLog"] = "💾 로그 저장",
+            ["Header_HexInspectorByte"] = "🔍 헥스 덤프 & 바이트 분석기",
+            ["Header_RawPacketStream"] = "📡 원본 패킷 스트림 로그",
+            ["Lbl_RawPacketHint"] = "목록에서 패킷을 선택하면 상세 바이트 분석이 표시됩니다.",
+            ["Lbl_RegisteredCount"] = "{0}개 등록",
+            ["Btn_StartSim"] = "🔬 가상 시뮬레이터 시작",
+            ["Btn_StreamingActive"] = "🟢 스트리밍 중",
+            ["Btn_RefreshPorts"] = "🔄 포트 새로고침",
+            ["Lbl_TomlFooter"] = "Kable 실시간 멀티 프로토콜 엔진 • 프로파일 검증 완료",
+            ["Col_Active"] = "활성",
+            ["Col_PacketId"] = "패킷 ID",
+            ["Col_PacketName"] = "명칭 (Name)",
+            ["Col_TrafficKind"] = "트래픽 구분 (Traffic Kind)",
+            ["Col_Interval"] = "주기 (ms)",
+            ["Col_SimulatedBase"] = "가상 기준값",
+            ["Col_PayloadFormat"] = "송신 페이로드 / 포맷",
+            ["Lbl_PacketCatalogDesc"] = "장비가 송수신하는 패킷을 정의하고, 상시(Periodic) 및 수시(Aperiodic) 주기와 시뮬레이션 값을 관리합니다."
         };
 
         // 3. Traditional Chinese (zh-TW)

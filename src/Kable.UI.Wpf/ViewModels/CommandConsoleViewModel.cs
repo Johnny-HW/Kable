@@ -43,7 +43,7 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         new SettingParameterModel
         {
             Id = "SET_TARGET_TEMP",
-            DisplayName = "목표 온도 제어 (Chamber Temp)",
+            DisplayName = "Target Temperature Control (Chamber)",
             CommandPrefix = "SET TEMP_TARGET",
             Value = 45.0,
             MinValue = 10.0,
@@ -54,7 +54,7 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         new SettingParameterModel
         {
             Id = "SET_PRESS_LIMIT",
-            DisplayName = "공급 압력 상한치 (Pressure Limit)",
+            DisplayName = "Supply Pressure Limit",
             CommandPrefix = "SET PRESS_LIMIT",
             Value = 150.0,
             MinValue = 50.0,
@@ -65,7 +65,7 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         new SettingParameterModel
         {
             Id = "SET_FLOW_OFFSET",
-            DisplayName = "약액 유량 오프셋 보정 (Flow Offset)",
+            DisplayName = "Chemical Flow Offset",
             CommandPrefix = "SET FLOW_OFFSET",
             Value = 1.5,
             MinValue = -5.0,
@@ -208,12 +208,12 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         if (target == null) return;
 
         string payload = target.BuildPayload();
-        target.LastAckMessage = $"전송 중: {payload}";
+        target.LastAckMessage = $"Sending: {payload}";
 
         if (ManualSendRequested != null)
         {
             await ManualSendRequested.Invoke(payload);
-            target.LastAckMessage = $"적용 완료 ({DateTime.Now:HH:mm:ss})";
+            target.LastAckMessage = $"Applied ({DateTime.Now:HH:mm:ss})";
         }
     }
 }

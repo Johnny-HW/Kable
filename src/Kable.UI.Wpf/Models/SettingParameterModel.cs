@@ -29,12 +29,12 @@ public partial class SettingParameterModel : ObservableObject
     private string _unit = string.Empty;
 
     [ObservableProperty]
-    private double _scaleFactor = 10.0; // 예: 0.1도 단위인 경우 x10
+    private double _scaleFactor = 10.0; // e.g. 0.1 deg unit -> x10
 
     [ObservableProperty]
-    private string _lastAckMessage = "대기 중";
+    private string _lastAckMessage = "Ready";
 
-    // 자동 환산된 Raw 정수값 (레지스터 / DAC Count)
+    // Auto-converted Raw integer value (Register / DAC Count)
     public int RawValue => (int)Math.Round(Value * ScaleFactor);
 
     // 자동 환산된 16진수 Hex 포맷 (예: 0x01C2)

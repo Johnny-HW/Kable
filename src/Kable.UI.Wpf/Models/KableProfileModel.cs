@@ -28,7 +28,7 @@ public enum RouterType
 public sealed class KableProfileModel
 {
     public string DeviceName { get; set; } = "Chemical_Pump_Ch1";
-    public string Description { get; set; } = "Chamber 1 약액 공급 펌프 통신 채널";
+    public string Description { get; set; } = "Chamber 1 Chemical Supply Pump Comm Channel";
 
     // Transport
     public TransportType Transport { get; set; } = TransportType.Serial;

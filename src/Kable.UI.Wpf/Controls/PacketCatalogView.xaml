@@ -30,7 +30,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
                     <TextBlock Text="{loc:Loc Header_PacketCatalog}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource KableAccentBlue}" Margin="0,0,0,4"/>
-                    <TextBlock Text="장비가 송수신하는 패킷을 정의하고, 상시(Periodic) 및 수시(Aperiodic) 주기와 시뮬레이션 값을 관리합니다." 
+                    <TextBlock Text="{loc:Loc Lbl_PacketCatalogDesc}" 
                                Foreground="{StaticResource KableTextSecondary}" FontSize="11"/>
                 </StackPanel>
 
@@ -75,10 +75,10 @@
                       Style="{StaticResource IosDataGridStyle}">
                 <DataGrid.Columns>
                     <!-- Enable Checkbox -->
-                    <DataGridCheckBoxColumn Header="활성" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
+                    <DataGridCheckBoxColumn Header="{loc:Loc Col_Active}" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
 
                     <!-- Packet ID (Read Only Key) -->
-                    <DataGridTextColumn Header="패킷 ID" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold" IsReadOnly="True">
+                    <DataGridTextColumn Header="{loc:Loc Col_PacketId}" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold" IsReadOnly="True">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="FontFamily" Value="Consolas, Courier New"/>
@@ -89,7 +89,7 @@
                     </DataGridTextColumn>
 
                     <!-- Name -->
-                    <DataGridTextColumn Header="명칭 (Name)" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="160">
+                    <DataGridTextColumn Header="{loc:Loc Col_PacketName}" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="160">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="FontWeight" Value="SemiBold"/>
@@ -99,8 +99,8 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <!-- Traffic Kind (상시 vs 수시 vs 알람) -->
-                    <DataGridTemplateColumn Header="트래픽 구분 (Traffic Kind)" Width="170">
+                    <!-- Traffic Kind (Aperiodic vs Periodic vs Alarm) -->
+                    <DataGridTemplateColumn Header="{loc:Loc Col_TrafficKind}" Width="170">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ComboBox SelectedItem="{Binding Kind, UpdateSourceTrigger=PropertyChanged}" 
@@ -114,7 +114,7 @@
                     </DataGridTemplateColumn>
 
                     <!-- Interval (ms) - For Periodic -->
-                    <DataGridTextColumn Header="주기 (ms)" Binding="{Binding IntervalMs, UpdateSourceTrigger=PropertyChanged}" Width="85">
+                    <DataGridTextColumn Header="{loc:Loc Col_Interval}" Binding="{Binding IntervalMs, UpdateSourceTrigger=PropertyChanged}" Width="95">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#0071E3"/>
@@ -127,7 +127,7 @@
                     </DataGridTextColumn>
 
                     <!-- Unit -->
-                    <DataGridTextColumn Header="단위" Binding="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" Width="70">
+                    <DataGridTextColumn Header="{loc:Loc Col_Unit}" Binding="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" Width="70">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#64748B"/>
@@ -137,7 +137,7 @@
                     </DataGridTextColumn>
 
                     <!-- Base Value -->
-                    <DataGridTextColumn Header="가상 기준값" Binding="{Binding SimulatedBaseValue, UpdateSourceTrigger=PropertyChanged}" Width="95">
+                    <DataGridTextColumn Header="{loc:Loc Col_SimulatedBase}" Binding="{Binding SimulatedBaseValue, UpdateSourceTrigger=PropertyChanged}" Width="100">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Foreground" Value="#0F172A"/>
@@ -150,7 +150,7 @@
                     </DataGridTextColumn>
 
                     <!-- Command Payload / Template -->
-                    <DataGridTextColumn Header="송신 페이로드 / 포맷" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*">
+                    <DataGridTextColumn Header="{loc:Loc Col_PayloadFormat}" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="FontFamily" Value="Consolas, Courier New"/>

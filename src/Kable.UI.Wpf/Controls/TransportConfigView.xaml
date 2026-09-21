@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Kable.UI.Wpf.Controls.TransportConfigView"
+<UserControl x:Class="Kable.UI.Wpf.Controls.TransportConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -36,7 +36,7 @@
                 <StackPanel>
                     <DockPanel Margin="0,0,0,10">
                         <TextBlock Text="{loc:Loc Lbl_SerialPort}" Foreground="{StaticResource KableTextSecondary}" VerticalAlignment="Center" FontWeight="Medium"/>
-                        <Button Content="?�� Refresh Ports" Command="{Binding RefreshComPortsCommand}" DockPanel.Dock="Right" Padding="12,6" Background="#E2E8F0" Foreground="{StaticResource KableAccentBlue}" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0"/>
+                        <Button Content="{loc:Loc Btn_RefreshPorts}" Command="{Binding RefreshComPortsCommand}" DockPanel.Dock="Right" Padding="12,6" Background="#E2E8F0" Foreground="{StaticResource KableAccentBlue}" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0"/>
                     </DockPanel>
                     <ComboBox Style="{StaticResource IosComboBoxStyle}" ItemsSource="{Binding DetectedComPorts}" SelectedItem="{Binding Profile.PortName}" Margin="0,0,0,10"/>
 
