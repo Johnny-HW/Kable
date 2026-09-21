@@ -16,6 +16,7 @@ using Kable.Tests.Fixtures;
 using Kable.Transports;
 using Xunit;
 
+[Collection("HardwareTransportTests")]
 public class TransportFaultInjectionTests
 {
     [Fact]
@@ -32,26 +33,34 @@ public class TransportFaultInjectionTests
 
         var serverAcceptTask = serverPipe.WaitForConnectionAsync();
 
-        await using var session = new KableClientBuilder<string>()
-            .UseNamedPipe(pipeName, timeoutMs: 3000)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
+        try
+        {
+            await using var session = new KableClientBuilder<string>()
+                .UseNamedPipe(pipeName, timeoutMs: 3000)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
 
-        await session.StartAsync();
-        await serverAcceptTask;
+            await session.StartAsync();
+            await serverAcceptTask;
 
-        session.IsConnected.Should().BeTrue();
+            session.IsConnected.Should().BeTrue();
 
-        // Server process crash simulation (dispose stream abruptly)
-        serverPipe.Dispose();
+            // Server process crash simulation (dispose stream abruptly)
+            serverPipe.Dispose();
 
-        // Wait for EOF detection on ReadLoop
-        var pendingReq = session.RequestAsync<string>("PING_CRASH", TimeSpan.FromSeconds(3)).AsTask();
+            // Wait for EOF detection on ReadLoop
+            await Task.Delay(100);
+            var pendingReq = session.RequestAsync<string>("PING_CRASH", TimeSpan.FromSeconds(3)).AsTask();
 
-        Func<Task> act = async () => await pendingReq;
-        await act.Should().ThrowAsync<DeviceDisconnectedException>();
+            Func<Task> act = async () => await pendingReq;
+            await act.Should().ThrowAsync<DeviceDisconnectedException>();
 
-        session.IsConnected.Should().BeFalse();
+            session.IsConnected.Should().BeFalse();
+        }
+        finally
+        {
+            serverPipe.Dispose();
+        }
     }
 
     [Fact]
@@ -67,27 +76,35 @@ public class TransportFaultInjectionTests
             serverSocket = await listener.AcceptSocketAsync();
         });
 
-        await using var session = new KableClientBuilder<string>()
-            .UseTcp("127.0.0.1", port)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
+        try
+        {
+            await using var session = new KableClientBuilder<string>()
+                .UseTcp("127.0.0.1", port)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
 
-        await session.StartAsync();
-        await serverTask;
+            await session.StartAsync();
+            await serverTask;
 
-        session.IsConnected.Should().BeTrue();
+            session.IsConnected.Should().BeTrue();
 
-        // Force TCP RST: LingerState enabled with Timeout = 0
-        serverSocket!.LingerState = new LingerOption(true, 0);
-        serverSocket.Close();
+            // Force TCP RST: LingerState enabled with Timeout = 0
+            serverSocket!.LingerState = new LingerOption(true, 0);
+            serverSocket.Close();
 
-        var pendingReq = session.RequestAsync<string>("PING_AFTER_RST", TimeSpan.FromSeconds(3)).AsTask();
+            await Task.Delay(100);
+            var pendingReq = session.RequestAsync<string>("PING_AFTER_RST", TimeSpan.FromSeconds(3)).AsTask();
 
-        Func<Task> act = async () => await pendingReq;
-        await act.Should().ThrowAsync<DeviceDisconnectedException>();
+            Func<Task> act = async () => await pendingReq;
+            await act.Should().ThrowAsync<DeviceDisconnectedException>();
 
-        session.IsConnected.Should().BeFalse();
-        listener.Stop();
+            session.IsConnected.Should().BeFalse();
+        }
+        finally
+        {
+            listener.Stop();
+            try { await serverTask; } catch { }
+        }
     }
 
     [Fact]
@@ -110,32 +127,37 @@ public class TransportFaultInjectionTests
             serverSocket.Shutdown(SocketShutdown.Both);
         });
 
-        await using var session = new KableClientBuilder<string>()
-            .UseTcp("127.0.0.1", port)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
-
-        await session.StartAsync();
-
-        GC.Collect(2, GCCollectionMode.Forced, true);
-        GC.WaitForPendingFinalizers();
-        int gen2Before = GC.CollectionCount(2);
-
-        int received = 0;
-        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await foreach (var item in session.Stream.WithCancellation(cts.Token))
+        try
         {
-            received++;
-            if (received >= packetCount) break;
+            await using var session = new KableClientBuilder<string>()
+                .UseTcp("127.0.0.1", port)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
+
+            await session.StartAsync();
+
+            GC.Collect(2, GCCollectionMode.Forced, true);
+            GC.WaitForPendingFinalizers();
+            int gen2Before = GC.CollectionCount(2);
+
+            int received = 0;
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await foreach (var item in session.Stream.WithCancellation(cts.Token))
+            {
+                received++;
+                if (received >= packetCount) break;
+            }
+
+            int gen2After = GC.CollectionCount(2);
+
+            received.Should().Be(packetCount);
+            (gen2After - gen2Before).Should().BeLessThanOrEqualTo(1, "High-throughput streaming should not trigger excessive Gen2 GC collections");
         }
-
-        int gen2After = GC.CollectionCount(2);
-
-        received.Should().Be(packetCount);
-        (gen2After - gen2Before).Should().BeLessThanOrEqualTo(1, "High-throughput streaming should not trigger excessive Gen2 GC collections");
-
-        await serverTask;
-        listener.Stop();
+        finally
+        {
+            try { await serverTask; } catch { }
+            listener.Stop();
+        }
     }
 
     [Fact]
@@ -221,26 +243,35 @@ public class TransportFaultInjectionTests
             acceptedSocket = await listener.AcceptSocketAsync();
         });
 
-        await using var session = new KableClientBuilder<string>()
-            .UseTcp("127.0.0.1", port)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
+        try
+        {
+            await using var session = new KableClientBuilder<string>()
+                .UseTcp("127.0.0.1", port)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
 
-        await session.StartAsync();
-        await acceptTask;
+            await session.StartAsync();
+            await acceptTask;
 
-        session.IsConnected.Should().BeTrue();
+            session.IsConnected.Should().BeTrue();
 
-        // Enforce hard RST via socket linger
-        acceptedSocket!.LingerState = new LingerOption(true, 0);
-        acceptedSocket.Close();
+            // Enforce hard RST via socket linger
+            acceptedSocket!.LingerState = new LingerOption(true, 0);
+            acceptedSocket.Close();
 
-        var pendingReq = session.RequestAsync<string>("TEST_RST_RECOVERY", TimeSpan.FromSeconds(3)).AsTask();
-        Func<Task> act = async () => await pendingReq;
-        await act.Should().ThrowAsync<DeviceDisconnectedException>();
+            await Task.Delay(100);
+            var pendingReq = session.RequestAsync<string>("TEST_RST_RECOVERY", TimeSpan.FromSeconds(3)).AsTask();
 
-        session.IsConnected.Should().BeFalse();
-        listener.Stop();
+            Func<Task> act = async () => await pendingReq;
+            await act.Should().ThrowAsync<DeviceDisconnectedException>();
+
+            session.IsConnected.Should().BeFalse();
+        }
+        finally
+        {
+            listener.Stop();
+            try { await acceptTask; } catch { }
+        }
     }
 
     [Fact]
@@ -256,24 +287,32 @@ public class TransportFaultInjectionTests
 
         var serverWait = serverPipe.WaitForConnectionAsync();
 
-        await using var session = new KableClientBuilder<string>()
-            .UseNamedPipe(pipeName, timeoutMs: 2000)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
+        try
+        {
+            await using var session = new KableClientBuilder<string>()
+                .UseNamedPipe(pipeName, timeoutMs: 2000)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
 
-        await session.StartAsync();
-        await serverWait;
+            await session.StartAsync();
+            await serverWait;
 
-        session.IsConnected.Should().BeTrue();
+            session.IsConnected.Should().BeTrue();
 
-        // Abrupt server crash simulation
-        serverPipe.Dispose();
+            // Abrupt server crash simulation
+            serverPipe.Dispose();
 
-        var pendingReq = session.RequestAsync<string>("SHOULD_FAIL", TimeSpan.FromSeconds(3)).AsTask();
-        Func<Task> act = async () => await pendingReq;
-        await act.Should().ThrowAsync<DeviceDisconnectedException>();
+            await Task.Delay(100);
+            var pendingReq = session.RequestAsync<string>("SHOULD_FAIL", TimeSpan.FromSeconds(3)).AsTask();
+            Func<Task> act = async () => await pendingReq;
+            await act.Should().ThrowAsync<DeviceDisconnectedException>();
 
-        session.IsConnected.Should().BeFalse();
+            session.IsConnected.Should().BeFalse();
+        }
+        finally
+        {
+            serverPipe.Dispose();
+        }
     }
 
     [Fact]
@@ -379,27 +418,32 @@ public class TransportFaultInjectionTests
             await Task.Delay(2000);
         });
 
-        var factory = new TcpConnectionFactory("127.0.0.1", port);
-        await using var ctx = await factory.ConnectAsync();
-
-        // Write massive buffer to exhaust TCP send window
-        byte[] largeChunk = new byte[64 * 1024]; // 64KB
-        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-
-        Func<Task> act = async () =>
+        try
         {
-            while (!cts.IsCancellationRequested)
+            var factory = new TcpConnectionFactory("127.0.0.1", port);
+            await using var ctx = await factory.ConnectAsync();
+
+            // Write massive buffer to exhaust TCP send window
+            byte[] largeChunk = new byte[64 * 1024]; // 64KB
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+            Func<Task> act = async () =>
             {
-                await ctx.Output.WriteAsync(largeChunk, cts.Token);
-                await ctx.Output.FlushAsync(cts.Token);
-            }
-            cts.Token.ThrowIfCancellationRequested();
-        };
+                while (!cts.IsCancellationRequested)
+                {
+                    await ctx.Output.WriteAsync(largeChunk, cts.Token);
+                    await ctx.Output.FlushAsync(cts.Token);
+                }
+                cts.Token.ThrowIfCancellationRequested();
+            };
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
-
-        listener.Stop();
-        await acceptTask;
+            await act.Should().ThrowAsync<OperationCanceledException>();
+        }
+        finally
+        {
+            listener.Stop();
+            try { await acceptTask; } catch { }
+        }
     }
 }
 

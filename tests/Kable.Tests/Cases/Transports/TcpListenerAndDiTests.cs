@@ -14,6 +14,7 @@ using Kable.Transports;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
+[Collection("HardwareTransportTests")]
 public class TcpListenerAndDiTests
 {
     [Fact]
@@ -22,31 +23,38 @@ public class TcpListenerAndDiTests
         await using var listener = new TcpConnectionListener(IPAddress.Loopback, 0);
         int port = ((IPEndPoint)listener.LocalEndPoint).Port;
 
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
         var serverTask = Task.Run(async () =>
         {
             await using var serverCtx = await listener.AcceptAsync();
-            var readResult = await serverCtx.Input.ReadAsync();
+            var readResult = await serverCtx.Input.ReadAsync(cts.Token);
             string msg = Encoding.UTF8.GetString(System.Buffers.BuffersExtensions.ToArray(readResult.Buffer));
             serverCtx.Input.AdvanceTo(readResult.Buffer.End);
 
-            byte[] reply = Encoding.UTF8.GetBytes("SERVER_ACK:" + msg);
-            await serverCtx.Output.WriteAsync(reply);
-            await serverCtx.Output.FlushAsync();
-            await Task.Delay(200);
-        });
+            byte[] reply = Encoding.UTF8.GetBytes("SERVER_ACK:" + msg + "\n");
+            await serverCtx.Output.WriteAsync(reply, cts.Token);
+            await serverCtx.Output.FlushAsync(cts.Token);
+            await Task.Delay(Timeout.Infinite, cts.Token);
+        }, cts.Token);
 
-        var clientFactory = new TcpConnectionFactory("127.0.0.1", port);
-        await using var session = new KableClientBuilder<string>()
-            .UseConnectionFactory(clientFactory)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
+        try
+        {
+            var clientFactory = new TcpConnectionFactory("127.0.0.1", port);
+            await using var session = new KableClientBuilder<string>()
+                .UseConnectionFactory(clientFactory)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
 
-        await session.StartAsync();
+            await session.StartAsync(cts.Token);
 
-        var response = await session.RequestAsync<string>("HELLO_LISTENER", TimeSpan.FromSeconds(3));
-        response.Should().Be("SERVER_ACK:HELLO_LISTENER");
-
-        await serverTask;
+            var response = await session.RequestAsync<string>("HELLO_LISTENER", TimeSpan.FromSeconds(3), cts.Token);
+            response.Should().Be("SERVER_ACK:HELLO_LISTENER");
+        }
+        finally
+        {
+            cts.Cancel();
+            try { await serverTask; } catch { }
+        }
     }
 
     [Fact]

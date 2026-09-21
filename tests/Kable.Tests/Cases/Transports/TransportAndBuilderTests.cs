@@ -11,6 +11,7 @@ using Kable.Extensions;
 using Kable.Transports;
 using Xunit;
 
+[Collection("HardwareTransportTests")]
 public class TransportAndBuilderTests
 {
     [Fact]
@@ -21,35 +22,39 @@ public class TransportAndBuilderTests
         int assignedPort = ((IPEndPoint)listener.LocalEndpoint).Port;
 
 
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
         var serverTask = Task.Run(async () =>
         {
-            using var serverSocket = await listener.AcceptSocketAsync();
+            using var serverSocket = await listener.AcceptSocketAsync(cts.Token);
             var buffer = new byte[128];
-            int read = serverSocket.Receive(buffer);
+            int read = await serverSocket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, cts.Token);
             string receivedCmd = Encoding.UTF8.GetString(buffer, 0, read);
 
-            serverSocket.Send(Encoding.UTF8.GetBytes("ECHO_" + receivedCmd));
-            await Task.Delay(200);
-            serverSocket.Shutdown(SocketShutdown.Both);
-        });
+            await serverSocket.SendAsync(Encoding.UTF8.GetBytes("ECHO_" + receivedCmd + "\n").AsMemory(), SocketFlags.None, cts.Token);
+            await Task.Delay(Timeout.Infinite, cts.Token);
+        }, cts.Token);
 
+        try
+        {
+            var clientFactory = new TcpConnectionFactory("127.0.0.1", assignedPort);
+            await using var session = new KableClientBuilder<string>()
+                .UseConnectionFactory(clientFactory)
+                .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+                .Build();
 
-        var clientFactory = new TcpConnectionFactory("127.0.0.1", assignedPort);
-        await using var session = new KableClientBuilder<string>()
-            .UseConnectionFactory(clientFactory)
-            .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-            .Build();
+            await session.StartAsync(cts.Token);
 
-        await session.StartAsync();
+            var response = await session.RequestAsync<string>("PING", TimeSpan.FromSeconds(3), cts.Token);
 
-
-        var response = await session.RequestAsync<string>("PING", TimeSpan.FromSeconds(3));
-
-        response.Should().Be("ECHO_PING");
-        session.IsConnected.Should().BeTrue();
-
-        await serverTask;
-        listener.Stop();
+            response.Should().Be("ECHO_PING");
+            session.IsConnected.Should().BeTrue();
+        }
+        finally
+        {
+            cts.Cancel();
+            try { await serverTask; } catch { }
+            listener.Stop();
+        }
     }
 
 
