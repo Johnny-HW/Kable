@@ -63,6 +63,10 @@ public partial class AlarmListViewModel : ObservableObject, ICommObserver
 
         _dispatcher.BeginInvoke(() =>
         {
+            if (Alarms.Count >= 500)
+            {
+                Alarms.RemoveAt(Alarms.Count - 1);
+            }
             Alarms.Insert(0, model);
         });
     }

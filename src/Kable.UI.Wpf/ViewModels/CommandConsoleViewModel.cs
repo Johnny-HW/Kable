@@ -137,9 +137,9 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         {
             if (Packets.Count >= _maxLogCount)
             {
-                Packets.RemoveAt(0);
+                Packets.RemoveAt(Packets.Count - 1);
             }
-            Packets.Add(model);
+            Packets.Insert(0, model);
         });
     }
 
