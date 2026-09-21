@@ -51,4 +51,43 @@ public partial class SettingParameterModel : ObservableObject
     }
 
     public string BuildPayload() => $"{CommandPrefix}={Value:F1} RAW={HexRawValue}";
+
+    /// <summary>
+    /// Kable.Core의 순수 CommandDefinition 불변 구조체로부터 파라미터 제어 모델 생성
+    /// </summary>
+    public static SettingParameterModel FromDefinition(Kable.Protocol.CommandDefinition def)
+    {
+        return new SettingParameterModel
+        {
+            Id = def.Id,
+            DisplayName = string.IsNullOrWhiteSpace(def.Name) ? def.Id : def.Name,
+            CommandPrefix = string.IsNullOrWhiteSpace(def.RequestPayload) ? $"SET {def.Id}" : def.RequestPayload,
+            Value = def.DefaultValue,
+            MinValue = def.MinValue,
+            MaxValue = def.MaxValue,
+            Step = def.Step > 0 ? def.Step : 1.0,
+            Unit = def.Unit,
+            ScaleFactor = def.ScaleFactor > 0 ? def.ScaleFactor : 1.0,
+            LastAckMessage = "Ready"
+        };
+    }
+
+    /// <summary>
+    /// 현재 파라미터 모델을 순수 CommandDefinition 불변 구조체로 추출
+    /// </summary>
+    public Kable.Protocol.CommandDefinition ToDefinition()
+    {
+        return new Kable.Protocol.CommandDefinition(
+            Id,
+            DisplayName,
+            CommandPrefix,
+            "",
+            Unit,
+            Value,
+            MinValue,
+            MaxValue,
+            Step,
+            ScaleFactor
+        );
+    }
 }

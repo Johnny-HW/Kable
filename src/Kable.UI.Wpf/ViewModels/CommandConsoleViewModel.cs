@@ -38,42 +38,7 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
 
     public ObservableCollection<PacketDisplayModel> Packets { get; } = new();
 
-    public ObservableCollection<SettingParameterModel> AllSettingParameters { get; } = new()
-    {
-        new SettingParameterModel
-        {
-            Id = "SET_TARGET_TEMP",
-            DisplayName = "Target Temperature Control (Chamber)",
-            CommandPrefix = "SET TEMP_TARGET",
-            Value = 45.0,
-            MinValue = 10.0,
-            MaxValue = 120.0,
-            Step = 0.5,
-            Unit = "°C"
-        },
-        new SettingParameterModel
-        {
-            Id = "SET_PRESS_LIMIT",
-            DisplayName = "Supply Pressure Limit",
-            CommandPrefix = "SET PRESS_LIMIT",
-            Value = 150.0,
-            MinValue = 50.0,
-            MaxValue = 300.0,
-            Step = 1.0,
-            Unit = "kPa"
-        },
-        new SettingParameterModel
-        {
-            Id = "SET_FLOW_OFFSET",
-            DisplayName = "Chemical Flow Offset",
-            CommandPrefix = "SET FLOW_OFFSET",
-            Value = 1.5,
-            MinValue = -5.0,
-            MaxValue = 10.0,
-            Step = 0.1,
-            Unit = "mL/min"
-        }
-    };
+    public ObservableCollection<SettingParameterModel> AllSettingParameters { get; } = new();
 
     public ObservableCollection<SettingParameterModel> FilteredSettingParameters { get; } = new();
 
@@ -89,6 +54,43 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         _maxLogCount = maxLogCount;
         RefreshFilteredCommands();
         _selectedSetting = FilteredSettingParameters.Count > 0 ? FilteredSettingParameters[0] : null;
+    }
+
+    /// <summary>
+    /// 외부에서 순수 명령어 정의 구조체(CommandDefinition) 목록을 주입하여 수시 명령 콘솔 파라미터 셋을 동적 구성
+    /// </summary>
+    public void LoadCommands(IEnumerable<Kable.Protocol.CommandDefinition> commandDefs)
+    {
+        AllSettingParameters.Clear();
+        if (commandDefs != null)
+        {
+            foreach (var def in commandDefs)
+            {
+                AllSettingParameters.Add(SettingParameterModel.FromDefinition(def));
+            }
+        }
+        RefreshFilteredCommands();
+        SelectedSetting = FilteredSettingParameters.Count > 0 ? FilteredSettingParameters[0] : null;
+    }
+
+    /// <summary>
+    /// 외부에서 상시/수시 스케줄링 목록(ScheduledCommandItem)을 주입받아 수시(Aperiodic) 모드인 항목만 자동으로 필터링하여 구성
+    /// </summary>
+    public void LoadScheduledCommands(IEnumerable<Kable.Protocol.ScheduledCommandItem> scheduledItems)
+    {
+        AllSettingParameters.Clear();
+        if (scheduledItems != null)
+        {
+            foreach (var item in scheduledItems)
+            {
+                if (item.IsEnabled && item.Mode == Kable.Protocol.CommandExecutionMode.Aperiodic)
+                {
+                    AllSettingParameters.Add(SettingParameterModel.FromDefinition(item.Definition));
+                }
+            }
+        }
+        RefreshFilteredCommands();
+        SelectedSetting = FilteredSettingParameters.Count > 0 ? FilteredSettingParameters[0] : null;
     }
 
     partial void OnCommandSearchTextChanged(string value)

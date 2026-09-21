@@ -100,7 +100,7 @@ public partial class MainViewModel : ObservableObject
     public void AddPacketItem()
     {
         int count = PacketCatalog.Count + 1;
-        PacketCatalog.Add(new PacketCatalogItem
+        var newItem = new PacketCatalogItem
         {
             Id = $"CUSTOM_PKT_{count}",
             Name = $"User Packet {count}",
@@ -110,7 +110,28 @@ public partial class MainViewModel : ObservableObject
             IntervalMs = 200,
             Unit = "V",
             SimulatedBaseValue = 5.0
-        });
+        };
+        newItem.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(PacketCatalogItem.Kind) ||
+                e.PropertyName == nameof(PacketCatalogItem.IsEnabled) ||
+                e.PropertyName == nameof(PacketCatalogItem.CommandPayload) ||
+                e.PropertyName == nameof(PacketCatalogItem.Name))
+            {
+                SyncCommandConsole();
+            }
+        };
+        PacketCatalog.Add(newItem);
+        SyncCommandConsole();
+    }
+
+    /// <summary>
+    /// 카탈로그에서 상시(Periodic) 또는 수시(Aperiodic)로 모드가 변경되었을 때 수시 명령 콘솔과 자동 동기화
+    /// </summary>
+    public void SyncCommandConsole()
+    {
+        var scheduledItems = System.Linq.Enumerable.Select(PacketCatalog, p => p.ToScheduledItem());
+        Terminal.CommandConsole.LoadScheduledCommands(scheduledItems);
     }
 
     public CommTerminalViewModel Terminal { get; } = new();
@@ -212,6 +233,64 @@ public partial class MainViewModel : ObservableObject
                 LogLevel.Information,
                 Profile.DeviceName));
         };
+
+        // Kable.Core의 순수 불변 구조체(ScheduledCommandItem) 정의 컬렉션
+        // 동일한 기능(CommandDefinition)을 가지면서 상시(Periodic) 또는 수시(Aperiodic) 모드를 자유롭게 지정
+        var defaultCommands = new[]
+        {
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("REQ_STATUS", "Device Status Query", "GET_STATUS", "STATUS: READY"),
+                Kable.Protocol.CommandExecutionMode.Aperiodic),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("SET_TARGET_TEMP", "Target Temperature Control (Chamber)", "SET TEMP_TARGET", "ACK: TEMP_TARGET UPDATED", "°C", 45.0, 10.0, 120.0, 0.5, 10.0),
+                Kable.Protocol.CommandExecutionMode.Aperiodic),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("SET_PRESS_LIMIT", "Supply Pressure Limit", "SET PRESS_LIMIT", "ACK: PRESS_LIMIT UPDATED", "kPa", 150.0, 50.0, 300.0, 1.0, 1.0),
+                Kable.Protocol.CommandExecutionMode.Aperiodic),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("SET_FLOW_OFFSET", "Chemical Flow Offset", "SET FLOW_OFFSET", "ACK: FLOW_OFFSET APPLIED", "mL/min", 1.5, -5.0, 10.0, 0.1, 1.0),
+                Kable.Protocol.CommandExecutionMode.Aperiodic),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("CHAMBER_TEMP", "Chamber Temperature", "", "TEMP:{VAL}", "°C", 24.8),
+                Kable.Protocol.CommandExecutionMode.Periodic, 800),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("LINE_PRESSURE", "Line Supply Pressure", "", "PRESS:{VAL}", "kPa", 101.3),
+                Kable.Protocol.CommandExecutionMode.Periodic, 1000),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("FLOW_RATE", "Chemical Flow Rate", "", "FLOW:{VAL}", "mL/min", 12.5),
+                Kable.Protocol.CommandExecutionMode.Periodic, 600),
+
+            new Kable.Protocol.ScheduledCommandItem(
+                new Kable.Protocol.CommandDefinition("ALM_OVERTEMP", "Overtemp Detected Alarm", "", "ALM_001: OVERTEMP"),
+                Kable.Protocol.CommandExecutionMode.Aperiodic)
+        };
+
+        // UI 카탈로그 및 수시 콘솔에 동적 주입
+        PacketCatalog.Clear();
+        foreach (var sc in defaultCommands)
+        {
+            var item = PacketCatalogItem.FromScheduledItem(sc);
+            item.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(PacketCatalogItem.Kind) ||
+                    e.PropertyName == nameof(PacketCatalogItem.IsEnabled) ||
+                    e.PropertyName == nameof(PacketCatalogItem.CommandPayload) ||
+                    e.PropertyName == nameof(PacketCatalogItem.Name))
+                {
+                    SyncCommandConsole();
+                }
+            };
+            PacketCatalog.Add(item);
+        }
+
+        // 수시 명령 콘솔에 Aperiodic 항목 주입
+        Terminal.CommandConsole.LoadScheduledCommands(defaultCommands);
 
         RefreshComPorts();
         UpdateTomlPreview();
