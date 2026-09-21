@@ -110,13 +110,13 @@
                             <TextBlock Text="{loc:Loc Header_TransportSelection}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,10"/>
                             
                             <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <RadioButton Content="Serial" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
-                                <RadioButton Content="TCP/IP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
-                                <RadioButton Content="Named Pipe" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
-                                <RadioButton Content="Modbus-TCP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsModbusTcp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.ModbusTcp}"/>
-                                <RadioButton Content="Melsec SLMP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMelsecSlmp}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.MelsecSlmp}"/>
-                                <RadioButton Content="MQTT" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMqtt}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Mqtt}"/>
-                                <RadioButton Content="OPC UA" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsOpcUa}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.OpcUa}"/>
+                                <RadioButton Content="Serial" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
+                                <RadioButton Content="TCP/IP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
+                                <RadioButton Content="Named Pipe" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
+                                <RadioButton Content="Modbus-TCP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsModbusTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.ModbusTcp}"/>
+                                <RadioButton Content="Melsec SLMP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMelsecSlmp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.MelsecSlmp}"/>
+                                <RadioButton Content="MQTT" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMqtt, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Mqtt}"/>
+                                <RadioButton Content="OPC UA" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsOpcUa, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.OpcUa}"/>
                             </WrapPanel>
 
                             <!-- Serial Specific Settings -->
