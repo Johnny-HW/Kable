@@ -8,7 +8,7 @@
         xmlns:controls="clr-namespace:Kable.UI.Wpf.Controls;assembly=Kable.UI.Wpf"
         xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization;assembly=Kable.UI.Wpf"
         mc:Ignorable="d"
-        Title="🔌 Kable Studio" Height="860" Width="1200"
+        Title="🔌 DEMO" Height="860" Width="1200"
         WindowStartupLocation="CenterScreen" 
         WindowStyle="None" AllowsTransparency="True"
         Background="Transparent">
@@ -38,7 +38,7 @@
                     <!-- Left: Traffic Light Window Buttons (Red Close, Yellow Min, Green Max) -->
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Red Close Button -->
-                        <Button Click="CloseButton_Click" Width="13" Height="13" Margin="0,0,8,0" Cursor="Hand" ToolTip="닫기">
+                        <Button Click="CloseButton_Click" Width="13" Height="13" Margin="0,0,8,0" Cursor="Hand" ToolTip="Close">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="circle" Background="#FF5F56" CornerRadius="7" BorderBrush="#E0443E" BorderThickness="0.5">
@@ -54,7 +54,7 @@
                         </Button>
 
                         <!-- Yellow Minimize Button -->
-                        <Button Click="MinimizeButton_Click" Width="13" Height="13" Margin="0,0,8,0" Cursor="Hand" ToolTip="최소화">
+                        <Button Click="MinimizeButton_Click" Width="13" Height="13" Margin="0,0,8,0" Cursor="Hand" ToolTip="Minimize">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="circle" Background="#FFBD2E" CornerRadius="7" BorderBrush="#DEA123" BorderThickness="0.5">
@@ -70,7 +70,7 @@
                         </Button>
 
                         <!-- Green Maximize Button -->
-                        <Button Click="MaximizeButton_Click" Width="13" Height="13" Margin="0,0,14,0" Cursor="Hand" ToolTip="최대화">
+                        <Button Click="MaximizeButton_Click" Width="13" Height="13" Margin="0,0,14,0" Cursor="Hand" ToolTip="Maximize">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="circle" Background="#27C93F" CornerRadius="7" BorderBrush="#1AAB29" BorderThickness="0.5">
@@ -85,8 +85,8 @@
                             </Button.Template>
                         </Button>
 
-                        <TextBlock Text="🔌 Kable Studio" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
-                        <TextBlock Text=" — Hardware Communication Engineering Platform" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="6,1,0,0"/>
+                        <TextBlock Text="🔌 DEMO" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
+                        <TextBlock Text=" — Kable Hardware Communication Studio" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="6,1,0,0"/>
                     </StackPanel>
 
                     <!-- Right Status Tags in Titlebar -->

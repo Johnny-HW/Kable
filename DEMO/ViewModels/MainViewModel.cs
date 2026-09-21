@@ -143,7 +143,7 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
-        _selectedLanguage = AvailableLanguages[0]; // Default Korean
+        _selectedLanguage = AvailableLanguages[0]; // Default English (en-US)
         KableLocalizer.Instance.SetCulture(CultureInfo.GetCultureInfo(_selectedLanguage.CultureCode));
 
         Terminal.ManualSendRequested += async (cmd) =>

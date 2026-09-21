@@ -35,7 +35,15 @@
                         </Button.Resources>
                     </Button>
                     <Button Content="{loc:Loc Btn_Clear}" Command="{Binding ClearLogsCommand}" 
-                            Padding="12,6" Margin="0,0,12,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                            Padding="12,6" Margin="0,0,8,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button Content="💾 Export Log" Command="{Binding ExportToFileCommand}" 
+                            Padding="12,6" Margin="0,0,12,0" Background="#EFF6FF" Foreground="#0071E3" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="8"/>

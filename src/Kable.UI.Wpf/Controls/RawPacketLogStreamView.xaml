@@ -1,0 +1,166 @@
+<UserControl x:Class="Kable.UI.Wpf.Controls.RawPacketLogStreamView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
+             mc:Ignorable="d" 
+             d:DesignHeight="350" d:DesignWidth="800">
+    <Grid Background="#FFFFFF">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Action Header Bar -->
+            <RowDefinition Height="*"/>    <!-- DataGrid of Raw Packets -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Hex Dump Preview -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header Toolbar -->
+        <Border Grid.Row="0" Background="#F8FAFC" Padding="10,6" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="📡 Raw Packet Stream Log" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="#64748B" FontSize="11"/>
+                    </Border>
+                    <!-- Pause / Resume -->
+                    <Button Content="{loc:Loc Btn_Pause}" Command="{Binding TogglePauseCommand}" 
+                            Padding="10,4" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#334155" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <!-- Clear -->
+                    <Button Content="{loc:Loc Btn_Clear}" Command="{Binding ClearLogsCommand}" 
+                            Padding="10,4" Margin="0,0,6,0" Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" FontSize="11" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <!-- Save to File (History Export) -->
+                    <Button Content="💾 Export Log File" Command="{Binding ExportToFileCommand}" 
+                            Padding="10,4" Margin="0,0,6,0" Background="#EFF6FF" Foreground="#0071E3" FontWeight="Bold" FontSize="11" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:Loc Lbl_Filter}" Foreground="#64748B" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" Width="150" 
+                             Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#E2E8F0" BorderThickness="1" Padding="6,3" FontSize="11">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 2. Packet List Grid -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Packets}" SelectedItem="{Binding SelectedPacket}"
+                  IsReadOnly="True"
+                  Style="{StaticResource IosDataGridStyle}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{loc:Loc Col_Seq}" Binding="{Binding SequenceNo}" Width="55">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#64748B"/>
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="95">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#475569"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Dir}" Binding="{Binding Direction}" Width="70">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="TX ➡">
+                                    <Setter Property="Foreground" Value="#0071E3"/>
+                                </Trigger>
+                                <Trigger Property="Text" Value="RX ⬅">
+                                    <Setter Property="Foreground" Value="#34C759"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="90">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Medium"/>
+                            <Setter Property="Foreground" Value="#1E293B"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Type}" Binding="{Binding Kind}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Bytes}" Binding="{Binding Length}" Width="60">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#64748B"/>
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="Margin" Value="0,0,10,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Latency}" Binding="{Binding LatencyMs}" Width="75">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#D97706"/>
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="Margin" Value="0,0,8,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_PayloadPreview}" Binding="{Binding AsciiPreview}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+                            <Setter Property="Foreground" Value="#0F172A"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- 3. Bottom Quick Hex Dump Bar -->
+        <Border Grid.Row="2" Background="#F8FAFC" Padding="8,6" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+            <TextBox Text="{Binding SelectedPacket.HexDump, Mode=OneWay, FallbackValue='Click a packet row above to view full byte inspection.'}" 
+                     FontFamily="Consolas, Courier New" FontSize="11" Foreground="#475569"
+                     Background="Transparent" BorderThickness="0" MaxHeight="60"
+                     IsReadOnly="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+        </Border>
+    </Grid>
+</UserControl>

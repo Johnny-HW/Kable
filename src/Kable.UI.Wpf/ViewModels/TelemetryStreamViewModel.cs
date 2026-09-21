@@ -60,6 +60,8 @@ public partial class TelemetryStreamViewModel : ObservableObject, ICommObserver
 
     public ObservableCollection<TelemetryItemModel> TelemetryItems { get; } = new();
 
+    public Controls.RawPacketLogStreamViewModel RawLogStream { get; }
+
     public ChannelReader<PacketTraceRecord> CommandStream => throw new NotSupportedException();
     public ChannelReader<PacketTraceRecord> PeriodicStream => throw new NotSupportedException();
     public ChannelReader<PacketTraceRecord> AlarmStream => throw new NotSupportedException();
@@ -67,6 +69,7 @@ public partial class TelemetryStreamViewModel : ObservableObject, ICommObserver
     public TelemetryStreamViewModel(Dispatcher? dispatcher = null)
     {
         _dispatcher = dispatcher ?? (Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher);
+        RawLogStream = new Controls.RawPacketLogStreamViewModel(_dispatcher, 1000);
     }
 
     public void OnPacketTrace(in PacketTraceRecord trace)
@@ -74,6 +77,9 @@ public partial class TelemetryStreamViewModel : ObservableObject, ICommObserver
         // 상시 통신 (텔레메트리 스트림) 필터링
         if (trace.Kind != TrafficKind.PeriodicTelemetry) return;
         if (IsPaused) return;
+
+        // 원본 패킷 스트림 로그로 전달
+        RawLogStream.OnPacketTrace(in trace);
 
         string paramName = !string.IsNullOrEmpty(trace.Tag) ? trace.Tag : trace.DeviceId;
         string valueStr = trace.ParsedText ?? $"{trace.RawBytes.Length} bytes";

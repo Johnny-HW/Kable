@@ -4,13 +4,16 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:vm="clr-namespace:Kable.UI.Wpf.ViewModels"
+             xmlns:controls="clr-namespace:Kable.UI.Wpf.Controls"
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
              mc:Ignorable="d" 
-             d:DesignHeight="550" d:DesignWidth="850">
+             d:DesignHeight="650" d:DesignWidth="850">
     <Grid Background="#FFFFFF">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /> <!-- Toolbar -->
-            <RowDefinition Height="*" />     <!-- Telemetry In-Place Grid -->
+            <RowDefinition Height="Auto" /> <!-- 1. Toolbar -->
+            <RowDefinition Height="1.2*" />  <!-- 2. Telemetry In-Place Grid -->
+            <RowDefinition Height="Auto" /> <!-- Splitter -->
+            <RowDefinition Height="*" />    <!-- 3. Reusable Raw Packet Stream Split Log -->
         </Grid.RowDefinitions>
 
         <!-- 1. Toolbar -->
@@ -52,7 +55,7 @@
             </DockPanel>
         </Border>
 
-        <!-- 2. Telemetry In-Place Grid -->
+        <!-- 2. Telemetry In-Place Current Value Grid -->
         <DataGrid Grid.Row="1" ItemsSource="{Binding TelemetryItems}"
                   IsReadOnly="True"
                   Style="{StaticResource IosDataGridStyle}">
@@ -109,5 +112,13 @@
                 </DataGridTextColumn>
             </DataGrid.Columns>
         </DataGrid>
+
+        <!-- Grid Splitter with subtle grab handle -->
+        <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="#E2E8F0" ResizeDirection="Rows" Cursor="SizeNS"/>
+
+        <!-- 3. Reusable Split View: Raw Packet Stream Log & Hex Dump -->
+        <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+            <controls:RawPacketLogStreamView DataContext="{Binding RawLogStream}"/>
+        </Border>
     </Grid>
 </UserControl>
