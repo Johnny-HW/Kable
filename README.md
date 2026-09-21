@@ -5,8 +5,14 @@
 
 [![Language](https://img.shields.io/badge/Language-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
 [![Targets](https://img.shields.io/badge/Targets-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-178%20Passing-brightgreen.svg)]()
+
+---
+
+## 📖 Live Web Documentation (Docsify)
+👉 **[Browse Interactive Documentation Portal (7 Languages)](https://Johnny-HW.github.io/Kable/)**
 
 ---
 
@@ -14,6 +20,7 @@
 
 - [English (Current)](README.md)
 - [한국어 (Korean)](README.ko.md)
+- [Web Documentation Portal (All Languages)](https://Johnny-HW.github.io/Kable/)
 
 ---
 

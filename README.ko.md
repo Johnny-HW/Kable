@@ -5,8 +5,14 @@
 
 [![Language](https://img.shields.io/badge/언어-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
 [![Targets](https://img.shields.io/badge/타깃-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
+[![Docs](https://img.shields.io/badge/문서-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
 [![License](https://img.shields.io/badge/라이선스-Apache%202.0-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/단위테스트-178개%20통과-brightgreen.svg)]()
+
+---
+
+## 📖 실시간 웹 기술 문서 포털 (Docsify)
+👉 **[Kable 대화형 웹 기술 문서 사이트 바로가기 (7개 국어 지원)](https://Johnny-HW.github.io/Kable/)**
 
 ---
 
@@ -14,6 +20,7 @@
 
 - [English (글로벌 표준 영문)](README.md)
 - [한국어 (현재 문서)](README.ko.md)
+- [웹 문서 포털 (7개 언어 지원)](https://Johnny-HW.github.io/Kable/)
 
 ---
 
