@@ -82,7 +82,7 @@ public sealed class VirtualDeviceSimulator : IDisposable
                 // 1. 상시 텔레메트리 (Periodic Telemetry)
                 if (item.Kind == TrafficKind.PeriodicTelemetry)
                 {
-                    int interval = Math.Max(20, item.IntervalMs);
+                    int interval = Math.Max(100, item.IntervalMs);
                     if (!itemLastSent.TryGetValue(item.Id, out var last) || (now - last).TotalMilliseconds >= interval)
                     {
                         itemLastSent[item.Id] = now;
@@ -108,8 +108,8 @@ public sealed class VirtualDeviceSimulator : IDisposable
                 }
             }
 
-            // 간헐적 가상 알람 시뮬레이션 (약 1/150 확률, 약 7~10초에 한 번)
-            if (_random.Next(0, 150) == 7)
+            // 간헐적 가상 알람 시뮬레이션 (약 1/120 확률, 약 10~15초에 한 번)
+            if (_random.Next(0, 120) == 7)
             {
                 var almText = "ALM_WARN: Flow Sensor Jitter detected";
                 var almBytes = Encoding.UTF8.GetBytes(almText);
@@ -127,7 +127,7 @@ public sealed class VirtualDeviceSimulator : IDisposable
 
             try
             {
-                await Task.Delay(25, token); // 40Hz 정밀도 틱
+                await Task.Delay(100, token); // 10Hz 부드러운 틱 주기 (적당하고 안정적인 스트리밍 속도)
             }
             catch (OperationCanceledException)
             {

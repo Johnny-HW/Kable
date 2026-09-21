@@ -68,9 +68,9 @@ public partial class MainViewModel : ObservableObject
     private ObservableCollection<PacketCatalogItem> _packetCatalog = new()
     {
         new PacketCatalogItem { Id = "REQ_STATUS", Name = "Device Status Query", Kind = TrafficKind.AperiodicCommand, CommandPayload = "GET_STATUS", ResponseTemplate = "STATUS: READY", IntervalMs = 0, Unit = "", SimulatedBaseValue = 0 },
-        new PacketCatalogItem { Id = "CHAMBER_TEMP", Name = "Chamber Temperature", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "TEMP:{VAL}", IntervalMs = 100, Unit = "°C", SimulatedBaseValue = 24.8 },
-        new PacketCatalogItem { Id = "LINE_PRESSURE", Name = "Line Supply Pressure", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "PRESS:{VAL}", IntervalMs = 100, Unit = "kPa", SimulatedBaseValue = 101.3 },
-        new PacketCatalogItem { Id = "FLOW_RATE", Name = "Chemical Flow Rate", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "FLOW:{VAL}", IntervalMs = 50, Unit = "mL/min", SimulatedBaseValue = 12.5 },
+        new PacketCatalogItem { Id = "CHAMBER_TEMP", Name = "Chamber Temperature", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "TEMP:{VAL}", IntervalMs = 800, Unit = "°C", SimulatedBaseValue = 24.8 },
+        new PacketCatalogItem { Id = "LINE_PRESSURE", Name = "Line Supply Pressure", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "PRESS:{VAL}", IntervalMs = 1000, Unit = "kPa", SimulatedBaseValue = 101.3 },
+        new PacketCatalogItem { Id = "FLOW_RATE", Name = "Chemical Flow Rate", Kind = TrafficKind.PeriodicTelemetry, CommandPayload = "", ResponseTemplate = "FLOW:{VAL}", IntervalMs = 600, Unit = "mL/min", SimulatedBaseValue = 12.5 },
         new PacketCatalogItem { Id = "ALM_OVERTEMP", Name = "Overtemp Detected Alarm", Kind = TrafficKind.SpontaneousAlarm, CommandPayload = "", ResponseTemplate = "ALM_001: OVERTEMP", IntervalMs = 0, Unit = "", SimulatedBaseValue = 0 }
     };
 
