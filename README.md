@@ -1,90 +1,143 @@
 # 🔌 Kable
 
 > **High-Performance, Zero-Allocation Reactive Hardware Communication Engine for .NET**  
-> Combining Microsoft Bedrock's `System.IO.Pipelines` transport abstraction with RSocket interaction patterns.
+> Combining Microsoft Bedrock's `System.IO.Pipelines` transport abstraction with RSocket interaction patterns, ready-made WPF terminal diagnostics, and industrial-grade multi-language localization.
+
+[![Language](https://img.shields.io/badge/Language-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
+[![Targets](https://img.shields.io/badge/Targets-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-178%20Passing-brightgreen.svg)]()
+
+---
+
+## 🌐 Documentation Languages
+
+- [English (Current)](README.md)
+- [한국어 (Korean)](README.ko.md)
 
 ---
 
 ## ✨ Key Features
 
 - **Pure Multi-Targeting**: Native support for `.NET 10.0`, `.NET 8.0 (LTS)`, and `netstandard2.0` (.NET Framework 4.8 / Legacy systems).
-- **Zero-Copy Pipelines & Low-Allocation Budget**: Zero memory copies and vector-accelerated buffer parsing via `System.IO.Pipelines` and `ReadOnlySequence<byte>` with predictable allocation budgets (<1KB/request).
-- **Hybrid Transaction Router**:
-  - **No-Correlation ID Devices** (RS-232C, Simple ASCII): Automatic asynchronous preemptive FIFO lock (`SemaphoreSlim`) preventing request interleaving.
-  - **Correlation ID Protocols** (Modern TCP/IPC): High-speed lock-free pipelining & interleaving.
-- **Fail-Fast Safety Policy**: Immediate `DeviceDisconnectedException` dispatch upon cable/link disconnection to guarantee physical hardware safe-state.
-- **Tri-Stream Observability**: Independent bounded ringbuffers (`DropOldest`) separating Periodic Telemetry, Command Console, and Spontaneous Alarms to prevent UI lagging.
-
+- **Zero-Copy Pipelines & Zero-GC Budget**: Vector-accelerated buffer parsing via `System.IO.Pipelines` and `ReadOnlySequence<byte>` (<1KB allocation budget per transaction).
+- **Industrial Multi-Language Localization (7 Languages)**:
+  - English (`en-US`), Korean (`ko-KR`), Chinese Simplified (`zh-CN`), Chinese Traditional (`zh-TW`), Japanese (`ja-JP`), German (`de-DE`), French (`fr-FR`).
+  - Runtime culture switching via `KableLocalizer.Instance.SetCulture(...)` with auto-translated error messages for equipment operators.
+- **Ready-Made WPF Terminal (`Kable.UI.Wpf`)**:
+  - Drag-and-drop `<kable:CommTerminalView />` XAML UserControl with live packet inspection, Wireshark-style hex dump, and manual command injection.
+- **Offline Mock Simulator (`UseSimulator`)**:
+  - Full in-memory zero-network cross-piped loopback simulator enabling sequence logic development before physical hardware delivery.
+- **Standard Wireshark PCAP Capture & Packet Replay**:
+  - Export live packet sessions directly to `.pcap` files and replay captured field anomalies with speed multipliers (`PacketReplayer`).
+- **Real-Time Jitter & RTT Watchdog (`SessionHealthMonitor`)**:
+  - Circular buffer moving average & standard deviation (Jitter) calculation with automatic SECS-GEM / MES warning alarm dispatch.
+- **Alarm Lifecycle Manager (`AlarmManager`)**:
+  - Semiconductor 4-tier severity (`Info`, `Warning`, `Critical`, `Fatal`) and state tracking (`Set`/`Clear`) with lock-free `ChannelReader` streaming.
+- **Analog Deadband Filter (`DeadbandFilter<T>`)**:
+  - Thread-safe jitter noise suppressor preventing unnecessary high-frequency reporting to host MES.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Fluent Builder (`KableClientBuilder`)
+### 1. Fluent Builder with Offline Simulator
 
 ```csharp
 using Kable.Extensions;
 using Kable.Codecs;
 
-// Connect via TCP, Serial Port, or NamedPipe in 3 lines:
+// Develop against an offline mock simulator in 5 lines:
 await using var session = new KableClientBuilder<string>()
-    .UseTcp("192.168.0.100", 9000)
+    .UseSimulator(sim =>
+    {
+        sim.OnCommand("STATUS", "STATUS:READY")
+           .OnCommand("GET_TEMP", "TEMP:24.5");
+    })
+    // For real hardware:
+    // .UseTcp("192.168.0.100", 9000)
     // .UseSerialPort("COM3", baudRate: 9600)
     // .UseNamedPipe("local_hardware_pipe")
     .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+    .WithDeviceId("ROBOT_A")
     .Build();
 
 await session.StartAsync();
 
-// Request-Response with Fail-Fast Watchdog
-string response = await session.RequestAsync<string>("START_ACQUISITION", TimeSpan.FromSeconds(3));
+string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(2));
+Console.WriteLine(status); // "STATUS:READY"
+```
 
-// Subscribe to Real-time Stream
-await foreach (var packet in session.Stream)
+### 2. Ready-Made WPF UI Terminal (`Kable.UI.Wpf`)
+
+Add real-time hardware communication terminal to your WPF application in XAML:
+
+```xml
+<Window x:Class="MyEquipmentApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:kable="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf">
+    <Grid>
+        <!-- Ready-made diagnostic terminal with live list, hex dump, and manual send -->
+        <kable:CommTerminalView x:Name="CommTerminal" />
+    </Grid>
+</Window>
+```
+
+Code-behind:
+```csharp
+var vm = new CommTerminalViewModel();
+CommTerminal.DataContext = vm;
+
+// Hook up manual injection
+vm.ManualSendRequested += async (cmd) => await session.SendAsync(cmd);
+
+// Hook session observer to VM
+builder.WithObserver(vm);
+```
+
+### 3. Industrial Localization (i18n)
+
+```csharp
+using System.Globalization;
+using Kable.Localization;
+
+// Switch runtime language to Japanese or German
+KableLocalizer.Instance.SetCulture(new CultureInfo("ja-JP"));
+
+try
 {
-    Console.WriteLine($"Received telemetry: {packet}");
+    await session.RequestAsync<string>("MOVE_AXIS", TimeSpan.FromSeconds(3));
+}
+catch (DeviceTimeoutException ex)
+{
+    // Returns translated localized message: "コマンド 'MOVE_AXIS' の応答が 3000ms 待機後にタイムアウトしました。"
+    MessageBox.Show(ex.GetLocalizedMessage());
 }
 ```
 
-### 2. Dependency Injection (`Microsoft.Extensions.DependencyInjection`)
+### 4. Wireshark PCAP Dump & Anomaly Replay
 
 ```csharp
-builder.Services.AddKable(); // Registers ICommObserver (3-channel ringbuffer)
+using Kable.Observability;
 
-builder.Services.AddKableSession<string>((client, sp) =>
+// 1. Dump session to Wireshark .pcap
+var pcapObserver = new PcapStreamObserver("dump.pcap");
+builder.WithObserver(pcapObserver);
+
+// 2. Replay captured packets at double speed in lab
+var replayer = new PacketReplayer(capturedRecords).WithSpeed(2.0);
+await replayer.ReplayAsync(async packet =>
 {
-    client.UseSerialPort("COM3", baudRate: 9600)
-          .UseCodec(new AsciiLineCodec(delimiter: 0x0D));
+    await simulatedSession.ProcessPacketAsync(packet);
 });
 ```
 
-### 3. Lightweight Simple Facade (`KableSimple`)
-
-For quick prototypes and minimal ceremony (always use `await using` to ensure non-blocking cleanup):
-
-```csharp
-using Kable.Simple;
-
-// Open connection and guarantee clean non-blocking disposal
-await using var client = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
-
-// Subscribe to real-time events & errors
-client.LineReceived += line => Console.WriteLine($"Rx: {line}");
-client.ErrorOccurred += ex => Console.Error.WriteLine($"Error: {ex.Message}");
-
-// Send single line or Query (Request-Response)
-await client.SendLineAsync("SET:PARAM=1");
-string reply = await client.QueryAsync("GET:PARAM?");
-```
-
-### 4. Type-Safe Device Profile Manager (`KableProfileManager`)
-
-Automate background periodic polling and thread-safe aperiodic commands using device-specific Enums with zero memory-leak UI data binding:
+### 5. Type-Safe Device Profile Manager (`KableProfileManager`)
 
 ```csharp
 using Kable.Engine.Profiles;
 
-// Define your equipment protocol commands via Enums
 public enum RobotTelemetry { Status, ArmPosition, VacuumPressure }
 public enum RobotControl   { ServoOn, MoveHome, PickWafer }
 
@@ -94,23 +147,10 @@ var config = new KableProfileConfig<RobotTelemetry, RobotControl>
     Port = 9000
 };
 
-// Register background telemetry polling (independent non-drifting timers)
 config.AddPeriodic(RobotTelemetry.Status, "?STATUS", TimeSpan.FromMilliseconds(100));
-config.AddPeriodic(RobotTelemetry.VacuumPressure, "?VACUUM", TimeSpan.FromMilliseconds(50));
-
-// Register aperiodic control commands
 config.AddAperiodic(RobotControl.ServoOn, "CMD:SERVO=1");
-config.AddAperiodic(RobotControl.MoveHome, "CMD:HOME");
 
 await using var client = await KableProfileManager.ConnectAsync(config);
-
-// Zero-latency instant cache lookup
-string? currentStatus = client.GetLatest(RobotTelemetry.Status);
-
-// Safe ViewModel binding: Weak reference prevents memory leaks upon View close
-client.SubscribeWeak(viewModel, (vm, cmd, data) => vm.UpdateTelemetry(cmd, data));
-
-// Thread-safe command execution seamlessly arbitrated with background polling
 string result = await client.ExecuteAsync(RobotControl.ServoOn);
 ```
 
@@ -118,8 +158,6 @@ string result = await client.ExecuteAsync(RobotControl.ServoOn);
 
 ## 📄 License & Governance
 
-- **Core Engine & Framework**: [Apache License 2.0](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/LICENSE)
-- **Third-Party Open-Source Notices**: [THIRD_PARTY_LICENSES.md](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/THIRD_PARTY_LICENSES.md)
-- **Detailed Compliance Guide**: [07. Open-Source Licensing & Compliance Guide](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/docs/07_OPENSOURCE_LICENSING_AND_COMPLIANCE.md)
-- **Zero-Copyleft Guarantee**: No obligation to disclose your proprietary equipment control sequences or recipe algorithms. Fully permissive and safe for 100% closed-source commercial binary distribution.
-
+- **Core Engine & Framework**: [Apache License 2.0](LICENSE)
+- **Third-Party Open-Source Notices**: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)
+- **Zero-Copyleft Guarantee**: Fully permissive for 100% closed-source commercial equipment control binary distribution.

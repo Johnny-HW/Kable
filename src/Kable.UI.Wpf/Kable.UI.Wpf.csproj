@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net10.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageId>Kable.UI.Wpf</PackageId>
+    <Description>Ready-made WPF UserControls for real-time hardware communication monitoring, Wireshark-style hex dump inspection, and manual command injection.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
+    <ProjectReference Include="..\Kable\Kable.csproj" />
+  </ItemGroup>
+
+</Project>

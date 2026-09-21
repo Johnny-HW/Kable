@@ -2,11 +2,14 @@ namespace Kable.Extensions;
 
 using System;
 using System.IO.Ports;
+using System.Threading;
+using System.Threading.Tasks;
 using Kable.Codecs;
 using Kable.Core;
 using Kable.Engine;
 using Kable.Observability;
 using Kable.Transports;
+using Kable.Transports.Simulators;
 
 public sealed class KableClientBuilder<TMessage>
 {
@@ -50,6 +53,20 @@ public sealed class KableClientBuilder<TMessage>
         return this;
     }
 
+    /// <summary>
+    /// 실물 하드웨어 없이 인메모리 루프백 시뮬레이터로 통신을 모사합니다.
+    /// </summary>
+    public KableClientBuilder<TMessage> UseSimulator(Action<MockHardwareSimulator> configure)
+    {
+        var (clientContext, serverContext) = InMemoryConnectionContext.CreatePair();
+        var simulator = new MockHardwareSimulator(serverContext);
+        configure(simulator);
+        simulator.Start();
+
+        _factory = new DelegateConnectionFactory(() => new ValueTask<IConnectionContext>(clientContext));
+        return this;
+    }
+
     public KableClientBuilder<TMessage> UseConnectionFactory(IConnectionFactory factory)
     {
         _factory = factory;
@@ -77,11 +94,18 @@ public sealed class KableClientBuilder<TMessage>
     public IDeviceSession<TMessage> Build()
     {
         if (_factory == null)
-            throw new InvalidOperationException("ConnectionFactory must be configured (e.g. UseTcp or UseSerialPort).");
+            throw new InvalidOperationException("ConnectionFactory must be configured (e.g. UseTcp, UseSerialPort, or UseSimulator).");
 
         if (_codec == null)
             throw new InvalidOperationException("ProtocolCodec must be configured (e.g. UseCodec).");
 
         return new KableSession<TMessage>(_factory, _codec, _observer, deviceId: _deviceId);
+    }
+
+    private sealed class DelegateConnectionFactory : IConnectionFactory
+    {
+        private readonly Func<ValueTask<IConnectionContext>> _creator;
+        public DelegateConnectionFactory(Func<ValueTask<IConnectionContext>> creator) => _creator = creator;
+        public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default) => _creator();
     }
 }
