@@ -265,6 +265,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_LiveTest"] = "4. Diagnostics & Live Simulation",
             ["Header_TomlPreview"] = "📄 Auto-Generated TOML Preview",
 
+            ["Nav_Config"] = "⚙️ Comm Config",
+            ["Nav_Inspector"] = "💬 Aperiodic Commands",
+            ["Nav_Telemetry"] = "📈 Telemetry",
+            ["Nav_Alarms"] = "🚨 Alarms",
+            ["Nav_Export"] = "📄 Config Export",
+
             ["Col_Seq"] = "#",
             ["Col_Time"] = "Time",
             ["Col_Dir"] = "Dir",
@@ -325,6 +331,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_CodecRouter"] = "3. 패킷 코덱(Codec) 및 트랜잭션 라우터",
             ["Header_LiveTest"] = "4. 현장 통신 진단 및 시뮬레이션",
             ["Header_TomlPreview"] = "📄 자동 생성된 TOML 설정 미리보기",
+
+            ["Nav_Config"] = "⚙️ 통신 설정 (Config)",
+            ["Nav_Inspector"] = "💬 수시 명령 (Aperiodic)",
+            ["Nav_Telemetry"] = "📈 상시 텔레메트리 (Telemetry)",
+            ["Nav_Alarms"] = "🚨 실시간 알람 (Alarms)",
+            ["Nav_Export"] = "📄 설정 내보내기 (Export)",
 
             ["Col_Seq"] = "순번(#)",
             ["Col_Time"] = "수신시각",
@@ -387,6 +399,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_LiveTest"] = "4. 現狀診斷與即時模擬",
             ["Header_TomlPreview"] = "📄 自動產生之 TOML 設定預覽",
 
+            ["Nav_Config"] = "⚙️ 通訊設定 (Config)",
+            ["Nav_Inspector"] = "💬 隨機指令 (Aperiodic)",
+            ["Nav_Telemetry"] = "📈 遙測數據 (Telemetry)",
+            ["Nav_Alarms"] = "🚨 即時警報 (Alarms)",
+            ["Nav_Export"] = "📄 匯出設定 (Export)",
+
             ["Col_Seq"] = "序號(#)",
             ["Col_Time"] = "時間",
             ["Col_Dir"] = "方向",
@@ -447,6 +465,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_CodecRouter"] = "3. 编解码器与路由配置",
             ["Header_LiveTest"] = "4. 现场通信诊断与模拟",
             ["Header_TomlPreview"] = "📄 自动生成的 TOML 配置预览",
+
+            ["Nav_Config"] = "⚙️ 通信配置 (Config)",
+            ["Nav_Inspector"] = "💬 非周期命令 (Aperiodic)",
+            ["Nav_Telemetry"] = "📈 实时遥测 (Telemetry)",
+            ["Nav_Alarms"] = "🚨 实时报警 (Alarms)",
+            ["Nav_Export"] = "📄 导出配置 (Export)",
 
             ["Col_Seq"] = "序号(#)",
             ["Col_Time"] = "时间",
@@ -509,6 +533,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_LiveTest"] = "4. 現地通信診断 & シミュレーション",
             ["Header_TomlPreview"] = "📄 自動生成された TOML 設定プレビュー",
 
+            ["Nav_Config"] = "⚙️ 通信設定 (Config)",
+            ["Nav_Inspector"] = "💬 随時コマンド (Aperiodic)",
+            ["Nav_Telemetry"] = "📈 定常テレメトリ (Telemetry)",
+            ["Nav_Alarms"] = "🚨 リアルタイム警報 (Alarms)",
+            ["Nav_Export"] = "📄 設定エクスポート (Export)",
+
             ["Col_Seq"] = "連番(#)",
             ["Col_Time"] = "時刻",
             ["Col_Dir"] = "方向",
@@ -570,6 +600,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_LiveTest"] = "4. Diagnose & Live-Simulation",
             ["Header_TomlPreview"] = "📄 Automatisch generierte TOML-Vorschau",
 
+            ["Nav_Config"] = "⚙️ Kommunikation (Config)",
+            ["Nav_Inspector"] = "💬 Befehle (Aperiodic)",
+            ["Nav_Telemetry"] = "📈 Telemetrie (Telemetry)",
+            ["Nav_Alarms"] = "🚨 Alarme (Alarms)",
+            ["Nav_Export"] = "📄 Exportieren (Export)",
+
             ["Col_Seq"] = "#",
             ["Col_Time"] = "Zeit",
             ["Col_Dir"] = "Richtung",
@@ -630,6 +666,12 @@ public sealed class KableLocalizer : IKableLocalizer
             ["Header_CodecRouter"] = "3. Códec y Enrutador de Transacciones",
             ["Header_LiveTest"] = "4. Diagnóstico y Simulación en Vivo",
             ["Header_TomlPreview"] = "📄 Vista Previa de TOML Autogenerado",
+
+            ["Nav_Config"] = "⚙️ Configuración (Config)",
+            ["Nav_Inspector"] = "💬 Comandos (Aperiodic)",
+            ["Nav_Telemetry"] = "📈 Telemetría (Telemetry)",
+            ["Nav_Alarms"] = "🚨 Alarmas (Alarms)",
+            ["Nav_Export"] = "📄 Exportar (Export)",
 
             ["Col_Seq"] = "#",
             ["Col_Time"] = "Hora",

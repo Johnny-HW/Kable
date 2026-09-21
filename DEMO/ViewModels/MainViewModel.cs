@@ -57,6 +57,33 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private LanguageOption _selectedLanguage;
 
+    [ObservableProperty]
+    private int _selectedNavIndex = 0; // 0: Config, 1: LiveInspector, 2: Telemetry, 3: Alarms, 4: TomlExport
+
+    public bool IsNavConfig => SelectedNavIndex == 0;
+    public bool IsNavInspector => SelectedNavIndex == 1;
+    public bool IsNavTelemetry => SelectedNavIndex == 2;
+    public bool IsNavAlarms => SelectedNavIndex == 3;
+    public bool IsNavExport => SelectedNavIndex == 4;
+
+    partial void OnSelectedNavIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsNavConfig));
+        OnPropertyChanged(nameof(IsNavInspector));
+        OnPropertyChanged(nameof(IsNavTelemetry));
+        OnPropertyChanged(nameof(IsNavAlarms));
+        OnPropertyChanged(nameof(IsNavExport));
+    }
+
+    [RelayCommand]
+    public void SetNav(string indexStr)
+    {
+        if (int.TryParse(indexStr, out int idx))
+        {
+            SelectedNavIndex = idx;
+        }
+    }
+
     public CommTerminalViewModel Terminal { get; } = new();
 
     [ObservableProperty]

@@ -1,0 +1,57 @@
+<UserControl x:Class="Kable.ConfigStudio.Views.LiveInspectorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf"
+             xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization;assembly=Kable.UI.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Live Diagnostic Control Card -->
+        <Border Grid.Row="0" Background="#1E1E2E" CornerRadius="16" Padding="16" Margin="0,0,0,12" BorderBrush="#313244" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.2" Color="#000000"/>
+            </Border.Effect>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:Loc Header_LiveTest}" FontWeight="Bold" FontSize="14" Foreground="#F9E2AF" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TestStatus}" Foreground="{Binding TestResultColor}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="{loc:Loc Btn_RunLiveTest}" Command="{Binding RunLiveTestCommand}" 
+                            Padding="16,8" Margin="0,0,10,0" Background="#F9E2AF" Foreground="#11111B" FontWeight="Bold" 
+                            BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="10"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button Content="{loc:Loc Btn_RunSimulation}" Command="{Binding RunMockSimulationCommand}" 
+                            Padding="16,8" Background="#313244" Foreground="#CDD6F4" FontWeight="SemiBold" 
+                            BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="10"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Aperiodic Command Console Viewport -->
+        <Border Grid.Row="1" Background="#1E1E2E" CornerRadius="16" BorderBrush="#313244" BorderThickness="1" ClipToBounds="True">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+            </Border.Effect>
+            <ui:CommandConsoleView DataContext="{Binding Terminal.CommandConsole}"/>
+        </Border>
+    </Grid>
+</UserControl>

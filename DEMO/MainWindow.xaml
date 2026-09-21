@@ -4,12 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Kable.ConfigStudio.ViewModels"
-        xmlns:models="clr-namespace:Kable.ConfigStudio.Models"
-        xmlns:ui="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf"
+        xmlns:views="clr-namespace:Kable.ConfigStudio.Views"
         xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization;assembly=Kable.UI.Wpf"
         mc:Ignorable="d"
-        Title="🔌 Kable Connection Config Studio" Height="820" Width="1120"
-        WindowStartupLocation="CenterScreen" Background="#11111B">
+        Title="🔌 Kable Studio" Height="820" Width="1160"
+        WindowStartupLocation="CenterScreen" Background="#0F1017">
     <Window.DataContext>
         <vm:MainViewModel/>
     </Window.DataContext>
@@ -17,317 +16,299 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <SolidColorBrush x:Key="BgDark" Color="#1E1E2E"/>
-        <SolidColorBrush x:Key="BgCard" Color="#252538"/>
-        <SolidColorBrush x:Key="BgInput" Color="#313244"/>
-        <SolidColorBrush x:Key="BorderColor" Color="#45475A"/>
-        <SolidColorBrush x:Key="TextPrimary" Color="#CDD6F4"/>
-        <SolidColorBrush x:Key="TextSecondary" Color="#A6ADC8"/>
+        <SolidColorBrush x:Key="BgDark" Color="#181926"/>
+        <SolidColorBrush x:Key="BgCard" Color="#212234"/>
+        <SolidColorBrush x:Key="BgInput" Color="#2E3046"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#3D405B"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#F4F6FC"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#9399B2"/>
         <SolidColorBrush x:Key="AccentBlue" Color="#89B4FA"/>
         <SolidColorBrush x:Key="AccentGreen" Color="#A6E3A1"/>
         <SolidColorBrush x:Key="AccentYellow" Color="#F9E2AF"/>
         <SolidColorBrush x:Key="AccentOrange" Color="#FAB387"/>
 
-        <Style x:Key="TransportRadioBtn" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="#CDD6F4"/>
-            <Setter Property="FontSize" Value="14"/>
+        <!-- iOS Style Glass Pill ComboBox ToggleButton -->
+        <ControlTemplate x:Key="IosComboBoxToggleButton" TargetType="ToggleButton">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="28" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" 
+                        Background="#24273A" CornerRadius="16" 
+                        BorderBrush="#3D405B" BorderThickness="1"/>
+                <Border Grid.Column="0" Background="Transparent" Margin="1" />
+                <Path x:Name="Arrow" Grid.Column="1" 
+                      HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Data="M 0 0 L 4 4 L 8 0 Z" Fill="#89B4FA" Margin="0,1,6,0"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="Background" Value="#363A4F"/>
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#89B4FA"/>
+                    <Setter TargetName="Arrow" Property="Fill" Value="#B4BEFE"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="Border" Property="Background" Value="#363A4F"/>
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#89B4FA"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- iOS Style ComboBox Template -->
+        <Style x:Key="IosComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="Foreground" Value="#F4F6FC"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,16,0"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" 
+                                          Template="{StaticResource IosComboBoxToggleButton}" 
+                                          Focusable="False" 
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                          ClickMode="Press"/>
+                            <ContentPresenter x:Name="ContentSite" 
+                                              IsHitTestVisible="False" 
+                                              Content="{TemplateBinding SelectionBoxItem}" 
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" 
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" 
+                                              Margin="14,0,28,0" 
+                                              VerticalAlignment="Center" 
+                                              HorizontalAlignment="Left"/>
+                            <Popup x:Name="Popup" 
+                                   Placement="Bottom" 
+                                   IsOpen="{TemplateBinding IsDropDownOpen}" 
+                                   AllowsTransparency="True" 
+                                   Focusable="False" 
+                                   PopupAnimation="Slide"
+                                   VerticalOffset="4">
+                                <Grid x:Name="DropDown" 
+                                      SnapsToDevicePixels="True" 
+                                      MinWidth="{TemplateBinding ActualWidth}" 
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder" 
+                                            Background="#181926" 
+                                            BorderThickness="1" 
+                                            BorderBrush="#3D405B" 
+                                            CornerRadius="14" 
+                                            Padding="4">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.45" Color="#000000"/>
+                                        </Border.Effect>
+                                        <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- iOS Style ComboBoxItem Template -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="12,8"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" 
+                                Background="Transparent" 
+                                CornerRadius="10" 
+                                Padding="{TemplateBinding Padding}" 
+                                Margin="0,1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#2E3046"/>
+                                <Setter Property="Foreground" Value="#89B4FA"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#89B4FA"/>
+                                <Setter Property="Foreground" Value="#11111B"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- iOS Style Segment Navigation RadioButton -->
+        <Style x:Key="IosNavRadioBtn" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#A6ADC8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="PillBorder" 
+                                Background="Transparent" 
+                                CornerRadius="16" 
+                                Padding="16,8" 
+                                Margin="2,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="#252538"/>
+                                <Setter Property="Foreground" Value="#CDD6F4"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="#89B4FA"/>
+                                <Setter Property="Foreground" Value="#11111B"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Transport Selection Radio Button (iOS Pill) -->
+        <Style x:Key="TransportRadioBtn" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#A6ADC8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="PillBorder" 
+                                Background="#1E1E2E" 
+                                BorderBrush="#313244" 
+                                BorderThickness="1" 
+                                CornerRadius="12" 
+                                Padding="14,8" 
+                                Margin="0,0,8,8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="#2E3046"/>
+                                <Setter Property="Foreground" Value="#F4F6FC"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="#89B4FA"/>
+                                <Setter TargetName="PillBorder" Property="BorderBrush" Value="#89B4FA"/>
+                                <Setter Property="Foreground" Value="#11111B"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- 1. iOS Glass Header -->
+            <RowDefinition Height="Auto"/> <!-- 2. iOS Segment Navigation Bar -->
+            <RowDefinition Height="*"/>    <!-- 3. Active Viewport Container -->
         </Grid.RowDefinitions>
 
-        <!-- 1. Header -->
-        <Border Grid.Row="0" Background="{StaticResource BgDark}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+        <!-- 1. Header (iOS Glass Card) -->
+        <Border Grid.Row="0" Background="#181926" CornerRadius="18" Padding="18,12" Margin="0,0,0,14" BorderBrush="#313244" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+            </Border.Effect>
             <DockPanel>
-                <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="{loc:Loc Header_CommInspector}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AccentOrange}"/>
-                    <TextBlock Text="Kable Real-Time High-Performance Hardware Communication Studio" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
-                </StackPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <!-- Dynamic Language Selector -->
-                    <Border Background="#313244" CornerRadius="4" Padding="6,2" Margin="0,0,10,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="🌐 " VerticalAlignment="Center"/>
-                            <ComboBox ItemsSource="{Binding AvailableLanguages}" SelectedItem="{Binding SelectedLanguage}" 
-                                      Background="#313244" Foreground="{StaticResource TextPrimary}" BorderThickness="0" 
-                                      Width="160" Padding="4,2"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Background="#313244" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                        <TextBlock Text="Engine: Kable v1.2.0" Foreground="{StaticResource AccentBlue}" FontWeight="Bold"/>
-                    </Border>
-                    <Border Background="#313244" CornerRadius="4" Padding="8,4">
-                        <TextBlock Text="0-GC Pipelines" Foreground="{StaticResource AccentGreen}" FontWeight="Bold"/>
-                    </Border>
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- 2. Main 2-Column Split: Config Left, Live Test & TOML Right -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="520"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- LEFT: Configuration Form -->
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,8,0">
-                <StackPanel>
-                    <!-- Device Info -->
-                    <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="{loc:Loc Header_DeviceInfo}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="{loc:Loc Lbl_DeviceId}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                <TextBox Grid.Column="1" Text="{Binding Profile.DeviceName, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="{loc:Loc Lbl_Description}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                <TextBox Grid.Column="1" Text="{Binding Profile.Description, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Transport Selection -->
-                    <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="{loc:Loc Header_TransportSelection}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,10"/>
-                            
-                            <WrapPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <RadioButton Content="Serial" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
-                                <RadioButton Content="TCP/IP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
-                                <RadioButton Content="Named Pipe" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
-                                <RadioButton Content="Modbus-TCP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsModbusTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.ModbusTcp}"/>
-                                <RadioButton Content="Melsec SLMP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMelsecSlmp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.MelsecSlmp}"/>
-                                <RadioButton Content="MQTT" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMqtt, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Mqtt}"/>
-                                <RadioButton Content="OPC UA" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsOpcUa, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.OpcUa}"/>
-                            </WrapPanel>
-
-                            <!-- Serial Specific Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsSerial, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <DockPanel Margin="0,0,0,6">
-                                        <TextBlock Text="시리얼 COM 포트 (자동 감지):" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                        <Button Content="🔄 포트 새로고침" Command="{Binding RefreshComPortsCommand}" DockPanel.Dock="Right" Padding="6,2" Background="{StaticResource BgInput}" Foreground="{StaticResource AccentBlue}" Cursor="Hand"/>
-                                    </DockPanel>
-                                    <ComboBox ItemsSource="{Binding DetectedComPorts}" SelectedItem="{Binding Profile.PortName}" Padding="6,4" Margin="0,0,0,6"/>
-
-                                    <UniformGrid Columns="2" Margin="0,4,0,0">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="보레이트 (BaudRate):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <ComboBox ItemsSource="{Binding AvailableBaudRates}" SelectedItem="{Binding Profile.BaudRate}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="패리티 (Parity):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <ComboBox ItemsSource="{Binding AvailableParities}" SelectedItem="{Binding Profile.Parity}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- TCP Specific Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsTcp, Converter={StaticResource BoolToVis}}">
-                                <UniformGrid Columns="2">
-                                    <StackPanel Margin="0,0,4,0">
-                                        <TextBlock Text="대상 장비 IP 주소:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                        <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                    </StackPanel>
-                                    <StackPanel Margin="4,0,0,0">
-                                        <TextBlock Text="TCP 포트 번호:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                        <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                    </StackPanel>
-                                </UniformGrid>
-                            </Border>
-
-                            <!-- Modbus-TCP Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsModbusTcp, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <UniformGrid Columns="2" Margin="0,0,0,6">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="Modbus 슬레이브 IP 주소:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="TCP 포트 (기본 502):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                    <UniformGrid Columns="2">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="Unit ID (Slave ID):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.ModbusUnitId, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="테스트 읽기 레지스터 주소:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.ModbusTestRegister, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Melsec SLMP Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsMelsecSlmp, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <UniformGrid Columns="2" Margin="0,0,0,6">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="PLC IP 주소 (Q/iQ-R):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="SLMP TCP 포트 (기본 5000):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                    <UniformGrid Columns="3">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="네트워크 번호:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.MelsecNetworkNo, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="2,0,2,0">
-                                            <TextBlock Text="PC 번호 (기본 255):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.MelsecPcNo, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="테스트 디바이스 (예: D1000):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.MelsecDevice, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- MQTT Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsMqtt, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <UniformGrid Columns="2" Margin="0,0,0,6">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="MQTT 브로커 Host/IP:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="포트 (기본 1883):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                    <UniformGrid Columns="2">
-                                        <StackPanel Margin="0,0,4,0">
-                                            <TextBlock Text="클라이언트 ID:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.MqttClientId, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                        <StackPanel Margin="4,0,0,0">
-                                            <TextBlock Text="토픽 Prefix:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                            <TextBox Text="{Binding Profile.MqttTopicPrefix, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                        </StackPanel>
-                                    </UniformGrid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- OPC UA Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsOpcUa, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <TextBlock Text="OPC UA 엔드포인트 URL:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                    <TextBox Text="{Binding Profile.OpcEndpointUrl, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4" Margin="0,0,0,6"/>
-                                    <TextBlock Text="테스트 읽기 NodeId (예: ns=2;s=Device.Status):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                    <TextBox Text="{Binding Profile.OpcNodeId, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Named Pipe Settings -->
-                            <Border Background="{StaticResource BgCard}" CornerRadius="6" Padding="10" Visibility="{Binding IsNamedPipe, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <TextBlock Text="로컬 Named Pipe 이름:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                    <TextBox Text="{Binding Profile.PipeName, UpdateSourceTrigger=PropertyChanged}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Padding="6,4"/>
-                                    <TextBlock Text="\\.\pipe\ 식별자로 백그라운드 드라이버 데몬과 연결됩니다." FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
-
-                    <!-- Codec & Router Settings -->
-                    <Border Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="{loc:Loc Header_CodecRouter}" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
-                            <UniformGrid Columns="2">
-                                <StackPanel Margin="0,0,4,0">
-                                    <TextBlock Text="Codec:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                    <ComboBox ItemsSource="{Binding AvailableCodecs}" SelectedItem="{Binding Profile.Codec}" Padding="6,4"/>
-                                </StackPanel>
-                                <StackPanel Margin="4,0,0,0">
-                                    <TextBlock Text="Router:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,2"/>
-                                    <ComboBox ItemsSource="{Binding AvailableRouters}" SelectedItem="{Binding Profile.Router}" Padding="6,4"/>
-                                </StackPanel>
-                            </UniformGrid>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-
-            <!-- RIGHT: Live CommTerminalView (Decoupled Components) & TOML Output -->
-            <Grid Grid.Column="1" Margin="8,0,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="180"/>
-                </Grid.RowDefinitions>
-
-                <!-- Connection Test Bar -->
-                <Border Grid.Row="0" Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc Header_LiveTest}" FontWeight="Bold" Foreground="{StaticResource AccentYellow}" Margin="0,0,0,8"/>
-                        <Grid Margin="0,0,0,8">
-                            <TextBlock Text="{Binding TestStatus}" Foreground="{Binding TestResultColor}" FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        </Grid>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="{loc:Loc Btn_RunLiveTest}" Command="{Binding RunLiveTestCommand}" Padding="12,6" Margin="0,0,8,0" Background="{StaticResource AccentYellow}" Foreground="#11111B" FontWeight="Bold" Cursor="Hand"/>
-                            <Button Content="{loc:Loc Btn_RunSimulation}" Command="{Binding RunMockSimulationCommand}" Padding="12,6" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
-                        </StackPanel>
+                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔌 " FontSize="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="{loc:Loc Header_CommInspector}" FontSize="18" FontWeight="Bold" Foreground="#FAB387" VerticalAlignment="Center"/>
                     </StackPanel>
-                </Border>
+                    <TextBlock Text="Kable Real-Time High-Performance Hardware Communication Studio" FontSize="11" Foreground="#9399B2" Margin="4,2,0,0"/>
+                </StackPanel>
 
-                <!-- Modular Tri-Stream Comm Terminal (Aperiodic / Periodic / Alarms) -->
-                <Border Grid.Row="1" Background="{StaticResource BgDark}" CornerRadius="8" Margin="0,0,0,10" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" ClipToBounds="True">
-                    <ui:CommTerminalView DataContext="{Binding Terminal}"/>
-                </Border>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- iOS Pill Language Selector -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="🌐" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Style="{StaticResource IosComboBoxStyle}"
+                                  ItemsSource="{Binding AvailableLanguages}" 
+                                  SelectedItem="{Binding SelectedLanguage}" 
+                                  Width="180"/>
+                    </StackPanel>
 
-                <!-- Generated TOML Preview -->
-                <Border Grid.Row="2" Background="{StaticResource BgDark}" CornerRadius="8" Padding="14" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <DockPanel Grid.Row="0" Margin="0,0,0,6">
-                            <TextBlock Text="{loc:Loc Header_TomlPreview}" FontWeight="Bold" Foreground="{StaticResource AccentGreen}" VerticalAlignment="Center"/>
-                            <Button Content="{loc:Loc Btn_Refresh}" Command="{Binding UpdateTomlPreviewCommand}" DockPanel.Dock="Right" Padding="6,2" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" Cursor="Hand"/>
-                        </DockPanel>
-                        <TextBox Grid.Row="1" Text="{Binding GeneratedTomlPreview}" Background="{StaticResource BgInput}" Foreground="{StaticResource TextPrimary}" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
-                    </Grid>
-                </Border>
-            </Grid>
-        </Grid>
-
-        <!-- 3. Bottom Action Bar -->
-        <Border Grid.Row="2" Background="{StaticResource BgDark}" CornerRadius="8" Padding="12" Margin="0,12,0,0" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-            <DockPanel>
-                <TextBlock Text="Kable Configuration Studio — Real-Time Multi-Protocol Engine" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                <Button Content="{loc:Loc Btn_SaveConfig}" Command="{Binding SaveToFileCommand}" DockPanel.Dock="Right" Padding="20,8" Background="{StaticResource AccentBlue}" Foreground="#11111B" FontWeight="Bold" FontSize="14" Cursor="Hand"/>
+                    <!-- Engine Status Badges -->
+                    <Border Background="#252538" CornerRadius="10" Padding="10,5" Margin="0,0,8,0">
+                        <TextBlock Text="Engine: v1.2.0" Foreground="#89B4FA" FontWeight="Bold" FontSize="11"/>
+                    </Border>
+                    <Border Background="#252538" CornerRadius="10" Padding="10,5">
+                        <TextBlock Text="0-GC Hotpath" Foreground="#A6E3A1" FontWeight="Bold" FontSize="11"/>
+                    </Border>
+                </StackPanel>
             </DockPanel>
         </Border>
+
+        <!-- 2. iOS Segmented Navigation Bar -->
+        <Border Grid.Row="1" Background="#181926" CornerRadius="20" Padding="6" Margin="0,0,0,16" BorderBrush="#313244" BorderThickness="1" HorizontalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.2" Color="#000000"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <!-- 0. 통신 설정 -->
+                <RadioButton Content="{loc:Loc Nav_Config}" Style="{StaticResource IosNavRadioBtn}" 
+                             IsChecked="{Binding IsNavConfig, Mode=OneWay}"
+                             Command="{Binding SetNavCommand}" CommandParameter="0"/>
+
+                <!-- 1. 수시 명령 콘솔 -->
+                <RadioButton Content="{loc:Loc Nav_Inspector}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavInspector, Mode=OneWay}"
+                             Command="{Binding SetNavCommand}" CommandParameter="1"/>
+
+                <!-- 2. 상시 텔레메트리 -->
+                <RadioButton Content="{loc:Loc Nav_Telemetry}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavTelemetry, Mode=OneWay}"
+                             Command="{Binding SetNavCommand}" CommandParameter="2"/>
+
+                <!-- 3. 실시간 알람 -->
+                <RadioButton Content="{loc:Loc Nav_Alarms}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavAlarms, Mode=OneWay}"
+                             Command="{Binding SetNavCommand}" CommandParameter="3"/>
+
+                <!-- 4. TOML 내보내기 -->
+                <RadioButton Content="{loc:Loc Nav_Export}" Style="{StaticResource IosNavRadioBtn}"
+                             IsChecked="{Binding IsNavExport, Mode=OneWay}"
+                             Command="{Binding SetNavCommand}" CommandParameter="4"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 3. Active Screen Viewport (Decoupled Multi-View Container) -->
+        <Grid Grid.Row="2">
+            <!-- Screen 0: Connection Configuration -->
+            <views:ConnectionConfigView Visibility="{Binding IsNavConfig, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- Screen 1: Live Aperiodic Command Inspector -->
+            <views:LiveInspectorView Visibility="{Binding IsNavInspector, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- Screen 2: High-rate Telemetry Stream Dashboard -->
+            <views:TelemetryDashboardView Visibility="{Binding IsNavTelemetry, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- Screen 3: Spontaneous Alarm Monitor -->
+            <views:AlarmMonitorView Visibility="{Binding IsNavAlarms, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- Screen 4: TOML Config Preview & Save -->
+            <views:TomlExportView Visibility="{Binding IsNavExport, Converter={StaticResource BoolToVis}}"/>
+        </Grid>
     </Grid>
 </Window>
