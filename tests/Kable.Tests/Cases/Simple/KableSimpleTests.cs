@@ -103,4 +103,40 @@ public class KableSimpleTests
 
         await serverTask;
     }
+
+    [Fact]
+    public async Task KableSimple_OpenNamedPipeAndQuery_ReceivesResponse()
+    {
+        string pipeName = "kable_simple_test_pipe_" + Guid.NewGuid().ToString("N")[..8];
+        var serverPipe = new System.IO.Pipes.NamedPipeServerStream(
+            pipeName,
+            System.IO.Pipes.PipeDirection.InOut,
+            1,
+            System.IO.Pipes.PipeTransmissionMode.Byte,
+            System.IO.Pipes.PipeOptions.Asynchronous);
+
+        var serverWait = serverPipe.WaitForConnectionAsync();
+
+        var serverTask = Task.Run(async () =>
+        {
+            await serverWait;
+            byte[] buf = new byte[256];
+            int read = await serverPipe.ReadAsync(buf, 0, buf.Length);
+            string req = Encoding.ASCII.GetString(buf, 0, read).Trim();
+            req.Should().Be("IDENT?");
+
+            byte[] resp = Encoding.ASCII.GetBytes("KABLE_DEVICE_V1\n");
+            await serverPipe.WriteAsync(resp, 0, resp.Length);
+            await serverPipe.FlushAsync();
+        });
+
+        await using var client = await KableSimple.OpenNamedPipeAsync(pipeName);
+        client.IsConnected.Should().BeTrue();
+
+        string answer = await client.QueryAsync("IDENT?", TimeSpan.FromSeconds(3));
+        answer.Should().Be("KABLE_DEVICE_V1");
+
+        await serverTask;
+        serverPipe.Dispose();
+    }
 }
