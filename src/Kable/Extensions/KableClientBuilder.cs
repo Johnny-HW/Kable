@@ -5,6 +5,7 @@ using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
 using Kable.Codecs;
+using Kable.Configuration;
 using Kable.Core;
 using Kable.Engine;
 using Kable.Observability;
@@ -17,6 +18,57 @@ public sealed class KableClientBuilder<TMessage>
     private IProtocolCodec<TMessage>? _codec;
     private ICommObserver? _observer;
     private string _deviceId = "DEFAULT";
+
+    /// <summary>
+    /// KableDeviceOptions 설정 객체를 주입하여 전송 계층 및 장비 ID를 일괄 바인딩합니다.
+    /// </summary>
+    public KableClientBuilder<TMessage> UseOptions(KableDeviceOptions options)
+    {
+        if (options == null) throw new ArgumentNullException(nameof(options));
+
+        _deviceId = options.DeviceId ?? "DEFAULT";
+
+        switch (options.Transport?.Trim().ToLowerInvariant())
+        {
+            case "tcp":
+            case "socket":
+                UseTcp(options.Host, options.Port);
+                break;
+
+            case "serial":
+            case "serialport":
+            case "rs232":
+            case "rs485":
+                UseSerialPort(
+                    options.PortName,
+                    options.BaudRate,
+                    options.GetParity(),
+                    options.DataBits,
+                    options.GetStopBits());
+                break;
+
+            case "namedpipe":
+            case "pipe":
+            case "ipc":
+                UseNamedPipe(options.PipeName, options.ServerName, options.TimeoutMs);
+                break;
+
+            case "simulator":
+            case "mock":
+                UseSimulator(sim => { });
+                break;
+
+            default:
+                throw new NotSupportedException($"지원되지 않는 Transport 유형입니다: '{options.Transport}'. (Tcp, Serial, NamedPipe, Simulator 지원)");
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// KableDeviceOptions 설정 객체를 주입합니다. (UseOptions의 별칭)
+    /// </summary>
+    public KableClientBuilder<TMessage> WithOptions(KableDeviceOptions options) => UseOptions(options);
 
     public KableClientBuilder<TMessage> UseDeviceId(string deviceId)
     {

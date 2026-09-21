@@ -50,7 +50,32 @@
 
 ## 🚀 실전 코드 예제
 
-### 1. 오프라인 시뮬레이터로 시작하기 (실물 하드웨어 불필요)
+### 1. 설정 모델(Config / Options)로 시작하기 (INI, JSON, YAML 등 연동)
+
+```csharp
+using Kable.Extensions;
+using Kable.Configuration;
+using Kable.Codecs;
+
+// 상위 앱이 JSON, INI, YAML, TOML 등에서 읽어온 설정을 POCO 레코드로 주입:
+var options = new KableDeviceOptions
+{
+    DeviceId = "WAFER_ROBOT",
+    Transport = "Serial",   // "Tcp", "Serial", "NamedPipe", "Simulator"
+    PortName = "COM3",
+    BaudRate = 115200,
+    TimeoutMs = 3000
+};
+
+await using var session = new KableClientBuilder<string>()
+    .UseOptions(options)
+    .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+    .Build();
+
+await session.StartAsync();
+```
+
+### 2. 오프라인 시뮬레이터로 시작하기 (실물 하드웨어 불필요)
 
 ```csharp
 using Kable.Extensions;

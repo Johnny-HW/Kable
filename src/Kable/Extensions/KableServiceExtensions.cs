@@ -33,4 +33,22 @@ public static class KableServiceExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// KableDeviceOptions 설정 모델을 주입하여 장비 세션을 DI 컨테이너에 등록합니다.
+    /// </summary>
+    public static IServiceCollection AddKableSession<TMessage>(
+        this IServiceCollection services,
+        Kable.Configuration.KableDeviceOptions options,
+        Func<IServiceProvider, IProtocolCodec<TMessage>> codecFactory)
+    {
+        if (options == null) throw new ArgumentNullException(nameof(options));
+        if (codecFactory == null) throw new ArgumentNullException(nameof(codecFactory));
+
+        return services.AddKableSession<TMessage>((builder, sp) =>
+        {
+            builder.UseOptions(options);
+            builder.UseCodec(codecFactory(sp));
+        });
+    }
 }

@@ -48,7 +48,32 @@
 
 ## 🚀 Quick Start
 
-### 1. Fluent Builder with Offline Simulator
+### 1. Configuration-Driven Session (`KableDeviceOptions`)
+
+```csharp
+using Kable.Extensions;
+using Kable.Configuration;
+using Kable.Codecs;
+
+// Inject options mapped from JSON, INI, YAML, TOML, or DB:
+var options = new KableDeviceOptions
+{
+    DeviceId = "WAFER_ROBOT",
+    Transport = "Serial",   // "Tcp", "Serial", "NamedPipe", "Simulator"
+    PortName = "COM3",
+    BaudRate = 115200,
+    TimeoutMs = 3000
+};
+
+await using var session = new KableClientBuilder<string>()
+    .UseOptions(options)
+    .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
+    .Build();
+
+await session.StartAsync();
+```
+
+### 2. Fluent Builder with Offline Simulator
 
 ```csharp
 using Kable.Extensions;
