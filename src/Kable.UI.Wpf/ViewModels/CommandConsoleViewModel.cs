@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kable.Core;
 using Kable.Observability;
+using Kable.UI.Wpf.Models;
 
 public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
 {
@@ -29,7 +30,47 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     [ObservableProperty]
     private string _manualCommandText = string.Empty;
 
+    [ObservableProperty]
+    private SettingParameterModel? _selectedSetting;
+
     public ObservableCollection<PacketDisplayModel> Packets { get; } = new();
+
+    public ObservableCollection<SettingParameterModel> SettingParameters { get; } = new()
+    {
+        new SettingParameterModel
+        {
+            Id = "SET_TARGET_TEMP",
+            DisplayName = "목표 온도 제어 (Chamber Temp)",
+            CommandPrefix = "SET TEMP_TARGET",
+            Value = 45.0,
+            MinValue = 10.0,
+            MaxValue = 120.0,
+            Step = 0.5,
+            Unit = "°C"
+        },
+        new SettingParameterModel
+        {
+            Id = "SET_PRESS_LIMIT",
+            DisplayName = "공급 압력 상한치 (Pressure Limit)",
+            CommandPrefix = "SET PRESS_LIMIT",
+            Value = 150.0,
+            MinValue = 50.0,
+            MaxValue = 300.0,
+            Step = 1.0,
+            Unit = "kPa"
+        },
+        new SettingParameterModel
+        {
+            Id = "SET_FLOW_OFFSET",
+            DisplayName = "약액 유량 오프셋 보정 (Flow Offset)",
+            CommandPrefix = "SET FLOW_OFFSET",
+            Value = 1.5,
+            MinValue = -5.0,
+            MaxValue = 10.0,
+            Step = 0.1,
+            Unit = "mL/min"
+        }
+    };
 
     public ChannelReader<PacketTraceRecord> CommandStream => throw new NotSupportedException();
     public ChannelReader<PacketTraceRecord> PeriodicStream => throw new NotSupportedException();
@@ -41,11 +82,12 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     {
         _dispatcher = dispatcher ?? (Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher);
         _maxLogCount = maxLogCount;
+        _selectedSetting = SettingParameters[0];
     }
 
     public void OnPacketTrace(in PacketTraceRecord trace)
     {
-        // 수시 통신 (명령/응답) 필터링
+        // 수시 통신 (명령/응답)만 필터링 - 상시(Periodic) 및 알람(Alarm)은 제외
         if (trace.Kind != TrafficKind.AperiodicCommand) return;
         if (IsPaused) return;
 
@@ -94,6 +136,22 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         if (ManualSendRequested != null)
         {
             await ManualSendRequested.Invoke(ManualCommandText);
+        }
+    }
+
+    [RelayCommand]
+    public async Task ApplySettingAsync(SettingParameterModel? setting)
+    {
+        var target = setting ?? SelectedSetting;
+        if (target == null) return;
+
+        string payload = target.BuildPayload();
+        target.LastAckMessage = $"전송 중: {payload}";
+
+        if (ManualSendRequested != null)
+        {
+            await ManualSendRequested.Invoke(payload);
+            target.LastAckMessage = $"적용 완료 ({DateTime.Now:HH:mm:ss})";
         }
     }
 }

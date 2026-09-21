@@ -32,6 +32,9 @@ public partial class PacketCatalogItem : ObservableObject
     [ObservableProperty]
     private bool _isEnabled = true;
 
+    [ObservableProperty]
+    private string _currentSettingValue = string.Empty;
+
     public bool IsPeriodic => Kind == TrafficKind.PeriodicTelemetry;
     public bool IsAperiodic => Kind == TrafficKind.AperiodicCommand;
     public bool IsAlarm => Kind == TrafficKind.SpontaneousAlarm;

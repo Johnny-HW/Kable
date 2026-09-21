@@ -148,31 +148,67 @@ public partial class MainViewModel : ObservableObject
 
         Terminal.ManualSendRequested += async (cmd) =>
         {
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [TX] 수동 명령 송신: {cmd}");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [TX] 수시/설정 명령 송신: {cmd}");
             var txBytes = Encoding.UTF8.GetBytes(cmd);
             Terminal.OnPacketTrace(new PacketTraceRecord(
                 DateTime.UtcNow,
                 PacketDirection.Tx,
                 TrafficKind.AperiodicCommand,
-                "MANUAL_CMD",
+                "SET_CMD",
                 txBytes,
                 cmd,
                 TimeSpan.Zero,
                 LogLevel.Information,
                 Profile.DeviceName));
 
-            await Task.Delay(50);
+            await Task.Delay(40);
 
-            string echoResp = $"ACK:{cmd}";
+            // Setting 파라미터 변경 명령 처리 및 텔레메트리 기준값 동적 동기화
+            string echoResp;
+            if (cmd.StartsWith("SET TEMP_TARGET=", StringComparison.OrdinalIgnoreCase) &&
+                double.TryParse(cmd.Substring("SET TEMP_TARGET=".Length), CultureInfo.InvariantCulture, out double targetTemp))
+            {
+                var tempItem = System.Linq.Enumerable.FirstOrDefault(PacketCatalog, p => p.Id == "CHAMBER_TEMP");
+                if (tempItem != null)
+                {
+                    tempItem.SimulatedBaseValue = targetTemp;
+                }
+                echoResp = $"ACK: TEMP_TARGET UPDATED TO {targetTemp:F1}°C";
+            }
+            else if (cmd.StartsWith("SET PRESS_LIMIT=", StringComparison.OrdinalIgnoreCase) &&
+                     double.TryParse(cmd.Substring("SET PRESS_LIMIT=".Length), CultureInfo.InvariantCulture, out double pressLimit))
+            {
+                var pressItem = System.Linq.Enumerable.FirstOrDefault(PacketCatalog, p => p.Id == "LINE_PRESSURE");
+                if (pressItem != null)
+                {
+                    pressItem.SimulatedBaseValue = pressLimit;
+                }
+                echoResp = $"ACK: PRESS_LIMIT UPDATED TO {pressLimit:F1} kPa";
+            }
+            else if (cmd.StartsWith("SET FLOW_OFFSET=", StringComparison.OrdinalIgnoreCase) &&
+                     double.TryParse(cmd.Substring("SET FLOW_OFFSET=".Length), CultureInfo.InvariantCulture, out double flowOffset))
+            {
+                var flowItem = System.Linq.Enumerable.FirstOrDefault(PacketCatalog, p => p.Id == "FLOW_RATE");
+                if (flowItem != null)
+                {
+                    flowItem.SimulatedBaseValue = Math.Round(12.5 + flowOffset, 2);
+                }
+                echoResp = $"ACK: FLOW_OFFSET APPLIED ({flowOffset:F1} mL/min)";
+            }
+            else
+            {
+                echoResp = $"ACK:{cmd}";
+            }
+
             var rxBytes = Encoding.UTF8.GetBytes(echoResp);
             Terminal.OnPacketTrace(new PacketTraceRecord(
                 DateTime.UtcNow,
                 PacketDirection.Rx,
                 TrafficKind.AperiodicCommand,
-                "MANUAL_ACK",
+                "SET_ACK",
                 rxBytes,
                 echoResp,
-                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromMilliseconds(40),
                 LogLevel.Information,
                 Profile.DeviceName));
         };
