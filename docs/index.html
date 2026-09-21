@@ -59,14 +59,41 @@
       name: '🔌 Kable',
       repo: 'https://github.com/Johnny-HW/Kable',
       loadSidebar: true,
+      loadNavbar: true,
       subMaxLevel: 3,
       auto2top: true,
-      homepage: 'README.md',
+      homepage: 'en/README.md',
+      fallback: true,
+      nameLink: {
+        '/ko/': '#/ko/',
+        '/zh-tw/': '#/zh-tw/',
+        '/ja/': '#/ja/',
+        '/de/': '#/de/',
+        '/zh-cn/': '#/zh-cn/',
+        '/es/': '#/es/',
+        '/': '#/en/'
+      },
       search: {
         maxAge: 86400000,
         paths: 'auto',
-        placeholder: 'Search documentation...',
-        noData: 'No results found',
+        placeholder: {
+          '/ko/': '문서 검색...',
+          '/zh-tw/': '搜尋文件...',
+          '/ja/': 'ドキュメントを検索...',
+          '/de/': 'Dokumentation durchsuchen...',
+          '/zh-cn/': '搜索文档...',
+          '/es/': 'Buscar en la documentación...',
+          '/': 'Search documentation...'
+        },
+        noData: {
+          '/ko/': '검색 결과가 없습니다',
+          '/zh-tw/': '找不到相關結果',
+          '/ja/': '結果が見つかりません',
+          '/de/': 'Keine Ergebnisse gefunden',
+          '/zh-cn/': '未找到结果',
+          '/es/': 'No se encontraron resultados',
+          '/': 'No results found'
+        },
         depth: 4
       },
       copyCode: {

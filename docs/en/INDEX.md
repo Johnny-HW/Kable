@@ -27,52 +27,52 @@
 <tbody>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
 <td style="padding: 12px 16px; font-weight: 700; color: #2563eb;">Getting Started</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/README" style="color: #2563eb; text-decoration: none;">Overview & Quickstart</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/README" style="color: #2563eb; text-decoration: none;">Overview & Quickstart</a></td>
 <td style="padding: 12px 16px; color: #475569;">NuGet packages, KableClientBuilder, KableSimple facade, and DI container</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
 <td style="padding: 12px 16px; font-weight: 700; color: #2563eb;">Getting Started</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/PROJECT_SPEC" style="color: #2563eb; text-decoration: none;">Project Specifications</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/PROJECT_SPEC" style="color: #2563eb; text-decoration: none;">Project Specifications</a></td>
 <td style="padding: 12px 16px; color: #475569;">Single Source of Truth (SSOT), 4 core architectural decisions, and invariants</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
 <td style="padding: 12px 16px; font-weight: 700; color: #059669;">Architecture</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/01_ARCHITECTURE_OVERVIEW" style="color: #059669; text-decoration: none;">01. Architecture Overview</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/01_ARCHITECTURE_OVERVIEW" style="color: #059669; text-decoration: none;">01. Architecture Overview</a></td>
 <td style="padding: 12px 16px; color: #475569;">Bedrock Pipelines + RSocket 3-tier architecture and integrated class diagrams</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
 <td style="padding: 12px 16px; font-weight: 700; color: #059669;">Architecture</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/02_CORE_INTERFACES" style="color: #059669; text-decoration: none;">02. Core Interfaces Spec</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/02_CORE_INTERFACES" style="color: #059669; text-decoration: none;">02. Core Interfaces Spec</a></td>
 <td style="padding: 12px 16px; color: #475569;"><code>IConnectionContext</code>, <code>IProtocolCodec</code>, <code>IDeviceSession</code> contracts</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
 <td style="padding: 12px 16px; font-weight: 700; color: #059669;">Architecture</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/04_IMPLEMENTATION_LAYOUT" style="color: #059669; text-decoration: none;">04. Implementation Layout</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/04_IMPLEMENTATION_LAYOUT" style="color: #059669; text-decoration: none;">04. Implementation Layout</a></td>
 <td style="padding: 12px 16px; color: #475569;">Repository directory tree, namespace guidelines, and packaging layout</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
 <td style="padding: 12px 16px; font-weight: 700; color: #7c3aed;">Reliability</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/03_OBSERVABILITY_LOGGING" style="color: #7c3aed; text-decoration: none;">03. Observability & Logging</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/03_OBSERVABILITY_LOGGING" style="color: #7c3aed; text-decoration: none;">03. Observability & Logging</a></td>
 <td style="padding: 12px 16px; color: #475569;">Tri-stream bounded ringbuffers (<code>DropOldest</code>) and 60 FPS UI guarantee</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
 <td style="padding: 12px 16px; font-weight: 700; color: #7c3aed;">Reliability</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/05_INDUSTRIAL_CHECKSUMS" style="color: #7c3aed; text-decoration: none;">05. Industrial Checksums</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/05_INDUSTRIAL_CHECKSUMS" style="color: #7c3aed; text-decoration: none;">05. Industrial Checksums</a></td>
 <td style="padding: 12px 16px; color: #475569;">Modbus CRC-16, CCITT, LRC, and XOR BCC 0-GC lookup table algorithms</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
 <td style="padding: 12px 16px; font-weight: 700; color: #7c3aed;">Reliability</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP" style="color: #7c3aed; text-decoration: none;">06. Industrial Comm Roadmap</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP" style="color: #7c3aed; text-decoration: none;">06. Industrial Comm Roadmap</a></td>
 <td style="padding: 12px 16px; color: #475569;">13 industrial protocols spectrum, determinism classes, and roadmap</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
 <td style="padding: 12px 16px; font-weight: 700; color: #d97706;">Governance</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/CONVENTIONS" style="color: #d97706; text-decoration: none;">Coding Conventions</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/CONVENTIONS" style="color: #d97706; text-decoration: none;">Coding Conventions</a></td>
 <td style="padding: 12px 16px; color: #475569;">Line limits (300-500), synchronous blocking ban, and TDD requirements</td>
 </tr>
 <tr style="background: #f8fafc;">
 <td style="padding: 12px 16px; font-weight: 700; color: #d97706;">Governance</td>
-<td style="padding: 12px 16px; font-weight: 600;"><a href="#/07_OPENSOURCE_LICENSING_AND_COMPLIANCE" style="color: #d97706; text-decoration: none;">07. Open-Source Licensing</a></td>
+<td style="padding: 12px 16px; font-weight: 600;"><a href="#/en/07_OPENSOURCE_LICENSING_AND_COMPLIANCE" style="color: #d97706; text-decoration: none;">07. Open-Source Licensing</a></td>
 <td style="padding: 12px 16px; color: #475569;">Permissive licensing matrix (Apache-2.0, MIT, BSD) and Zero-Copyleft rules</td>
 </tr>
 </tbody>

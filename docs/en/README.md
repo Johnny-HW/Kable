@@ -177,35 +177,35 @@ builder.Services.AddKableSession<string>((client, sp) =>
 </thead>
 <tbody>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/INDEX" style="color: #2563eb; text-decoration: none;">INDEX.md</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/INDEX" style="color: #2563eb; text-decoration: none;">INDEX.md</a></td>
 <td style="padding: 12px 16px; color: #475569;">Master documentation index and 4 confirmed architectural decisions</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/01_ARCHITECTURE_OVERVIEW" style="color: #2563eb; text-decoration: none;">01. Architecture Overview</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/01_ARCHITECTURE_OVERVIEW" style="color: #2563eb; text-decoration: none;">01. Architecture Overview</a></td>
 <td style="padding: 12px 16px; color: #475569;">Bedrock Pipelines transport layer, RSocket interaction model, and class diagrams</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/02_CORE_INTERFACES" style="color: #2563eb; text-decoration: none;">02. Core Interfaces Spec</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/02_CORE_INTERFACES" style="color: #2563eb; text-decoration: none;">02. Core Interfaces Spec</a></td>
 <td style="padding: 12px 16px; color: #475569;"><code>IDeviceSession</code>, <code>IProtocolCodec</code>, and <code>IConnectionContext</code> contracts</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/03_OBSERVABILITY_LOGGING" style="color: #2563eb; text-decoration: none;">03. Observability & Logging</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/03_OBSERVABILITY_LOGGING" style="color: #2563eb; text-decoration: none;">03. Observability & Logging</a></td>
 <td style="padding: 12px 16px; color: #475569;">Tri-stream bounded ringbuffers (<code>DropOldest</code>) and 60 FPS UI responsiveness</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/04_IMPLEMENTATION_LAYOUT" style="color: #2563eb; text-decoration: none;">04. Implementation Layout</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/04_IMPLEMENTATION_LAYOUT" style="color: #2563eb; text-decoration: none;">04. Implementation Layout</a></td>
 <td style="padding: 12px 16px; color: #475569;">Repository directory hierarchy, namespace taxonomy, and NuGet packaging</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/05_INDUSTRIAL_CHECKSUMS" style="color: #2563eb; text-decoration: none;">05. Industrial Checksums</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/05_INDUSTRIAL_CHECKSUMS" style="color: #2563eb; text-decoration: none;">05. Industrial Checksums</a></td>
 <td style="padding: 12px 16px; color: #475569;">Zero-allocation CRC-16 (Modbus/CCITT), LRC, and XOR BCC look-up tables</td>
 </tr>
 <tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP" style="color: #2563eb; text-decoration: none;">06. Industrial Comm Roadmap</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP" style="color: #2563eb; text-decoration: none;">06. Industrial Comm Roadmap</a></td>
 <td style="padding: 12px 16px; color: #475569;">13 industrial communication protocols spectrum, determinism classes, and roadmap</td>
 </tr>
 <tr style="background: #f8fafc;">
-<td style="padding: 12px 16px; font-weight: 700;"><a href="#/07_OPENSOURCE_LICENSING_AND_COMPLIANCE" style="color: #2563eb; text-decoration: none;">07. Open-Source Licensing</a></td>
+<td style="padding: 12px 16px; font-weight: 700;"><a href="#/en/07_OPENSOURCE_LICENSING_AND_COMPLIANCE" style="color: #2563eb; text-decoration: none;">07. Open-Source Licensing</a></td>
 <td style="padding: 12px 16px; color: #475569;">Zero-Copyleft guarantee, permissive license matrix (Apache-2.0, MIT, BSD)</td>
 </tr>
 </tbody>

@@ -40,10 +40,20 @@ Kable/                                         # [Repository Root]
 ├── CHANGELOG.md                               # Release history (SemVer)
 │
 ├── docs/                                      # [GitHub Pages Documentation Root]
-│   ├── index.html                             # Docsify static single-page application
-│   ├── _sidebar.md                            # Categorized navigation sidebar
-│   ├── README.md                              # Documentation home & quick-start
-│   └── *.md                                   # English technical specifications
+│   ├── index.html                             # Docsify static single-page application (i18n)
+│   ├── _navbar.md                             # Global language switcher navbar
+│   │
+│   ├── en/                                    # [English Documentation Root]
+│   │   ├── _sidebar.md                        # Categorized navigation sidebar
+│   │   ├── _navbar.md                         # Language navbar
+│   │   ├── README.md                          # Quick-start guide
+│   │   └── *.md                               # 01~07 technical specifications
+│   │
+│   └── ko/                                    # [Korean Documentation Root]
+│       ├── _sidebar.md                        # Korean navigation sidebar
+│       ├── _navbar.md                         # Language navbar
+│       ├── README.md                          # Quick-start guide (Korean)
+│       └── *.md                               # 01~07 technical specifications (Korean)
 │
 ├── src/
 │   ├── Kable.Core/                            # [Pure Abstraction Contracts]
