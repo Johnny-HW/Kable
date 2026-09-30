@@ -36,9 +36,20 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
     private readonly CancellationTokenSource _sessionCts = new();
     private int _isConnected;
     private long _lastInboundTicks;
+    private long _spoolStoredCount;
+    private long _spoolInDoubtCount;
+    private long _spoolUnprocessedCount;
 
     public string DeviceId { get; }
     public bool IsConnected => State == SessionLifecycleState.Running && Volatile.Read(ref _isConnected) == 1;
+
+    /// <summary>
+    /// 세션 종료 후 또는 실시간 알람 스풀 워커 처리 결과 집계 리포트 (저장 완료, 저장 여부 불명, 미처리)
+    /// </summary>
+    public AlarmSpoolSummary SpoolSummary => new(
+        Volatile.Read(ref _spoolStoredCount),
+        Volatile.Read(ref _spoolInDoubtCount),
+        Volatile.Read(ref _spoolUnprocessedCount));
 
     public KableSession(
         IConnectionFactory connectionFactory,

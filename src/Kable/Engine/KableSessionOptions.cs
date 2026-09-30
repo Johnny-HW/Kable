@@ -43,29 +43,59 @@ public sealed class KableSessionOptions<TMessage>
     public TimeSpan AlarmSpoolTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
     /// <summary>
+    /// AlarmOverflowMode.SpoolToStorage 모드일 때 세션 종료 시 잔여 알람 전체 배출에 허용할 총 제한시간 (기본값: 1.5초).
+    /// 개별 메시지마다 타이머를 생성하지 않고 전체 배출에 단 하나의 제한시간을 적용하여 종료 시간을 엄격히 제어합니다.
+    /// </summary>
+    public TimeSpan AlarmSpoolDrainTimeout { get; set; } = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>
     /// AlarmOverflowMode.SpoolToStorage 모드일 때 세션 종료 시 스풀 큐에 남아있는 미저장 알람 처리 정책.
     /// </summary>
     public UnspooledAlarmDrainPolicy UnspooledAlarmDrainPolicy { get; set; } = UnspooledAlarmDrainPolicy.DrainWithinTimeout;
 
     /// <summary>
     /// AlarmOverflowMode.SpoolToStorage 모드일 때 호출되는 비동기 외부 저장소 이관 핸들러 (메시지, 취소 토큰).
+    /// 핸들러는 반드시 전달된 CancellationToken을 준수(비동기 I/O 전달 또는 ThrowIfCancellationRequested)해야 합니다.
     /// 반환값이 true이면 성공적으로 이관된 것으로 간주하며, false이거나 취소/실패 시 세션을 중단합니다.
     /// </summary>
     public Func<TMessage, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>>? OnAlarmOverflowAsync { get; set; }
-
-    /// <summary>
-    /// 취소 토큰이 필요 없는 단일 인자 람다를 위한 편의 설정 메서드.
-    /// </summary>
-    public void SetAlarmOverflowHandler(Func<TMessage, System.Threading.Tasks.ValueTask<bool>> handler)
-    {
-        OnAlarmOverflowAsync = (msg, _) => handler(msg);
-    }
 
     /// <summary>
     /// AlarmOverflowMode.SpoolToStorage 모드일 때 사용하는 비동기 알람 스풀 큐의 최대 용량 (기본값: 1,000).
     /// 디스패치 루프는 큐 등록만 수행하며, 스풀 큐 포화 또는 저장소 실패 시 명시적으로 세션을 중단합니다.
     /// </summary>
     public int AlarmSpoolQueueCapacity { get; set; } = 1000;
+}
+
+/// <summary>
+/// 알람 스풀 워커의 저장 처리 결과 집계 리포트입니다.
+/// </summary>
+public sealed class AlarmSpoolSummary
+{
+    /// <summary>
+    /// 성공적으로 외부 저장소에 영속화 완료된 알람 건수
+    /// </summary>
+    public long StoredCount { get; }
+
+    /// <summary>
+    /// 저장 중 취소 또는 타임아웃되어 실제 저장 여부가 불분명한 알람 건수 (중복 방지 및 추적용)
+    /// </summary>
+    public long InDoubtCount { get; }
+
+    /// <summary>
+    /// 저장 실패(false 반환, 예외) 또는 배출 제한시간 초과로 인해 처리되지 못한 미처리 알람 건수
+    /// </summary>
+    public long UnprocessedCount { get; }
+
+    public AlarmSpoolSummary(long storedCount, long inDoubtCount, long unprocessedCount)
+    {
+        StoredCount = storedCount;
+        InDoubtCount = inDoubtCount;
+        UnprocessedCount = unprocessedCount;
+    }
+
+    public override string ToString() =>
+        $"Stored={StoredCount}, InDoubt={InDoubtCount}, Unprocessed={UnprocessedCount}";
 }
 
 /// <summary>

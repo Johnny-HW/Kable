@@ -535,6 +535,142 @@ public class SessionIndustrialReliabilityTests
 
         session.IsConnected.Should().BeFalse("Session must be aborted due to storage timeout");
     }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_26_AlarmSpool_OverallDrainTimeout_CompletesPromptlyWithResidualAccounting()
+    {
+        // 다수의 대기 알람이 있더라도 전체 단일 배출 제한시간(AlarmSpoolDrainTimeout) 내에 워커가 종료되고 미처리 건수가 집계되는지 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new AsciiLineCodec();
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 1,
+            AlarmSpoolQueueCapacity = 50,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            AlarmSpoolTimeout = TimeSpan.FromSeconds(5),
+            AlarmSpoolDrainTimeout = TimeSpan.FromMilliseconds(200), // 전체 배출에 단 200ms만 부여
+            UnspooledAlarmDrainPolicy = UnspooledAlarmDrainPolicy.DrainWithinTimeout,
+            IsAlarmMessage = msg => msg.StartsWith("$ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = async (msg, ct) =>
+            {
+                // 메시지당 50ms 지연 (30개면 순차 실행 시 1,500ms 이상 소요)
+                await Task.Delay(50, ct);
+                return true;
+            }
+        };
+
+        var session = new KableSession<string>(factory, codec, options);
+        await session.StartAsync();
+
+        // 알람 30건 주입 (1건 스트림 + 29건 스풀 큐)
+        for (int i = 1; i <= 30; i++)
+        {
+            await factory.Context.WriteAsciiLineAsync($"$ALARM_{i:D2}", 0x0A);
+        }
+
+        // 약간의 시간 후 세션 종료 (워커가 일부만 저장하고 배출 타임아웃에 도달하도록)
+        await Task.Delay(60);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var disposeTask = session.DisposeAsync().AsTask();
+        var completed = await Task.WhenAny(disposeTask, Task.Delay(2000));
+        stopwatch.Stop();
+
+        completed.Should().Be(disposeTask, "DisposeAsync must complete promptly within overall drain timeout");
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(1500, "Worker termination must adhere to overall drain timeout");
+
+        var summary = session.SpoolSummary;
+        // 일부는 저장되고, 나머지는 배출 시간 초과로 Unprocessed 또는 InDoubt로 완벽히 집계되어야 함
+        (summary.StoredCount + summary.InDoubtCount + summary.UnprocessedCount).Should().Be(29);
+        summary.UnprocessedCount.Should().BeGreaterThan(0, "Remaining alarms after overall drain timeout must be tracked as Unprocessed");
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_27_AlarmSpool_InFlightCancellation_TrackedAsInDoubt()
+    {
+        // 저장 중 세션 취소된 메시지가 '저장 여부 불명(InDoubt)'으로 정확히 기록되는지 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new AsciiLineCodec();
+        var workerEnteredTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 1,
+            AlarmSpoolQueueCapacity = 5,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            IsAlarmMessage = msg => msg.StartsWith("$ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = async (msg, ct) =>
+            {
+                workerEnteredTcs.TrySetResult(true);
+                await Task.Delay(Timeout.Infinite, ct);
+                return true;
+            }
+        };
+
+        var session = new KableSession<string>(factory, codec, options);
+        await session.StartAsync();
+
+        await factory.Context.WriteAsciiLineAsync("$ALARM_01", 0x0A);
+        await factory.Context.WriteAsciiLineAsync("$ALARM_02_INFLIGHT", 0x0A);
+
+        await workerEnteredTcs.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        // 저장 진행 중에 즉시 세션 종료
+        await session.DisposeAsync();
+
+        var summary = session.SpoolSummary;
+        summary.InDoubtCount.Should().Be(1, "The message canceled in-flight must be tracked as InDoubt");
+        summary.StoredCount.Should().Be(0);
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_28_AlarmSpool_DrainFailureAndExceptions_TrackedAsUnprocessed()
+    {
+        // 종료 배출 중 실패(false) 또는 예외 발생 시 조용히 묻히지 않고 Unprocessed로 정확히 집계되는지 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new AsciiLineCodec();
+        var blockFirstTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 1,
+            AlarmSpoolQueueCapacity = 10,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            AlarmSpoolDrainTimeout = TimeSpan.FromSeconds(2),
+            UnspooledAlarmDrainPolicy = UnspooledAlarmDrainPolicy.DrainWithinTimeout,
+            IsAlarmMessage = msg => msg.StartsWith("$ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = async (msg, ct) =>
+            {
+                if (msg.Contains("FAIL"))
+                {
+                    return false; // 저장 실패
+                }
+                if (msg.Contains("THROW"))
+                {
+                    throw new System.IO.IOException("Storage disk full");
+                }
+                await Task.Yield();
+                return true;
+            }
+        };
+
+        var session = new KableSession<string>(factory, codec, options);
+        await session.StartAsync();
+
+        // 큐에 정상 1개, 실패 1개, 예외 1개 주입
+        await factory.Context.WriteAsciiLineAsync("$ALARM_01", 0x0A); // 스트림으로
+        await factory.Context.WriteAsciiLineAsync("$ALARM_02_OK", 0x0A);
+        await factory.Context.WriteAsciiLineAsync("$ALARM_03_FAIL", 0x0A);
+        await factory.Context.WriteAsciiLineAsync("$ALARM_04_THROW", 0x0A);
+        await Task.Delay(50);
+
+        await session.DisposeAsync();
+
+        var summary = session.SpoolSummary;
+        summary.UnprocessedCount.Should().Be(2, "Failed and thrown alarms during spooling must be tracked as Unprocessed");
+        summary.StoredCount.Should().Be(1, "Successfully stored alarm must be tracked as Stored");
+    }
 }
 
 internal sealed class FailingConnectionFactory : IConnectionFactory
