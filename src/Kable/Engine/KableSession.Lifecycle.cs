@@ -143,8 +143,12 @@ public sealed partial class KableSession<TMessage>
 
     private async Task PerformCleanupAsync(Exception? reason)
     {
-        if (Volatile.Read(ref _isDisposed) == 1)
+        // 2. 이미 종료된 상태의 조기 return 제거
+        // Dispose 이후 호출은 이미 폐기된 락을 만지지 않도록, 락 진입 전에 공유 Task로 연결합니다.
+        // 또한 이미 _cleanupTcs가 완료된 경우(Stopped/Disposed)에도 조기 성공 반환하지 않고 공유 Task를 기다려 동일한 결과를 수신합니다.
+        if (Volatile.Read(ref _isDisposed) == 1 || _cleanupTcs.Task.IsCompleted)
         {
+            await _cleanupTcs.Task.ConfigureAwait(false);
             return;
         }
 
@@ -155,17 +159,15 @@ public sealed partial class KableSession<TMessage>
             var currentState = (SessionLifecycleState)Volatile.Read(ref _lifecycleState);
             if (currentState == SessionLifecycleState.Disposed || currentState == SessionLifecycleState.Stopped)
             {
-                if (_cleanupTcs.Task.IsCompleted)
-                {
-                    return;
-                }
+                // 이미 정리가 완료된 상태: 락 해제 후 아래에서 _cleanupTcs.Task 대기
             }
             else if (currentState == SessionLifecycleState.Stopping)
             {
-                // Another thread is actively stopping
+                // 다른 호출자가 현재 정리 수행 중: 락 해제 후 아래에서 _cleanupTcs.Task 대기
             }
             else
             {
+                // 최초 호출자!
                 isFirstStopper = true;
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Stopping);
                 try { _sessionCts.Cancel(); } catch (ObjectDisposedException) { }
@@ -176,12 +178,14 @@ public sealed partial class KableSession<TMessage>
             _lifecycleLock.Release();
         }
 
+        // 최초 호출자가 아니면 완료 Task를 기다리고 동일한 결과(성공 또는 예외)를 수신합니다.
         if (!isFirstStopper)
         {
             await _cleanupTcs.Task.ConfigureAwait(false);
             return;
         }
 
+        // 1. 최초 호출자만 실제 정리를 수행합니다.
         try
         {
             // If StartAsync was in flight, wait for it to exit
@@ -227,14 +231,20 @@ public sealed partial class KableSession<TMessage>
                 }
             }
 
-            // 4. 워커 종료(SpoolSummary 확정) 후 연결 리소스 정리
+            // 4. 워커 종료(SpoolSummary 확정) 후 연결 리소스 폐기 (정확히 1회 폐기 보장)
+            Exception? contextException = null;
             if (_context != null)
             {
+                var ctx = _context;
+                _context = null;
                 try
                 {
-                    await _context.DisposeAsync().ConfigureAwait(false);
+                    await ctx.DisposeAsync().ConfigureAwait(false);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    contextException = ex;
+                }
             }
 
             await _lifecycleLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
@@ -248,10 +258,10 @@ public sealed partial class KableSession<TMessage>
                 _lifecycleLock.Release();
             }
 
-            if (workerException != null)
+            var finalException = workerException ?? contextException ?? reason;
+            if (finalException != null)
             {
-                _cleanupTcs.TrySetException(workerException);
-                throw workerException;
+                _cleanupTcs.TrySetException(finalException);
             }
             else
             {
@@ -262,22 +272,28 @@ public sealed partial class KableSession<TMessage>
         {
             _cleanupTcs.TrySetException(ex);
         }
+
+        // 최초 호출자도 함수 마지막에서 await _cleanupTcs.Task를 수행!
+        await _cleanupTcs.Task.ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
-        await StopAsync().ConfigureAwait(false);
-
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+        try
         {
-            return;
+            await StopAsync().ConfigureAwait(false);
         }
+        finally
+        {
+            if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+            {
+                Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Disposed);
 
-        Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Disposed);
-
-        try { _fifoLock.Dispose(); } catch { }
-        try { _lifecycleLock.Dispose(); } catch { }
-        try { _sessionCts.Dispose(); } catch { }
+                try { _fifoLock.Dispose(); } catch { }
+                try { _lifecycleLock.Dispose(); } catch { }
+                try { _sessionCts.Dispose(); } catch { }
+            }
+        }
     }
 
     public void Dispose()

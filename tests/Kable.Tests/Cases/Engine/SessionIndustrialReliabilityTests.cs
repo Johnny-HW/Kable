@@ -108,7 +108,7 @@ public class SessionIndustrialReliabilityTests
             IsAlarmMessage = msg => msg.Contains("ALARM", StringComparison.OrdinalIgnoreCase)
         };
 
-        await using var session = new KableSession<string>(factory, codec, options);
+        var session = new KableSession<string>(factory, codec, options);
         await session.StartAsync();
 
         // 1. 소비자가 알람 스트림을 읽지 않는 상태에서 5개의 알람을 전송하여 큐를 채움
@@ -137,6 +137,10 @@ public class SessionIndustrialReliabilityTests
         }
 
         session.IsConnected.Should().BeFalse();
+
+        // 페일패스트로 중단된 세션의 DisposeAsync()는 정리 예외를 삼키지 않고 그대로 전파
+        Func<Task> disposeAct = async () => await session.DisposeAsync();
+        await disposeAct.Should().ThrowAsync<AlarmBufferOverflowException>();
     }
 
     [Fact]
@@ -412,7 +416,7 @@ public class SessionIndustrialReliabilityTests
             }
         };
 
-        await using var session = new KableSession<string>(factory, codec, options);
+        var session = new KableSession<string>(factory, codec, options);
         await session.StartAsync();
 
         // 알람 채널(2개) + 워커 인플라이트(1개) + 스풀 큐 버퍼(2개) = 최대 5개 수용
@@ -431,6 +435,10 @@ public class SessionIndustrialReliabilityTests
 
         session.IsConnected.Should().BeFalse();
         tcsHoldStorage.TrySetResult(true);
+
+        // 페일패스트로 중단된 세션의 DisposeAsync()는 정리 예외를 삼키지 않고 그대로 전파
+        Func<Task> disposeAct = async () => await session.DisposeAsync();
+        await disposeAct.Should().ThrowAsync<AlarmBufferOverflowException>();
     }
 
     [Fact]
@@ -517,7 +525,7 @@ public class SessionIndustrialReliabilityTests
             }
         };
 
-        await using var session = new KableSession<string>(factory, codec, options);
+        var session = new KableSession<string>(factory, codec, options);
         await session.StartAsync();
 
         // 알람 주입
@@ -534,6 +542,10 @@ public class SessionIndustrialReliabilityTests
         }
 
         session.IsConnected.Should().BeFalse("Session must be aborted due to storage timeout");
+
+        // 페일패스트로 중단된 세션의 DisposeAsync()는 정리 예외를 삼키지 않고 그대로 전파
+        Func<Task> disposeAct = async () => await session.DisposeAsync();
+        await disposeAct.Should().ThrowAsync<AlarmBufferOverflowException>();
     }
 
     [Fact(Timeout = 5000)]
@@ -665,7 +677,8 @@ public class SessionIndustrialReliabilityTests
         await factory.Context.WriteAsciiLineAsync("$ALARM_04_THROW", 0x0A);
         await Task.Delay(50);
 
-        await session.DisposeAsync();
+        Func<Task> disposeAct = async () => await session.DisposeAsync();
+        await disposeAct.Should().ThrowAsync<AlarmBufferOverflowException>();
 
         var summary = session.SpoolSummary;
         summary.UnprocessedCount.Should().Be(2, "Failed and thrown alarms during spooling must be tracked as Unprocessed");
@@ -726,6 +739,94 @@ public class SessionIndustrialReliabilityTests
         var summary = session.SpoolSummary;
         (summary.StoredCount + summary.InDoubtCount + summary.UnprocessedCount).Should().Be(12);
         summary.StoredCount.Should().BeGreaterThanOrEqualTo(8, "At least 8 messages should be stored in ~2.5-3.0s");
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_30_Lifecycle_CleanupFailure_PropagatesToAllCallersAndDisposesResourceOnce()
+    {
+        // 워커 종료 예외를 주입한 뒤 최초 Stop, 동시 Stop, 후속 Stop, Dispose가 모두 같은 실패를 전달하고,
+        // 연결·자원 폐기는 정확히 한 번 수행되는지 검증
+        var trackingFactory = new TrackingDisposableConnectionFactory();
+        var codec = new AsciiLineCodec();
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 1,
+            AlarmSpoolQueueCapacity = 10,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            AlarmSpoolDrainTimeout = TimeSpan.FromSeconds(1),
+            UnspooledAlarmDrainPolicy = UnspooledAlarmDrainPolicy.DrainWithinTimeout,
+            IsAlarmMessage = msg => msg.StartsWith("$ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = (msg, ct) =>
+            {
+                // 종료 배출 시 의도적인 워커 예외 발생
+                throw new InvalidOperationException("Injected Worker Terminal Fault");
+            }
+        };
+
+        var session = new KableSession<string>(trackingFactory, codec, options);
+        await session.StartAsync();
+
+        // 알람 주입하여 스풀 워커가 배출 중 예외를 던지도록 구성
+        await trackingFactory.LastCreatedContext!.WriteAsciiLineAsync("$ALARM_01", 0x0A);
+        await trackingFactory.LastCreatedContext!.WriteAsciiLineAsync("$ALARM_02_SPOOL", 0x0A);
+        await Task.Delay(50);
+
+        // 1. 최초 Stop 호출과 동시 Stop 호출을 동시에 발송
+        var stopTask1 = session.StopAsync().AsTask();
+        var stopTask2 = session.StopAsync().AsTask();
+
+        // 두 호출 모두 동일한 실패를 전달받아야 함
+        Func<Task> act1 = async () => await stopTask1;
+        Func<Task> act2 = async () => await stopTask2;
+        (await act1.Should().ThrowAsync<Exception>()).WithInnerException<InvalidOperationException>().WithMessage("*Injected Worker Terminal Fault*");
+        (await act2.Should().ThrowAsync<Exception>()).WithInnerException<InvalidOperationException>().WithMessage("*Injected Worker Terminal Fault*");
+
+        // 2. 이미 종료된 상태에서의 후속 Stop 호출도 동일한 실패를 전달받아야 함
+        Func<Task> act3 = async () => await session.StopAsync();
+        (await act3.Should().ThrowAsync<Exception>()).WithInnerException<InvalidOperationException>().WithMessage("*Injected Worker Terminal Fault*");
+
+        // 3. 후속 Dispose 호출 역시 동일한 실패를 전달받으면서 자원을 안전하게 폐기해야 함
+        Func<Task> act4 = async () => await session.DisposeAsync();
+        (await act4.Should().ThrowAsync<Exception>()).WithInnerException<InvalidOperationException>().WithMessage("*Injected Worker Terminal Fault*");
+
+        // 4. 핵심 검증: StopAsync가 실패해도 연결 리소스 폐기(DisposeAsync)는 정확히 1회만 수행되어야 함!
+        trackingFactory.LastCreatedContext.DisposeCallCount.Should().Be(1, "Connection context must be disposed exactly once");
+        session.State.Should().Be(SessionLifecycleState.Disposed);
+    }
+}
+
+internal sealed class TrackingDisposableConnectionFactory : IConnectionFactory
+{
+    public TrackingDisposableConnectionContext? LastCreatedContext { get; private set; }
+
+    public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
+    {
+        var ctx = new TrackingDisposableConnectionContext();
+        LastCreatedContext = ctx;
+        return new ValueTask<IConnectionContext>(ctx);
+    }
+}
+
+internal sealed class TrackingDisposableConnectionContext : IConnectionContext
+{
+    private readonly TestMemoryConnectionContext _inner = new();
+    private int _disposeCallCount;
+    public int DisposeCallCount => Volatile.Read(ref _disposeCallCount);
+
+    public string ConnectionId => _inner.ConnectionId;
+    public string EndpointDescription => _inner.EndpointDescription;
+    public System.IO.Pipelines.PipeReader Input => _inner.Input;
+    public System.IO.Pipelines.PipeWriter Output => _inner.Output;
+    public CancellationToken ConnectionClosed => _inner.ConnectionClosed;
+
+    public void Abort(string reason) => _inner.Abort(reason);
+    public Task WriteAsciiLineAsync(string text, byte delimiter = 0x0A) => _inner.WriteAsciiLineAsync(text, delimiter);
+
+    public async ValueTask DisposeAsync()
+    {
+        Interlocked.Increment(ref _disposeCallCount);
+        await _inner.DisposeAsync();
     }
 }
 
