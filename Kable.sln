@@ -35,7 +35,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.Observability.OpenTel
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.Observability.OpenTelemetry.Tests", "tests\Kable.Observability.OpenTelemetry.Tests\Kable.Observability.OpenTelemetry.Tests.csproj", "{34470842-08BF-46EE-831E-D417749ED418}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.ConfigStudio", "DEMO\Kable.ConfigStudio.csproj", "{1877E19A-9DAF-4792-9DFD-30F0AE3A6277}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DEMOApp", "DEMO\DEMOApp.csproj", "{1877E19A-9DAF-4792-9DFD-30F0AE3A6277}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.Grpc", "src\Kable.Grpc\Kable.Grpc.csproj", "{4EDD8C88-73F2-4F62-A1BF-9F696C4014A6}"
 EndProject

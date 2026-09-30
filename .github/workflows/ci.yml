@@ -1,0 +1,104 @@
+name: CI - Build, Test & Packaging Validation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+permissions:
+  contents: read
+
+jobs:
+  test-windows:
+    name: Build & Test (Windows - Full Solution)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore Kable.sln
+
+      - name: Build Solution (Release)
+        run: dotnet build Kable.sln --configuration Release --no-restore
+
+      - name: Run All Tests (Release)
+        run: dotnet test Kable.sln --configuration Release --no-build --verbosity normal
+
+      - name: Validate NuGet Packaging
+        run: dotnet pack Kable.sln --configuration Release --output ./nupkgs --no-build
+
+  test-linux:
+    name: Build & Test (Ubuntu - Cross-Platform Core)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore Linux Projects
+        run: |
+          dotnet restore src/Kable.Core/Kable.Core.csproj
+          dotnet restore src/Kable/Kable.csproj
+          dotnet restore src/Kable.Generators/Kable.Generators.csproj
+          dotnet restore src/Kable.Engine.Disruptor/Kable.Engine.Disruptor.csproj
+          dotnet restore src/Kable.Transport.Ipc/Kable.Transport.Ipc.csproj
+          dotnet restore src/Kable.Grpc/Kable.Grpc.csproj
+          dotnet restore src/Kable.Modbus/Kable.Modbus.csproj
+          dotnet restore src/Kable.Melsec/Kable.Melsec.csproj
+          dotnet restore src/Kable.OpcUa/Kable.OpcUa.csproj
+          dotnet restore src/Kable.Mqtt/Kable.Mqtt.csproj
+          dotnet restore src/Kable.Observability.OpenTelemetry/Kable.Observability.OpenTelemetry.csproj
+          dotnet restore src/Kable.Host/Kable.Host.csproj
+          dotnet restore tests/Kable.Tests/Kable.Tests.csproj
+          dotnet restore tests/Kable.Generators.Tests/Kable.Generators.Tests.csproj
+          dotnet restore tests/Kable.Engine.Disruptor.Tests/Kable.Engine.Disruptor.Tests.csproj
+          dotnet restore tests/Kable.Transport.Ipc.Tests/Kable.Transport.Ipc.Tests.csproj
+          dotnet restore tests/Kable.Grpc.Tests/Kable.Grpc.Tests.csproj
+          dotnet restore tests/Kable.Modbus.Tests/Kable.Modbus.Tests.csproj
+          dotnet restore tests/Kable.Melsec.Tests/Kable.Melsec.Tests.csproj
+          dotnet restore tests/Kable.OpcUa.Tests/Kable.OpcUa.Tests.csproj
+          dotnet restore tests/Kable.Mqtt.Tests/Kable.Mqtt.Tests.csproj
+          dotnet restore tests/Kable.Observability.OpenTelemetry.Tests/Kable.Observability.OpenTelemetry.Tests.csproj
+          dotnet restore tests/Kable.Host.Tests/Kable.Host.Tests.csproj
+
+      - name: Run Core & Protocol Tests (Linux)
+        run: |
+          dotnet test tests/Kable.Tests/Kable.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Generators.Tests/Kable.Generators.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Engine.Disruptor.Tests/Kable.Engine.Disruptor.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Transport.Ipc.Tests/Kable.Transport.Ipc.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Grpc.Tests/Kable.Grpc.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Modbus.Tests/Kable.Modbus.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Melsec.Tests/Kable.Melsec.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.OpcUa.Tests/Kable.OpcUa.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Mqtt.Tests/Kable.Mqtt.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Observability.OpenTelemetry.Tests/Kable.Observability.OpenTelemetry.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/Kable.Host.Tests/Kable.Host.Tests.csproj --configuration Release --verbosity normal

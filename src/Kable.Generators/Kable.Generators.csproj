@@ -12,7 +12,6 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageId>Kable.Generators</PackageId>
-    <Version>1.0.0</Version>
     <Description>Roslyn Source Generator for Kable declarative commands and RPC contracts.</Description>
   </PropertyGroup>
 

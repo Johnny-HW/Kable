@@ -3,14 +3,14 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.4.0</Version>
+    <Version>1.5.0</Version>
+    <PackageVersion>1.5.0</PackageVersion>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
     <TieredPGO>true</TieredPGO>
-    <NoWarn>$(NoWarn);NU1901;NU1902;NU1903;NU1904</NoWarn>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
