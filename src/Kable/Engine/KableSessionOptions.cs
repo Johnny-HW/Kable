@@ -41,6 +41,12 @@ public sealed class KableSessionOptions<TMessage>
     /// 반환값이 true이면 성공적으로 이관된 것으로 간주하며, false이면 세션을 중단합니다.
     /// </summary>
     public System.Func<TMessage, System.Threading.Tasks.ValueTask<bool>>? OnAlarmOverflowAsync { get; set; }
+
+    /// <summary>
+    /// AlarmOverflowMode.SpoolToStorage 모드일 때 사용하는 비동기 알람 스풀 큐의 최대 용량 (기본값: 1,000).
+    /// 디스패치 루프는 큐 등록만 수행하며, 스풀 큐 포화 또는 저장소 실패 시 명시적으로 세션을 중단합니다.
+    /// </summary>
+    public int AlarmSpoolQueueCapacity { get; set; } = 1000;
 }
 
 /// <summary>

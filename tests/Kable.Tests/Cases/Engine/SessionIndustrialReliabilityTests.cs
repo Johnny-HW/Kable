@@ -263,6 +263,203 @@ public class SessionIndustrialReliabilityTests
         session.IsConnected.Should().BeTrue();
         spooledAlarms.Should().Contain(new[] { "$ALARM_03", "$ALARM_04" });
     }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_18_ConnectFailure_StopAndDispose_CompletesWithinTimeout()
+    {
+        // [1] 연결 실패 후 Stop·Dispose가 무한 대기하지 않고 제한시간 내 즉시 완료되는지 검증
+        var failingFactory = new FailingConnectionFactory();
+        var codec = new AsciiLineCodec();
+        var session = new KableSession<string>(failingFactory, codec);
+
+        // 1. 연결 실패 유도
+        Func<Task> actStart = async () => await session.StartAsync();
+        await actStart.Should().ThrowAsync<System.Net.Sockets.SocketException>();
+
+        // 2. 연결 실패 후 StopAsync 및 DisposeAsync가 블로킹 없이 즉시 완료되어야 함
+        var stopTask = session.StopAsync().AsTask();
+        var completedStop = await Task.WhenAny(stopTask, Task.Delay(2000));
+        completedStop.Should().Be(stopTask, "StopAsync must complete within timeout even after connect failure");
+
+        var disposeTask = session.DisposeAsync().AsTask();
+        var completedDispose = await Task.WhenAny(disposeTask, Task.Delay(2000));
+        completedDispose.Should().Be(disposeTask, "DisposeAsync must complete within timeout even after connect failure");
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_19_ConcurrentStart_InvokesConnectAsync_ExactlyOnce()
+    {
+        // [2] 동시 Start 여러 건에도 ConnectAsync() 호출은 정확히 1회만 일어나는지 검증
+        var countingFactory = new CountingDelayedConnectionFactory();
+        var codec = new AsciiLineCodec();
+        await using var session = new KableSession<string>(countingFactory, codec);
+
+        // 10개의 동시 StartAsync 호출
+        var startTasks = new List<Task>();
+        for (int i = 0; i < 10; i++)
+        {
+            startTasks.Add(session.StartAsync().AsTask());
+        }
+
+        // 연결 시도가 최초 1회 시작될 때까지 대기
+        await countingFactory.ConnectStarted;
+
+        // 연결 완료 허용
+        countingFactory.AllowConnectToComplete();
+
+        // 모든 10개 호출자가 성공적으로 완료되어야 함
+        await Task.WhenAll(startTasks);
+
+        session.IsConnected.Should().BeTrue();
+
+        // 핵심 검증: ConnectAsync는 정확히 1회만 호출되어야 함
+        countingFactory.ConnectInvocationCount.Should().Be(1);
+    }
+
+    [Fact(Timeout = 10000)]
+    public async Task TC_REL_20_Stream_RepeatedEarlyBreak_CleansUpWaitersWithoutAccumulation()
+    {
+        // [4] await foreach에서 조기 break를 반복해도 대기자가 누적되지 않고 정상 동작하는지 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new AsciiLineCodec();
+        await using var session = new KableSession<string>(factory, codec);
+        await session.StartAsync();
+
+        // 50회 연속으로 스트림을 열고, 메시지 1개 수신 후 즉시 break
+        for (int i = 1; i <= 50; i++)
+        {
+            var writeTask = factory.Context.WriteAsciiLineAsync($"$DATA_{i}", 0x0A);
+
+            await foreach (var item in session.GetStreamAsync())
+            {
+                item.Should().Be($"$DATA_{i}");
+                break; // 조기 break
+            }
+
+            await writeTask;
+        }
+
+        // 반복적인 break 이후에도 세션 송수신 및 스트림이 완벽하게 정상 동작해야 함
+        await factory.Context.WriteAsciiLineAsync("$FINAL_STREAM_DATA", 0x0A);
+        await foreach (var item in session.GetStreamAsync())
+        {
+            item.Should().Be("$FINAL_STREAM_DATA");
+            break;
+        }
+
+        session.IsConnected.Should().BeTrue();
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_21_AlarmSpool_SlowStorage_DoesNotBlockRequestResponseRouting()
+    {
+        // [3] 알람 저장이 느리거나 멈춰도 공통 디스패치는 블로킹되지 않고 요청·응답 라우팅이 정상 유지되는지 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new CorrelationIdLineCodec();
+        var tcsHoldStorage = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 2,
+            AlarmSpoolQueueCapacity = 10,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            IsAlarmMessage = msg => msg.Contains("ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = async msg =>
+            {
+                // 저장소 I/O가 무기한 또는 장시간 지연되는 상황 모의
+                await tcsHoldStorage.Task;
+                return true;
+            }
+        };
+
+        await using var session = new KableSession<string>(factory, codec, options);
+        await session.StartAsync();
+
+        // 1. 알람 큐(2개)를 채우고, 3번째 알람을 보내 스풀 큐로 넘김 (저장소 작업 대기 시작)
+        await factory.Context.WriteAsciiLineAsync("$ALARM_01", 0x0A);
+        await factory.Context.WriteAsciiLineAsync("$ALARM_02", 0x0A);
+        await factory.Context.WriteAsciiLineAsync("$ALARM_OVERFLOW_03", 0x0A);
+        await Task.Delay(50);
+
+        // 2. 핵심 검증: 저장소가 멈춰있는 중에도, 동기 요청/응답(CID)은 디스패치 루프가 멈추지 않고 즉시 완료되어야 함!
+        var reqTask = session.RequestAsync<string>("CID_PING:REQ", TimeSpan.FromSeconds(2));
+        await factory.Context.WriteAsciiLineAsync("CID_PING:PONG", 0x0A);
+        var resp = await reqTask;
+        resp.Should().Be("CID_PING:PONG");
+
+        // 3. 지연되었던 저장소 완료 허용
+        tcsHoldStorage.TrySetResult(true);
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TC_REL_22_AlarmSpool_QueueSaturation_AbortsSessionExplicitly()
+    {
+        // [3] 저장소가 멈춰서 스풀 큐마저 포화되면 조용히 유실되지 않고 명시적으로 세션을 중단하는지 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new CorrelationIdLineCodec();
+        var tcsHoldStorage = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 2,
+            AlarmSpoolQueueCapacity = 2,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            IsAlarmMessage = msg => msg.Contains("ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = async msg =>
+            {
+                await tcsHoldStorage.Task;
+                return true;
+            }
+        };
+
+        await using var session = new KableSession<string>(factory, codec, options);
+        await session.StartAsync();
+
+        // 알람 채널(2개) + 워커 인플라이트(1개) + 스풀 큐 버퍼(2개) = 최대 5개 수용
+        // 6번째 이상 주입 시 스풀 큐 포화로 인해 세션 페일패스트 중단 트리거
+        for (int i = 1; i <= 7; i++)
+        {
+            await factory.Context.WriteAsciiLineAsync($"$ALARM_{i:D2}", 0x0A);
+        }
+
+        // 세션 안전 중단 대기
+        var spinTimeout = DateTime.UtcNow.AddSeconds(3);
+        while (session.IsConnected && DateTime.UtcNow < spinTimeout)
+        {
+            await Task.Delay(20);
+        }
+
+        session.IsConnected.Should().BeFalse();
+        tcsHoldStorage.TrySetResult(true);
+    }
+}
+
+internal sealed class FailingConnectionFactory : IConnectionFactory
+{
+    public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
+    {
+        throw new System.Net.Sockets.SocketException(10061); // Connection Refused
+    }
+}
+
+internal sealed class CountingDelayedConnectionFactory : IConnectionFactory
+{
+    private int _connectCount;
+    private readonly TaskCompletionSource<bool> _startedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> _gateTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public int ConnectInvocationCount => Volatile.Read(ref _connectCount);
+    public Task ConnectStarted => _startedTcs.Task;
+
+    public void AllowConnectToComplete() => _gateTcs.TrySetResult(true);
+
+    public async ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
+    {
+        Interlocked.Increment(ref _connectCount);
+        _startedTcs.TrySetResult(true);
+        await _gateTcs.Task;
+        return new TestMemoryConnectionContext();
+    }
 }
 
 internal sealed class ControllableConnectionFactory : IConnectionFactory

@@ -30,7 +30,7 @@ public sealed partial class KableSession<TMessage>
 
     public async ValueTask StartAsync(CancellationToken ct = default)
     {
-        TaskCompletionSource<bool> myStartTcs;
+        bool isStarter = false;
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _sessionCts.Token);
 
         await _lifecycleLock.WaitAsync(ct).ConfigureAwait(false);
@@ -43,12 +43,12 @@ public sealed partial class KableSession<TMessage>
             }
             if (currentState == SessionLifecycleState.Starting)
             {
-                myStartTcs = _startTcs;
+                isStarter = false;
             }
             else if (currentState == SessionLifecycleState.Created)
             {
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Starting);
-                myStartTcs = _startTcs;
+                isStarter = true;
             }
             else
             {
@@ -60,10 +60,10 @@ public sealed partial class KableSession<TMessage>
             _lifecycleLock.Release();
         }
 
-        // If another caller was already starting, await their outcome
-        if (myStartTcs != _startTcs || State == SessionLifecycleState.Running)
+        // 최초 시작자가 아닌 모든 동시 호출자는 최초 시작자의 Task만 기다림 (중복 ConnectAsync 호출 완전 차단)
+        if (!isStarter)
         {
-            await myStartTcs.Task.ConfigureAwait(false);
+            await _startTcs.Task.ConfigureAwait(false);
             return;
         }
 
@@ -75,17 +75,8 @@ public sealed partial class KableSession<TMessage>
         }
         catch (Exception ex)
         {
-            await _lifecycleLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-            try
-            {
-                Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Stopped);
-                Volatile.Write(ref _isConnected, 0);
-                _startTcs.TrySetException(ex);
-            }
-            finally
-            {
-                _lifecycleLock.Release();
-            }
+            _startTcs.TrySetException(ex);
+            await PerformCleanupAsync(ex).ConfigureAwait(false);
             throw;
         }
 
@@ -105,6 +96,11 @@ public sealed partial class KableSession<TMessage>
                 _outboundPumpTask = Task.Run(OutboundPumpLoopAsync);
                 _dispatchLoopTask = Task.Run(DispatchLoopAsync);
                 _readLoopTask = Task.Run(ReadLoopAsync);
+
+                if (_alarmSpoolQueue != null)
+                {
+                    _alarmSpoolWorkerTask = Task.Run(AlarmSpoolWorkerLoopAsync);
+                }
 
                 if (_heartbeatOptions != null)
                 {
@@ -153,7 +149,10 @@ public sealed partial class KableSession<TMessage>
             var currentState = (SessionLifecycleState)Volatile.Read(ref _lifecycleState);
             if (currentState == SessionLifecycleState.Disposed || currentState == SessionLifecycleState.Stopped)
             {
-                // Already stopped
+                if (_cleanupTcs.Task.IsCompleted)
+                {
+                    return;
+                }
             }
             else if (currentState == SessionLifecycleState.Stopping)
             {
@@ -191,10 +190,13 @@ public sealed partial class KableSession<TMessage>
 
             OnConnectionClosed(reason);
 
+            _alarmSpoolQueue?.Writer.TryComplete();
+
             var tasksToWait = new List<Task>();
             if (_readLoopTask != null) tasksToWait.Add(_readLoopTask);
             if (_outboundPumpTask != null) tasksToWait.Add(_outboundPumpTask);
             if (_dispatchLoopTask != null) tasksToWait.Add(_dispatchLoopTask);
+            if (_alarmSpoolWorkerTask != null) tasksToWait.Add(_alarmSpoolWorkerTask);
             if (_heartbeatTask != null) tasksToWait.Add(_heartbeatTask);
 
             if (tasksToWait.Count > 0)

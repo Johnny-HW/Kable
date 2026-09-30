@@ -364,4 +364,70 @@ public sealed partial class KableSession<TMessage>
         {
         }
     }
+
+    /// <summary>
+    /// Background worker loop for persisting overflowed alarms to external storage.
+    /// Decouples persistence I/O from the inbound dispatch loop to prevent blocking normal request-response routing.
+    /// If storage persistence fails or the spool queue overflows, it explicitly aborts the session.
+    /// </summary>
+    private async Task AlarmSpoolWorkerLoopAsync()
+    {
+        if (_alarmSpoolQueue == null || _sessionOptions.OnAlarmOverflowAsync == null) return;
+
+        try
+        {
+            var reader = _alarmSpoolQueue.Reader;
+            while (await reader.WaitToReadAsync(_sessionCts.Token).ConfigureAwait(false))
+            {
+                while (reader.TryRead(out var msg))
+                {
+                    bool success;
+                    try
+                    {
+                        success = await _sessionOptions.OnAlarmOverflowAsync(msg).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _observer?.OnPacketTrace(new PacketTraceRecord(
+                            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                            "ALARM_SPOOL_STORAGE_ERROR", ReadOnlyMemory<byte>.Empty,
+                            $"Alarm storage persistence threw exception: {ex.Message}",
+                            TimeSpan.Zero, LogLevel.Critical));
+
+                        var abortEx = new AlarmBufferOverflowException(
+                            $"Alarm storage persistence threw exception for alarm ({msg}). Aborting session to prevent silent loss.", ex);
+                        _ = Task.Run(() => PerformCleanupAsync(abortEx));
+                        return;
+                    }
+
+                    if (!success)
+                    {
+                        var abortEx = new AlarmBufferOverflowException(
+                            $"Alarm storage handler reported failure persisting alarm ({msg}). Aborting session.");
+                        _observer?.OnPacketTrace(new PacketTraceRecord(
+                            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                            "ALARM_SPOOL_SAVE_FAILED", ReadOnlyMemory<byte>.Empty, abortEx.Message,
+                            TimeSpan.Zero, LogLevel.Critical));
+
+                        _ = Task.Run(() => PerformCleanupAsync(abortEx));
+                        return;
+                    }
+
+                    _observer?.OnPacketTrace(new PacketTraceRecord(
+                        DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                        "ALARM_SPOOLED_TO_STORAGE", ReadOnlyMemory<byte>.Empty,
+                        $"Spool worker successfully persisted alarm ({msg}) to external storage.",
+                        TimeSpan.Zero, LogLevel.Information));
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal session shutdown
+        }
+        catch (Exception ex)
+        {
+            _ = Task.Run(() => PerformCleanupAsync(ex));
+        }
+    }
 }

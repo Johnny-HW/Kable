@@ -25,10 +25,13 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
         SingleReader = true
     });
 
+    private readonly Channel<TMessage>? _alarmSpoolQueue;
+
     private IConnectionContext? _context;
     private Task? _readLoopTask;
     private Task? _dispatchLoopTask;
     private Task? _outboundPumpTask;
+    private Task? _alarmSpoolWorkerTask;
     private Task? _heartbeatTask;
     private readonly CancellationTokenSource _sessionCts = new();
     private int _isConnected;
@@ -68,6 +71,18 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
             SingleReader = false
         };
         _alarmStream = Channel.CreateBounded<TMessage>(alarmOptions);
+
+        // 알람 스풀 큐: SpoolToStorage 모드일 때 외부 저장소 비동기 저장 워커용 유한 큐
+        if (_sessionOptions.AlarmOverflowMode == AlarmOverflowMode.SpoolToStorage)
+        {
+            var spoolOptions = new BoundedChannelOptions(_sessionOptions.AlarmSpoolQueueCapacity)
+            {
+                FullMode = BoundedChannelFullMode.Wait,
+                SingleWriter = false,
+                SingleReader = true
+            };
+            _alarmSpoolQueue = Channel.CreateBounded<TMessage>(spoolOptions);
+        }
 
         // 텔레메트리 채널: 상한(InboundQueueCapacity) 및 오버플로우 정책 적용 (알람과 격리)
         var incomingOptions = new BoundedChannelOptions(_sessionOptions.InboundQueueCapacity)

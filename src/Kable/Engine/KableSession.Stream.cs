@@ -67,8 +67,8 @@ public sealed partial class KableSession<TMessage>
 
     private async IAsyncEnumerable<TMessage> GetStreamInternalAsync([EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _sessionCts.Token);
-        var token = linkedCts.Token;
+        var streamCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _sessionCts.Token);
+        var token = streamCts.Token;
 
         Task<bool>? pendingAlarmTask = null;
         Task<bool>? pendingTelemTask = null;
@@ -170,7 +170,24 @@ public sealed partial class KableSession<TMessage>
         }
         finally
         {
-            // 스트림 종료 시 취소 토큰을 통해 미완료 대기 작업 정리
+            // 스트림 종료(소비자 조기 break 또는 예외) 시 전용 CTS를 Cancel하여 채널 대기자 즉시 취소
+            try
+            {
+                streamCts.Cancel();
+            }
+            catch (ObjectDisposedException) { }
+
+            // 남은 대기 Task 예외 관찰 및 완료 대기
+            if (pendingAlarmTask != null && !pendingAlarmTask.IsCompleted)
+            {
+                try { await pendingAlarmTask.ConfigureAwait(false); } catch { }
+            }
+            if (pendingTelemTask != null && !pendingTelemTask.IsCompleted)
+            {
+                try { await pendingTelemTask.ConfigureAwait(false); } catch { }
+            }
+
+            streamCts.Dispose();
         }
 
         token.ThrowIfCancellationRequested();
@@ -274,18 +291,27 @@ public sealed partial class KableSession<TMessage>
         switch (_sessionOptions.AlarmOverflowMode)
         {
             case AlarmOverflowMode.SpoolToStorage:
-                if (_sessionOptions.OnAlarmOverflowAsync != null)
+                if (_alarmSpoolQueue != null)
                 {
-                    bool spooled = await _sessionOptions.OnAlarmOverflowAsync(message).ConfigureAwait(false);
-                    if (spooled)
+                    if (_alarmSpoolQueue.Writer.TryWrite(message))
                     {
                         _observer?.OnPacketTrace(new PacketTraceRecord(
                             DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                            "ALARM_SPOOLED_TO_STORAGE", ReadOnlyMemory<byte>.Empty,
-                            $"Spolled overflowed alarm ({message}) to external storage.",
+                            "ALARM_ENQUEUED_TO_SPOOL", ReadOnlyMemory<byte>.Empty,
+                            $"Enqueued overflowed alarm ({message}) to background spool queue.",
                             TimeSpan.Zero, LogLevel.Warning));
                         return;
                     }
+
+                    // 스풀 큐마저 포화되면 명시적으로 세션 중단 (데이터 무유실 및 페일패스트 계약)
+                    var spoolOverflowEx = new AlarmBufferOverflowException(
+                        $"Alarm spool queue capacity ({_sessionOptions.AlarmSpoolQueueCapacity}) saturated. Aborting session to prevent data loss.");
+                    _observer?.OnPacketTrace(new PacketTraceRecord(
+                        DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                        "ALARM_SPOOL_OVERFLOW_FAILFAST", ReadOnlyMemory<byte>.Empty, spoolOverflowEx.Message, TimeSpan.Zero, LogLevel.Critical));
+
+                    _ = Task.Run(() => PerformCleanupAsync(spoolOverflowEx));
+                    throw spoolOverflowEx;
                 }
                 goto default;
 
