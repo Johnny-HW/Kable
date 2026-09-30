@@ -88,10 +88,16 @@
                         <TextBlock Text=" — Kable Hardware Communication Studio" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="6,1,0,0"/>
                     </StackPanel>
 
-                    <!-- Right Status Tags in Titlebar -->
+                    <!-- Right Status Tags in Titlebar (Sequoia HIG Chip Style) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="#34C759" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="COM4 @ 115,200" Foreground="#0F172A" FontWeight="SemiBold" FontSize="10" FontFamily="Consolas, -apple-system"/>
+                            </StackPanel>
+                        </Border>
                         <Border Background="#F1F5F9" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
-                            <TextBlock Text="v1.2.0 Clean Light" Foreground="#0071E3" FontWeight="SemiBold" FontSize="10"/>
+                            <TextBlock Text="v2.4-Hotpath" Foreground="#0071E3" FontWeight="SemiBold" FontSize="10"/>
                         </Border>
                     </StackPanel>
                 </DockPanel>
@@ -128,7 +134,7 @@
                                          IsChecked="{Binding IsNavAlarms, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="4"/>
 
-                            <!-- 5. TOML 내보내기 -->
+                            <!-- 5. C# Struct CodeGen -->
                             <RadioButton Content="{loc:Loc Nav_Export}" Style="{StaticResource IosNavRadioBtn}" 
                                          IsChecked="{Binding IsNavExport, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="5"/>
@@ -163,6 +169,22 @@
                             </Button.Resources>
                         </Button>
 
+                        <!-- Simulation Speed Multiplier Pill -->
+                        <Button Command="{Binding CycleSimulationSpeedCommand}"
+                                ToolTip="시뮬레이터 딜레이 배율 전환 (1.0x -> 2.0x -> 0.5x)"
+                                Background="#F1F5F9" Foreground="#0071E3"
+                                Padding="10,6" Margin="0,0,8,0" FontWeight="Bold" FontSize="11" Cursor="Hand" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⏱️ Speed: " Foreground="#64748B"/>
+                                <TextBlock Text="{Binding SimulationSpeedLabel}" Foreground="#0071E3" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Button>
+
                         <!-- Reusable Language Selector Component -->
                         <controls:LanguageSelectorControl Margin="0,0,8,0"/>
 
@@ -191,8 +213,8 @@
                 <!-- Screen 4: Spontaneous Alarm Monitor -->
                 <views:AlarmMonitorView Visibility="{Binding IsNavAlarms, Converter={StaticResource BoolToVis}}"/>
 
-                <!-- Screen 5: TOML Config Preview & Save -->
-                <views:TomlExportView Visibility="{Binding IsNavExport, Converter={StaticResource BoolToVis}}"/>
+                <!-- Screen 5: Pure C# Struct CodeGen Preview & Save -->
+                <views:StructExportView Visibility="{Binding IsNavExport, Converter={StaticResource BoolToVis}}"/>
             </Grid>
         </Grid>
     </Border>

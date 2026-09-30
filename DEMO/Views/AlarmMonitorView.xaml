@@ -6,14 +6,232 @@
              xmlns:ui="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf"
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization;assembly=Kable.UI.Wpf"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="900">
+             d:DesignHeight="780" d:DesignWidth="1100">
     <Grid Margin="4">
-        <!-- Spontaneous Alarm Viewport -->
-        <Border Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" ClipToBounds="True">
+        <Grid.RowDefinitions>
+            <!-- 1. Apple HIG System Safety Status Banner & 4 Hardware Interlocks -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2. Real-time Alarm Event DataGrid & Incident Stream Log -->
+            <RowDefinition Height="*"/>
+            <!-- 3. Bottom Emergency E-Stop & Administrative Bar -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. System Safety Status & Hardware Interlocks Section -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <!-- Safety Status Frosted Amber Banner -->
+            <Border Background="#FFFDF7" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="16" Padding="14,12" Margin="0,0,0,10">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.05" Color="#000000"/>
+                </Border.Effect>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="36" Height="36" CornerRadius="10" Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" Margin="0,0,12,0">
+                            <TextBlock Text="⚠️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Operational — Degraded Safety Interlocks" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
+                                <Border Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="6" Padding="6,1" Margin="8,0,0,0">
+                                    <TextBlock Text="SIL-3 Fallback Armed" FontSize="10" FontWeight="SemiBold" Foreground="#B45309"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="2 non-fatal safety interlocks triggered warnings • Automatic nitrogen lockout engaged • Secondary containment stable" 
+                                       FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- 4 Safety Metrics Strip (matching design_alarms.html) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <!-- Metric 1: E-Stop Chain -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="E-Stop Chain" FontSize="9" FontWeight="SemiBold" Foreground="#64748B"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                                    <Ellipse Width="6" Height="6" Fill="#34C759" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding EStopChainStatus}" FontSize="10" FontWeight="Bold" Foreground="#34C759"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Metric 2: System MTBF -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="System MTBF" FontSize="9" FontWeight="SemiBold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding MtbfHours}" FontSize="10" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Metric 3: Active Faults -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,4" Margin="0,0,6,0">
+                            <StackPanel>
+                                <TextBlock Text="Active Faults" FontSize="9" FontWeight="SemiBold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding ActiveFaultsSummary}" FontSize="10" FontWeight="Bold" Foreground="#D97706" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Metric 4: Audit Signature -->
+                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,4">
+                            <StackPanel>
+                                <TextBlock Text="Audit Signature" FontSize="9" FontWeight="SemiBold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding AuditSignature}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas, -apple-system" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- 4 Industrial Interlock Safety Cards (Exact match to design_alarms.html) -->
+            <UniformGrid Columns="4">
+                <!-- Card 1: Vacuum Seal Interlock (Warning) -->
+                <Border Background="#FFFFFF" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="0,0,6,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.04" Color="#000000"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="INTERLOCK 0x01" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                            <Border DockPanel.Dock="Right" Background="#FEF3C7" CornerRadius="6" Padding="5,1">
+                                <TextBlock Text="{Binding LiveVacuumSealPa}" FontSize="9" FontWeight="Bold" Foreground="#B45309"/>
+                            </Border>
+                        </DockPanel>
+                        <TextBlock Text="Vacuum Seal Guard" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
+                        <TextBlock Text="Baratron Dual-Capacitance Gauge. Limit 10.0 Pa" FontSize="10" Foreground="#64748B" Margin="0,2,0,6" TextWrapping="Wrap"/>
+                        <!-- Progress Bar & Deviation -->
+                        <ProgressBar Value="{Binding LiveVacuumProgress}" Maximum="100" Height="4" Foreground="#FF9500" Background="#F1F5F9" BorderThickness="0" Margin="0,0,0,4"/>
+                        <DockPanel Margin="0,2,0,0">
+                            <TextBlock Text="🔒 N2 auto-lockout ACTIVE" FontSize="9" FontWeight="SemiBold" Foreground="#D97706" DockPanel.Dock="Left"/>
+                            <TextBlock Text="Inspect" FontSize="9" FontWeight="Bold" Foreground="#0071E3" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 2: Chamber Thermal Limit (Normal) -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="3,0,3,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.04" Color="#000000"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="INTERLOCK 0x02" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                            <Border DockPanel.Dock="Right" Background="#F0FDF4" CornerRadius="6" Padding="5,1">
+                                <TextBlock Text="{Binding LiveChamberThermalStatus}" FontSize="9" FontWeight="Bold" Foreground="#166534"/>
+                            </Border>
+                        </DockPanel>
+                        <TextBlock Text="Chamber Thermal" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
+                        <TextBlock Text="Max Limit: 120.0 °C. RTD PT100 Sensor nominal" FontSize="10" Foreground="#64748B" Margin="0,2,0,6" TextWrapping="Wrap"/>
+                        <ProgressBar Value="{Binding LiveChamberThermalProgress}" Maximum="100" Height="4" Foreground="#34C759" Background="#F1F5F9" BorderThickness="0" Margin="0,0,0,4"/>
+                        <DockPanel Margin="0,2,0,0">
+                            <TextBlock Text="✓ Thermal loop verified" FontSize="9" FontWeight="SemiBold" Foreground="#166534" DockPanel.Dock="Left"/>
+                            <TextBlock Text="CH-B1" FontSize="9" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 3: Wafer Arm Robotic E-Stop (Safe) -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="3,0,3,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.04" Color="#000000"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="INTERLOCK 0x03" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                            <Border DockPanel.Dock="Right" Background="#F0FDF4" CornerRadius="6" Padding="5,1">
+                                <TextBlock Text="Safe • Dual PLe" FontSize="9" FontWeight="Bold" Foreground="#166534"/>
+                            </Border>
+                        </DockPanel>
+                        <TextBlock Text="Wafer Arm E-Stop" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
+                        <TextBlock Text="Optical curtain clear. CAT4 Relay: ENERGIZED" FontSize="10" Foreground="#64748B" Margin="0,2,0,6" TextWrapping="Wrap"/>
+                        <ProgressBar Value="10" Maximum="100" Height="4" Foreground="#34C759" Background="#F1F5F9" BorderThickness="0" Margin="0,0,0,4"/>
+                        <DockPanel Margin="0,2,0,0">
+                            <TextBlock Text="🛡️ Safety Gate Synced" FontSize="9" FontWeight="SemiBold" Foreground="#166534" DockPanel.Dock="Left"/>
+                            <TextBlock Text="ARM-RT4" FontSize="9" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 4: Master Bypass & Security PIN (from design_alarms.html) -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="6,0,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.04" Color="#000000"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="SECURITY MODULE" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                            <Border DockPanel.Dock="Right" Background="#F1F5F9" CornerRadius="6" Padding="5,1">
+                                <TextBlock Text="Supervisor PIN" FontSize="9" FontWeight="Bold" Foreground="#0071E3"/>
+                            </Border>
+                        </DockPanel>
+                        <TextBlock Text="Master Bypass &amp; PIN" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
+                        <TextBlock Text="{Binding SupervisorPinStatus}" FontSize="10" FontWeight="Bold" Foreground="#0071E3" Margin="0,2,0,4" FontFamily="Consolas, -apple-system"/>
+                        
+                        <!-- Authenticate Key Action Button -->
+                        <Button Command="{Binding AuthenticateSupervisorCommand}" 
+                                Content="🔑 Authenticate Supervisor Key"
+                                Background="#F1F5F9" Foreground="#0F172A" FontWeight="Bold" FontSize="10" Padding="8,4" BorderThickness="0" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </StackPanel>
+
+        <!-- 2. Spontaneous Alarm Event Log Viewport -->
+        <Border Grid.Row="1" Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" ClipToBounds="True">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
             </Border.Effect>
             <ui:AlarmListView DataContext="{Binding Terminal.AlarmList}"/>
+        </Border>
+
+        <!-- 3. Bottom Emergency & Administrative Bar (matching design_alarms.html) -->
+        <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,10,0,0" Padding="12,8">
+            <DockPanel LastChildFill="False">
+                <!-- Left: Emergency Controls -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <!-- Prominent Trip Emergency E-Stop Button -->
+                    <Button Command="{Binding TripEmergencyStopCommand}" 
+                            Padding="14,6" Margin="0,0,8,0" Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🛑 Trip Emergency E-Stop (Hard Stop)" Foreground="#DC2626" FontWeight="Bold" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Reset Latched Interlocks Button -->
+                    <Button Command="{Binding ResetInterlocksCommand}" 
+                            Padding="12,6" Margin="0,0,8,0" Background="#F1F5F9" BorderThickness="0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔄 Reset Latched Interlocks" Foreground="#334155" FontWeight="SemiBold" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Right: Audit Export & Compliance Badges -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✓ Audit: SHA-256 Validated" Foreground="#166534" FontSize="10" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="8,3">
+                        <TextBlock Text="Export Audit CSV" Foreground="#64748B" FontSize="10" FontWeight="Medium"/>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
         </Border>
     </Grid>
 </UserControl>

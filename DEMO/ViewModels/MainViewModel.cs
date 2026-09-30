@@ -79,6 +79,30 @@ public partial class MainViewModel : ObservableObject
 
     private VirtualDeviceSimulator? _simulator;
 
+    [ObservableProperty]
+    private string _simulationSpeedLabel = "1.0x";
+
+    [RelayCommand]
+    public void CycleSimulationSpeed()
+    {
+        if (_simulator == null) return;
+        if (Math.Abs(_simulator.SpeedMultiplier - 1.0) < 0.05)
+        {
+            _simulator.SpeedMultiplier = 2.0;
+            SimulationSpeedLabel = "2.0x (Fast)";
+        }
+        else if (Math.Abs(_simulator.SpeedMultiplier - 2.0) < 0.05)
+        {
+            _simulator.SpeedMultiplier = 0.5;
+            SimulationSpeedLabel = "0.5x (Slow)";
+        }
+        else
+        {
+            _simulator.SpeedMultiplier = 1.0;
+            SimulationSpeedLabel = "1.0x (Normal)";
+        }
+    }
+
     [RelayCommand]
     public void ToggleSimulation()
     {
@@ -86,7 +110,7 @@ public partial class MainViewModel : ObservableObject
         IsSimulatorRunning = _simulator?.IsRunning ?? false;
         if (IsSimulatorRunning)
         {
-            TestStatus = "🟢 [Simulator Active] High-speed periodic telemetry streaming...";
+            TestStatus = "🟢 [Simulator Active] Streaming with realistic hardware latency...";
             TestResultColor = "#A6E3A1";
         }
         else
@@ -149,7 +173,87 @@ public partial class MainViewModel : ObservableObject
     private string _testResultColor = "#A6ADC8"; // gray
 
     [ObservableProperty]
+    private string _liveChamberTemp = "24.8 °C";
+
+    [ObservableProperty]
+    private string _liveLinePressure = "101.3 kPa";
+
+    [ObservableProperty]
+    private string _liveFlowRate = "12.5 mL/min";
+
+    [ObservableProperty]
+    private string _liveVacuumSealPa = "12.4 Pa";
+
+    [ObservableProperty]
+    private double _liveVacuumProgress = 75.0;
+
+    [ObservableProperty]
+    private string _liveChamberThermalStatus = "Normal • 45°C";
+
+    [ObservableProperty]
+    private double _liveChamberThermalProgress = 38.0;
+
+    [ObservableProperty]
+    private string _activeFaultsSummary = "2 Warnings, 0 Crit";
+
+    [ObservableProperty]
+    private string _eStopChainStatus = "CLOSED (0.4ms)";
+
+    [ObservableProperty]
+    private string _mtbfHours = "418.4 hrs (100%)";
+
+    [ObservableProperty]
+    private string _auditSignature = "#8f2a9c (14:28 UTC)";
+
+    [ObservableProperty]
+    private string _supervisorPinStatus = "● ● ○ ○ (2 of 4 Digits)";
+
+    [ObservableProperty]
+    private bool _isMasterOverrideActive;
+
+    [RelayCommand]
+    public void TripEmergencyStop()
+    {
+        EStopChainStatus = "TRIPPED (HARD STOP)";
+        ActiveFaultsSummary = "1 CRITICAL, 2 Warnings";
+        TestStatus = "🚨 [HARD STOP] Emergency E-Stop Tripped! Safety Loop Open.";
+        TestResultColor = "#F38BA8";
+
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow,
+            PacketDirection.Rx,
+            TrafficKind.SpontaneousAlarm,
+            "ESTOP_TRIP",
+            Encoding.UTF8.GetBytes("CRIT_001: EMERGENCY HARD STOP TRIPPED"),
+            "EMERGENCY HARD STOP ACTIVATED BY OPERATOR",
+            TimeSpan.Zero,
+            LogLevel.Critical,
+            Profile.DeviceName));
+    }
+
+    [RelayCommand]
+    public void ResetInterlocks()
+    {
+        EStopChainStatus = "CLOSED (0.4ms)";
+        ActiveFaultsSummary = "0 Warning, 0 Crit";
+        TestStatus = "🟢 [Safety Interlocks Reset] All safety loops verified nominal.";
+        TestResultColor = "#A6E3A1";
+        Terminal.AlarmList.ClearAlarms();
+    }
+
+    [RelayCommand]
+    public void AuthenticateSupervisor()
+    {
+        SupervisorPinStatus = "● ● ● ● (AUTHENTICATED)";
+        IsMasterOverrideActive = !IsMasterOverrideActive;
+        TestStatus = IsMasterOverrideActive ? "⚠️ [Supervisor Key] Master Override Active" : "🔒 [Supervisor Key] Normal Security Lock";
+    }
+
+    [ObservableProperty]
     private string _generatedTomlPreview = string.Empty;
+
+    [ObservableProperty]
+    private string _generatedCSharpPreview = string.Empty;
 
     [ObservableProperty]
     private ObservableCollection<string> _traceLog = new();
@@ -182,7 +286,8 @@ public partial class MainViewModel : ObservableObject
                 LogLevel.Information,
                 Profile.DeviceName));
 
-            await Task.Delay(40);
+            int cmdLatencyMs = Random.Shared.Next(35, 65);
+            await Task.Delay(cmdLatencyMs);
 
             // Setting 파라미터 변경 명령 처리 및 텔레메트리 기준값 동적 동기화
             string echoResp;
@@ -229,7 +334,7 @@ public partial class MainViewModel : ObservableObject
                 "SET_ACK",
                 rxBytes,
                 echoResp,
-                TimeSpan.FromMilliseconds(40),
+                TimeSpan.FromMilliseconds(cmdLatencyMs),
                 LogLevel.Information,
                 Profile.DeviceName));
         };
@@ -299,6 +404,48 @@ public partial class MainViewModel : ObservableObject
             Terminal,
             () => PacketCatalog,
             () => Profile.DeviceName);
+
+        // 상시 텔레메트리 및 알람 실시간 측정값 HUD 동적 바인딩 동기화
+        Terminal.TelemetryStream.TelemetryItems.CollectionChanged += (s, e) =>
+        {
+            // Collection changes or updates
+        };
+
+        // Terminal 패킷 인터셉트로 실시간 대시보드 HUD 즉각 동기화
+        Terminal.TelemetryUpdated += (tag, val, unit) =>
+        {
+            if (string.Equals(tag, "Chamber Temperature", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(tag, "CHAMBER_TEMP", StringComparison.OrdinalIgnoreCase))
+            {
+                LiveChamberTemp = $"{val} {unit}";
+                if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out double tVal))
+                {
+                    LiveChamberThermalStatus = tVal > 60.0 ? $"Warning • {tVal:F1}°C" : $"Normal • {tVal:F1}°C";
+                    LiveChamberThermalProgress = Math.Clamp((tVal / 120.0) * 100.0, 0, 100);
+                }
+            }
+            else if (string.Equals(tag, "Line Supply Pressure", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(tag, "LINE_PRESSURE", StringComparison.OrdinalIgnoreCase))
+            {
+                LiveLinePressure = $"{val} {unit}";
+                if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out double pVal))
+                {
+                    LiveVacuumSealPa = $"{pVal / 8.0:F1} Pa";
+                    LiveVacuumProgress = Math.Clamp((pVal / 150.0) * 100.0, 0, 100);
+                }
+            }
+            else if (string.Equals(tag, "Chemical Flow Rate", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(tag, "FLOW_RATE", StringComparison.OrdinalIgnoreCase))
+            {
+                LiveFlowRate = $"{val} {unit}";
+            }
+        };
+
+        Terminal.AlarmList.Alarms.CollectionChanged += (s, e) =>
+        {
+            int count = Terminal.AlarmList.Alarms.Count;
+            ActiveFaultsSummary = $"{count} Warning, 0 Crit";
+        };
     }
 
     partial void OnSelectedLanguageChanged(LanguageOption value)
@@ -613,6 +760,48 @@ public partial class MainViewModel : ObservableObject
         sb.AppendLine($"heartbeat_interval_ms = {Profile.HeartbeatIntervalMs}");
 
         GeneratedTomlPreview = sb.ToString();
+
+        // 2. Generate Zero-GC C# Driver Implementation Preview
+        var csSb = new StringBuilder();
+        csSb.AppendLine("// <auto-generated>");
+        csSb.AppendLine("// Kable Zero-GC Hotpath Driver Implementation");
+        csSb.AppendLine($"// Generated for device: {Profile.DeviceName} on {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        csSb.AppendLine("// </auto-generated>");
+        csSb.AppendLine("using System;");
+        csSb.AppendLine("using System.Buffers;");
+        csSb.AppendLine("using System.Runtime.CompilerServices;");
+        csSb.AppendLine("using System.Runtime.InteropServices;");
+        csSb.AppendLine("using Kable.Core;");
+        csSb.AppendLine();
+        csSb.AppendLine("namespace Kable.Generated.HardwareDrivers;");
+        csSb.AppendLine();
+        csSb.AppendLine($"/// <summary>");
+        csSb.AppendLine($"/// High-speed Zero-GC codec for {Profile.DeviceName}");
+        csSb.AppendLine($"/// Transport: {Profile.Transport} | Codec: {Profile.Codec}");
+        csSb.AppendLine($"/// </summary>");
+        csSb.AppendLine("[StructLayout(LayoutKind.Sequential, Pack = 1)]");
+        csSb.AppendLine($"public readonly struct {Profile.DeviceName.Replace(" ", "")}TelemetryPacket");
+        csSb.AppendLine("{");
+        csSb.AppendLine("    public readonly ushort Preamble;    // 0xAA55");
+        csSb.AppendLine("    public readonly byte   Sequence;    // 0..255");
+        csSb.AppendLine("    public readonly float  ChamberTemp; // °C");
+        csSb.AppendLine("    public readonly float  LinePress;   // kPa");
+        csSb.AppendLine("    public readonly float  FlowRate;    // mL/min");
+        csSb.AppendLine("    public readonly ushort Crc16;       // CCITT-16");
+        csSb.AppendLine();
+        csSb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        csSb.AppendLine($"    public static bool TryDecode(ReadOnlySpan<byte> source, out {Profile.DeviceName.Replace(" ", "")}TelemetryPacket packet)");
+        csSb.AppendLine("    {");
+        csSb.AppendLine($"        if (source.Length < Unsafe.SizeOf<{Profile.DeviceName.Replace(" ", "")}TelemetryPacket>())");
+        csSb.AppendLine("        {");
+        csSb.AppendLine("            packet = default;");
+        csSb.AppendLine("            return false;");
+        csSb.AppendLine("        }");
+        csSb.AppendLine($"        packet = MemoryMarshal.Read<{Profile.DeviceName.Replace(" ", "")}TelemetryPacket>(source);");
+        csSb.AppendLine("        return packet.Preamble == 0xAA55;");
+        csSb.AppendLine("    }");
+        csSb.AppendLine("}");
+        GeneratedCSharpPreview = csSb.ToString();
     }
 
     [RelayCommand]
@@ -647,17 +836,17 @@ public partial class MainViewModel : ObservableObject
                 safeFileName = "kable_device";
             }
 
-            string targetDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
+            string targetDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GeneratedDrivers");
             Directory.CreateDirectory(targetDir);
 
-            string filePath = Path.Combine(targetDir, $"{safeFileName.ToLowerInvariant()}_comm.toml");
+            string filePath = Path.Combine(targetDir, $"{safeFileName}TelemetryPacket.cs");
 
             // 2. Asynchronous write
-            await File.WriteAllTextAsync(filePath, GeneratedTomlPreview, Encoding.UTF8);
+            await File.WriteAllTextAsync(filePath, GeneratedCSharpPreview, Encoding.UTF8);
 
-            TestStatus = $"💾 파일 안전 저장 완료: {filePath}";
+            TestStatus = $"💾 C# 드라이버 구조체 파일 저장 완료: {filePath}";
             TestResultColor = "#A6E3A1"; // green
-            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [SAVE] 설정 파일 비동기 기록 완료: {filePath}");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [SAVE] C# Zero-GC 구조체 파일 기록 완료: {filePath}");
         }
         catch (Exception ex)
         {

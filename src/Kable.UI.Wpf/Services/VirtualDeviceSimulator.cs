@@ -21,6 +21,7 @@ public sealed class VirtualDeviceSimulator : IDisposable
     private Task? _simulationTask;
 
     public bool IsRunning => _cts != null && !_cts.IsCancellationRequested;
+    public double SpeedMultiplier { get; set; } = 1.0;
 
     public event Action<bool>? StateChanged;
 

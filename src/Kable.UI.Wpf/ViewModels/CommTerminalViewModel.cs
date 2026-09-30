@@ -22,6 +22,8 @@ public partial class CommTerminalViewModel : ObservableObject, ICommObserver
     public ChannelReader<PacketTraceRecord> PeriodicStream => throw new NotSupportedException();
     public ChannelReader<PacketTraceRecord> AlarmStream => throw new NotSupportedException();
 
+    public event Action<string, string, string>? TelemetryUpdated;
+
     public event Func<string, Task>? ManualSendRequested
     {
         add => CommandConsole.ManualSendRequested += value;
@@ -47,6 +49,7 @@ public partial class CommTerminalViewModel : ObservableObject, ICommObserver
                 break;
             case TrafficKind.PeriodicTelemetry:
                 TelemetryStream.OnPacketTrace(in trace);
+                TelemetryUpdated?.Invoke(trace.Tag, trace.ParsedText ?? string.Empty, string.Empty);
                 break;
             case TrafficKind.SpontaneousAlarm:
                 AlarmList.OnPacketTrace(in trace);

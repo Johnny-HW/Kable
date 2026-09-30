@@ -6,10 +6,172 @@
              xmlns:ui="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf"
              xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization;assembly=Kable.UI.Wpf"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="900">
+             d:DesignHeight="700" d:DesignWidth="1000">
     <Grid Margin="4">
-        <!-- Periodic Telemetry Stream Viewport -->
-        <Border Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" ClipToBounds="True">
+        <Grid.RowDefinitions>
+            <!-- 1. Apple HIG Oscilloscope Waveform Stage & Real-time Channel HUD -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2. Reusable Periodic Telemetry Parameter Grid & Raw Stream Split View -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. Apple Instruments Style Waveform & Metric Cards Stage -->
+        <Border Grid.Row="0" Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,12" Padding="14">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="130"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Stage Header: Timebase & Channel Legends -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#F1F5F9" CornerRadius="8" Padding="8,4" Margin="0,0,10,0">
+                            <TextBlock Text="⚡ REAL-TIME OSCILLOSCOPE" Foreground="#0071E3" FontWeight="Bold" FontSize="11"/>
+                        </Border>
+                        <!-- Channel Legends -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="6" Padding="6,2" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="#0071E3" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="#1E40AF">
+                                    <Run Text="CH1: Chamber Temp ("/><Run Text="{Binding LiveChamberTemp, Mode=OneWay}"/><Run Text=")"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="6" Padding="6,2" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="#34C759" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="#166534">
+                                    <Run Text="CH2: Supply Press ("/><Run Text="{Binding LiveLinePressure, Mode=OneWay}"/><Run Text=")"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="6" Padding="6,2">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="7" Height="7" Fill="#FF9500" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="#92400E">
+                                    <Run Text="CH3: Flow Rate ("/><Run Text="{Binding LiveFlowRate, Mode=OneWay}"/><Run Text=")"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Timebase Selector (Apple Segmented Pill) -->
+                    <Border DockPanel.Dock="Right" Background="#F1F5F9" CornerRadius="8" Padding="2" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="#FFFFFF" CornerRadius="6" Padding="8,2" Margin="1">
+                                <TextBlock Text="100 ms/div" FontSize="10" FontWeight="Bold" Foreground="#0071E3"/>
+                            </Border>
+                            <Border Background="Transparent" CornerRadius="6" Padding="8,2" Margin="1">
+                                <TextBlock Text="500 ms/div" FontSize="10" Foreground="#64748B"/>
+                            </Border>
+                            <Border Background="Transparent" CornerRadius="6" Padding="8,2" Margin="1">
+                                <TextBlock Text="1 s/div" FontSize="10" Foreground="#64748B"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </DockPanel>
+
+                <!-- Waveform Canvas Substrate (Apple HIG Ambient Oscilloscope) -->
+                <Border Grid.Row="1" Background="#FAFAFC" CornerRadius="10" BorderBrush="#E2E8F0" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <!-- Grid Division Lines -->
+                        <Canvas>
+                            <Line X1="0" Y1="32" X2="1200" Y2="32" Stroke="#E2E8F0" StrokeThickness="1" StrokeDashArray="4 4"/>
+                            <Line X1="0" Y1="65" X2="1200" Y2="65" Stroke="#CBD5E1" StrokeThickness="1"/>
+                            <Line X1="0" Y1="98" X2="1200" Y2="98" Stroke="#E2E8F0" StrokeThickness="1" StrokeDashArray="4 4"/>
+                            <Line X1="150" Y1="0" X2="150" Y2="130" Stroke="#F1F5F9" StrokeThickness="1"/>
+                            <Line X1="300" Y1="0" X2="300" Y2="130" Stroke="#F1F5F9" StrokeThickness="1"/>
+                            <Line X1="450" Y1="0" X2="450" Y2="130" Stroke="#F1F5F9" StrokeThickness="1"/>
+                            <Line X1="600" Y1="0" X2="600" Y2="130" Stroke="#F1F5F9" StrokeThickness="1"/>
+                            <Line X1="750" Y1="0" X2="750" Y2="130" Stroke="#F1F5F9" StrokeThickness="1"/>
+                            <Line X1="900" Y1="0" X2="900" Y2="130" Stroke="#F1F5F9" StrokeThickness="1"/>
+                        </Canvas>
+
+                        <!-- CH1 Chamber Temp Smooth Wave (System Blue) -->
+                        <Path Stroke="#0071E3" StrokeThickness="2.2" VerticalAlignment="Center">
+                            <Path.Data>
+                                <PathGeometry Figures="M 0,45 C 50,20 100,70 150,45 C 200,20 250,70 300,45 C 350,20 400,70 450,45 C 500,20 550,70 600,45 C 650,20 700,70 750,45 C 800,20 850,70 900,45 C 950,20 1000,70 1050,45"/>
+                            </Path.Data>
+                        </Path>
+
+                        <!-- CH2 Supply Press PWM/Step Pulse (System Green) -->
+                        <Path Stroke="#34C759" StrokeThickness="1.8" VerticalAlignment="Center">
+                            <Path.Data>
+                                <PathGeometry Figures="M 0,75 L 80,75 L 80,55 L 140,55 L 140,75 L 220,75 L 220,50 L 280,50 L 280,75 L 360,75 L 360,55 L 420,55 L 420,75 L 500,75 L 500,52 L 560,52 L 560,75 L 640,75 L 640,50 L 700,50 L 700,75 L 780,75 L 780,55 L 840,55 L 840,75 L 920,75 L 920,52 L 980,52 L 980,75 L 1050,75"/>
+                            </Path.Data>
+                        </Path>
+
+                        <!-- CH3 Flow Rate Drift Curve (System Orange) -->
+                        <Path Stroke="#FF9500" StrokeThickness="1.8" StrokeDashArray="4 2" VerticalAlignment="Center">
+                            <Path.Data>
+                                <PathGeometry Figures="M 0,95 C 200,92 400,85 600,80 C 800,75 1000,70 1200,68"/>
+                            </Path.Data>
+                        </Path>
+
+                        <!-- Live Cursor Needle Overlay -->
+                        <Canvas>
+                            <Line X1="620" Y1="0" X2="620" Y2="130" Stroke="#0071E3" StrokeThickness="1"/>
+                            <Border Canvas.Left="560" Canvas.Top="8" Background="#0071E3" CornerRadius="4" Padding="6,2">
+                                <TextBlock Text="t = +240ms | Sync Nominal" FontSize="9" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                            </Border>
+                            <Ellipse Canvas.Left="617" Canvas.Top="42" Width="6" Height="6" Fill="#0071E3" Stroke="#FFFFFF" StrokeThickness="1"/>
+                            <Ellipse Canvas.Left="617" Canvas.Top="72" Width="6" Height="6" Fill="#34C759" Stroke="#FFFFFF" StrokeThickness="1"/>
+                            <Ellipse Canvas.Left="617" Canvas.Top="77" Width="6" Height="6" Fill="#FF9500" Stroke="#FFFFFF" StrokeThickness="1"/>
+                        </Canvas>
+                    </Grid>
+                </Border>
+
+                <!-- 3 Channel Quick Cards (Squircle HUD Cards) -->
+                <UniformGrid Grid.Row="2" Columns="3" Margin="0,10,0,0">
+                    <!-- CH1 Card -->
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,8" Margin="0,0,6,0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="CH1: CHAMBER TEMP" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding LiveChamberTemp}" FontSize="16" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,3" VerticalAlignment="Center">
+                                <TextBlock Text="Live ±0.2%" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- CH2 Card -->
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,8" Margin="3,0,3,0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="CH2: SUPPLY PRESSURE" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding LiveLinePressure}" FontSize="16" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <Border DockPanel.Dock="Right" Background="#F0FDF4" CornerRadius="6" Padding="6,3" VerticalAlignment="Center">
+                                <TextBlock Text="1.0 kHz" FontSize="10" FontWeight="SemiBold" Foreground="#34C759"/>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- CH3 Card -->
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,8" Margin="6,0,0,0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="CH3: CHEMICAL FLOW" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                                <TextBlock Text="{Binding LiveFlowRate}" FontSize="16" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <Border DockPanel.Dock="Right" Background="#FFFBEB" CornerRadius="6" Padding="6,3" VerticalAlignment="Center">
+                                <TextBlock Text="Stable" FontSize="10" FontWeight="SemiBold" Foreground="#D97706"/>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+                </UniformGrid>
+            </Grid>
+        </Border>
+
+        <!-- 2. Periodic Telemetry Stream Viewport (Parameters Grid & Raw Split Log) -->
+        <Border Grid.Row="1" Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" ClipToBounds="True">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
             </Border.Effect>

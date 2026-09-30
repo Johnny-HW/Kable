@@ -7,8 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Kable.ConfigStudio</RootNamespace>
-    <AssemblyName>Kable.ConfigStudio</AssemblyName>
-    <ApplicationTitle>Kable Connection Config Studio</ApplicationTitle>
+    <AssemblyName>DEMOApp</AssemblyName>
+    <ApplicationTitle>DEMOApp</ApplicationTitle>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>

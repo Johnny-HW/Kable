@@ -1,0 +1,221 @@
+<UserControl x:Class="Kable.UI.Wpf.Controls.StructCodeGenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:loc="clr-namespace:Kable.UI.Wpf.Localization"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1000">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- 1. Apple Context Sub-header: Zero-GC Engine Info & Architecture Chips -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2. Dual Pane: Left Struct Layout & Memory Map | Right Generated C# Code -->
+            <RowDefinition Height="*"/>
+            <!-- 3. Bottom Action Bar (Copy Code, Export C# File) -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. Context Sub-Header Bar (Breadcrumbs & Target Engine) -->
+        <Border Grid.Row="0" Background="#FFFFFF" CornerRadius="14" Padding="14,10" Margin="0,0,0,10" BorderBrush="#E2E8F0" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.04" Color="#000000"/>
+            </Border.Effect>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="⚡ Kable Zero-GC Engine / " FontSize="11" Foreground="#64748B"/>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,2" Margin="0,0,8,0">
+                        <TextBlock Text="Immutable Struct CodeGen" FontSize="11" FontWeight="Bold" Foreground="#0F172A"/>
+                    </Border>
+                    <Border Background="#EFF6FF" CornerRadius="6" Padding="6,2" Margin="0,0,6,0">
+                        <TextBlock Text="Pack = 1 Sequential" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                    </Border>
+                    <Border Background="#F0FDF4" CornerRadius="6" Padding="6,2">
+                        <TextBlock Text="0 Allocs (Hotpath Span&lt;byte&gt;)" FontSize="10" FontWeight="SemiBold" Foreground="#34C759"/>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
+                        <TextBlock Text="C# 13 / .NET 10" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                    </Border>
+                    <Button Content="{loc:Loc Btn_Refresh}" Command="{Binding UpdateStructCodePreviewCommand}" 
+                            Style="{StaticResource IosSecondaryButtonStyle}" Padding="12,4"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 2. Dual Pane: Left Struct Layout & Memory Map | Right Generated C# Code -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Pane: Struct Memory Field Map (Zero-GC Layout Inspection) -->
+            <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" Padding="14">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.05" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔬 STRUCT MEMORY MAP" FontSize="11" FontWeight="Bold" Foreground="#1E40AF"/>
+                            <Border Background="#EFF6FF" CornerRadius="6" Padding="6,2" Margin="8,0,0,0">
+                                <TextBlock Text="Total: 19 Bytes" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                            </Border>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <!-- Memory Layout Card Deck -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- Field 0: Preamble -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Offset +0 (2 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="Preamble (ushort)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                    </StackPanel>
+                                    <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="0xAA55" FontSize="10" FontWeight="Bold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Field 1: Sequence -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Offset +2 (1 Byte)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="Sequence (byte)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                    </StackPanel>
+                                    <Border DockPanel.Dock="Right" Background="#F1F5F9" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="0..255" FontSize="10" FontWeight="SemiBold" Foreground="#64748B" FontFamily="Consolas"/>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Field 2: ChamberTemp -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Offset +3 (4 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="ChamberTemp (float)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                    </StackPanel>
+                                    <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="IEEE 754" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Field 3: LinePressure -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Offset +7 (4 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="LinePressure (float)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                    </StackPanel>
+                                    <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="IEEE 754" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Field 4: FlowRate -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Offset +11 (4 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="FlowRate (float)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                    </StackPanel>
+                                    <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="IEEE 754" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Field 5: CRC-16 -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Left">
+                                        <TextBlock Text="Offset +15 (2 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="Crc16 (ushort)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                    </StackPanel>
+                                    <Border DockPanel.Dock="Right" Background="#F0FDF4" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="CCITT-16" FontSize="10" FontWeight="Bold" Foreground="#166534" FontFamily="Consolas"/>
+                                    </Border>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Summary Footnote -->
+                    <Border Grid.Row="2" Background="#F1F5F9" CornerRadius="8" Padding="10,6" Margin="0,8,0,0">
+                        <TextBlock Text="✓ Guaranteed Zero-Allocation with MemoryMarshal.Read&lt;T&gt;" FontSize="10" Foreground="#334155" FontWeight="Medium"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Right Pane: C# Zero-GC Generated Driver Code Card -->
+            <Border Grid.Column="2" Background="#FFFFFF" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="1" Padding="14">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.05" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="⚡ C# ZERO-GC STRUCT DRIVER" FontSize="11" FontWeight="Bold" Foreground="#0071E3"/>
+                            <Border Background="#EFF6FF" CornerRadius="6" Padding="6,2" Margin="8,0,0,0">
+                                <TextBlock Text="ReadOnlySpan&lt;byte&gt; Inlining" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                            </Border>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBox Grid.Row="1" Text="{Binding GeneratedCSharpPreview}" 
+                             Background="#F8FAFC" Foreground="#0F172A" FontFamily="Consolas, Courier New" FontSize="12" 
+                             BorderThickness="0" Padding="14" IsReadOnly="True" VerticalScrollBarVisibility="Auto">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="10"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 3. Bottom Action Bar Card -->
+        <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="16" Padding="18,12" BorderBrush="#E2E8F0" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
+            </Border.Effect>
+            <DockPanel>
+                <TextBlock Text="Kable Zero-GC High Performance Driver Generator • Pure C# Immutable Structs" 
+                           Foreground="{StaticResource KableTextSecondary}" VerticalAlignment="Center" FontWeight="Medium" FontSize="12"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="💾 Save Driver (.cs)" Command="{Binding SaveToFileCommand}" 
+                            Style="{StaticResource IosPrimaryButtonStyle}" FontSize="13" Padding="20,8"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>
