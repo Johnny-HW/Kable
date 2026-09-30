@@ -368,23 +368,56 @@ public sealed partial class KableSession<TMessage>
     /// <summary>
     /// Background worker loop for persisting overflowed alarms to external storage.
     /// Decouples persistence I/O from the inbound dispatch loop to prevent blocking normal request-response routing.
-    /// If storage persistence fails or the spool queue overflows, it explicitly aborts the session.
+    /// Passes a CancellationToken with AlarmSpoolTimeout to the callback.
+    /// If storage persistence fails, times out, or the spool queue overflows, it explicitly aborts the session.
     /// </summary>
     private async Task AlarmSpoolWorkerLoopAsync()
     {
         if (_alarmSpoolQueue == null || _sessionOptions.OnAlarmOverflowAsync == null) return;
 
+        var token = _sessionCts.Token;
+        var reader = _alarmSpoolQueue.Reader;
+
         try
         {
-            var reader = _alarmSpoolQueue.Reader;
-            while (await reader.WaitToReadAsync(_sessionCts.Token).ConfigureAwait(false))
+            while (!token.IsCancellationRequested)
             {
+                if (!await reader.WaitToReadAsync(token).ConfigureAwait(false))
+                {
+                    break;
+                }
+
                 while (reader.TryRead(out var msg))
                 {
                     bool success;
+                    using var spoolCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    if (_sessionOptions.AlarmSpoolTimeout > TimeSpan.Zero)
+                    {
+                        spoolCts.CancelAfter(_sessionOptions.AlarmSpoolTimeout);
+                    }
+
                     try
                     {
-                        success = await _sessionOptions.OnAlarmOverflowAsync(msg).ConfigureAwait(false);
+                        success = await _sessionOptions.OnAlarmOverflowAsync(msg, spoolCts.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested)
+                    {
+                        // 세션 종료(Stop/Dispose)에 의한 취소: 정상 cooperative 종료
+                        return;
+                    }
+                    catch (OperationCanceledException) when (spoolCts.IsCancellationRequested)
+                    {
+                        // 저장소 처리 제한시간 초과
+                        _observer?.OnPacketTrace(new PacketTraceRecord(
+                            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                            "ALARM_SPOOL_TIMEOUT", ReadOnlyMemory<byte>.Empty,
+                            $"Alarm persistence timed out after {_sessionOptions.AlarmSpoolTimeout.TotalMilliseconds:F0}ms for alarm ({msg}). Aborting session.",
+                            _sessionOptions.AlarmSpoolTimeout, LogLevel.Critical));
+
+                        var timeoutEx = new AlarmBufferOverflowException(
+                            $"Alarm storage persistence timed out after {_sessionOptions.AlarmSpoolTimeout.TotalMilliseconds:F0}ms for alarm ({msg}). Aborting session.");
+                        _ = Task.Run(() => PerformCleanupAsync(timeoutEx));
+                        return;
                     }
                     catch (Exception ex)
                     {
@@ -428,6 +461,22 @@ public sealed partial class KableSession<TMessage>
         catch (Exception ex)
         {
             _ = Task.Run(() => PerformCleanupAsync(ex));
+        }
+        finally
+        {
+            // 세션 종료 시 잔여 미저장 알람 드레인 처리 (UnspooledAlarmDrainPolicy)
+            if (_sessionOptions.UnspooledAlarmDrainPolicy == UnspooledAlarmDrainPolicy.DrainWithinTimeout)
+            {
+                while (reader.TryRead(out var residualMsg))
+                {
+                    try
+                    {
+                        using var drainCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                        await _sessionOptions.OnAlarmOverflowAsync(residualMsg, drainCts.Token).ConfigureAwait(false);
+                    }
+                    catch { }
+                }
+            }
         }
     }
 }

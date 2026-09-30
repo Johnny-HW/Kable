@@ -30,6 +30,12 @@ public sealed partial class KableSession<TMessage>
 
     public async ValueTask StartAsync(CancellationToken ct = default)
     {
+        if (_sessionOptions.AlarmOverflowMode == AlarmOverflowMode.SpoolToStorage && _sessionOptions.OnAlarmOverflowAsync == null)
+        {
+            throw new InvalidOperationException(
+                "KableSession configuration error: AlarmOverflowMode is set to SpoolToStorage, but OnAlarmOverflowAsync callback is not provided.");
+        }
+
         bool isStarter = false;
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _sessionCts.Token);
 

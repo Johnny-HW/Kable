@@ -75,6 +75,12 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
         // 알람 스풀 큐: SpoolToStorage 모드일 때 외부 저장소 비동기 저장 워커용 유한 큐
         if (_sessionOptions.AlarmOverflowMode == AlarmOverflowMode.SpoolToStorage)
         {
+            if (_sessionOptions.OnAlarmOverflowAsync == null)
+            {
+                throw new InvalidOperationException(
+                    "KableSession configuration error: AlarmOverflowMode is set to SpoolToStorage, but OnAlarmOverflowAsync callback is not provided.");
+            }
+
             var spoolOptions = new BoundedChannelOptions(_sessionOptions.AlarmSpoolQueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.Wait,

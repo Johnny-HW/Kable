@@ -37,16 +37,51 @@ public sealed class KableSessionOptions<TMessage>
     public AlarmOverflowMode AlarmOverflowMode { get; set; } = AlarmOverflowMode.ThrowAndAbort;
 
     /// <summary>
-    /// AlarmOverflowMode.SpoolToStorage 모드일 때 호출되는 비동기 외부 저장소 이관 핸들러 (디스크/DB 영속화).
-    /// 반환값이 true이면 성공적으로 이관된 것으로 간주하며, false이면 세션을 중단합니다.
+    /// AlarmOverflowMode.SpoolToStorage 모드일 때 비동기 외부 저장소 이관 핸들러에 적용할 제한시간 (기본값: 3초).
+    /// 저장 작업이 이 제한시간을 초과하거나 세션 종료 시 토큰이 취소되어 워커 누수를 차단합니다.
     /// </summary>
-    public System.Func<TMessage, System.Threading.Tasks.ValueTask<bool>>? OnAlarmOverflowAsync { get; set; }
+    public TimeSpan AlarmSpoolTimeout { get; set; } = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// AlarmOverflowMode.SpoolToStorage 모드일 때 세션 종료 시 스풀 큐에 남아있는 미저장 알람 처리 정책.
+    /// </summary>
+    public UnspooledAlarmDrainPolicy UnspooledAlarmDrainPolicy { get; set; } = UnspooledAlarmDrainPolicy.DrainWithinTimeout;
+
+    /// <summary>
+    /// AlarmOverflowMode.SpoolToStorage 모드일 때 호출되는 비동기 외부 저장소 이관 핸들러 (메시지, 취소 토큰).
+    /// 반환값이 true이면 성공적으로 이관된 것으로 간주하며, false이거나 취소/실패 시 세션을 중단합니다.
+    /// </summary>
+    public Func<TMessage, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>>? OnAlarmOverflowAsync { get; set; }
+
+    /// <summary>
+    /// 취소 토큰이 필요 없는 단일 인자 람다를 위한 편의 설정 메서드.
+    /// </summary>
+    public void SetAlarmOverflowHandler(Func<TMessage, System.Threading.Tasks.ValueTask<bool>> handler)
+    {
+        OnAlarmOverflowAsync = (msg, _) => handler(msg);
+    }
 
     /// <summary>
     /// AlarmOverflowMode.SpoolToStorage 모드일 때 사용하는 비동기 알람 스풀 큐의 최대 용량 (기본값: 1,000).
     /// 디스패치 루프는 큐 등록만 수행하며, 스풀 큐 포화 또는 저장소 실패 시 명시적으로 세션을 중단합니다.
     /// </summary>
     public int AlarmSpoolQueueCapacity { get; set; } = 1000;
+}
+
+/// <summary>
+/// 세션 종료 시 스풀 큐에 남아있는 미저장 알람의 배출 정책.
+/// </summary>
+public enum UnspooledAlarmDrainPolicy
+{
+    /// <summary>
+    /// 세션 종료 시 남아있는 알람을 지정된 제한시간 내에 최대한 외부 저장소로 배출 시도.
+    /// </summary>
+    DrainWithinTimeout = 0,
+
+    /// <summary>
+    /// 세션 종료 시 즉시 중단하고 잔여 큐를 비움.
+    /// </summary>
+    AbortImmediately = 1
 }
 
 /// <summary>
