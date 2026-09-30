@@ -9,12 +9,11 @@
     
     <!-- NuGet 패키지 메타데이터 (글로벌 오픈소스 규격) -->
     <PackageId>Kable</PackageId>
-    <Version>1.4.0</Version>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <Description>High-performance, Zero-Allocation reactive hardware communication engine combining Bedrock Pipelines and RSocket interaction patterns.</Description>
     <PackageTags>industrial;hardware;serial;socket;namedpipe;pipelines;rsocket;reactive;zerogc</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
   </PropertyGroup>

@@ -99,15 +99,15 @@ public class SessionInterleavingAndResilienceTests
 
         await actTimeout.Should().ThrowAsync<DeviceTimeoutException>();
 
+        // Fail-safe industrial design: Session must abort on unkeyed FIFO timeout to prevent late response pollution
+        session.IsConnected.Should().BeFalse();
+
         await factory.Context.WriteAsciiLineAsync("LATE_PHANTOM_RESPONSE", 0x0A);
         await Task.Delay(50);
 
-        var newReqTask = session.RequestAsync<string>("REQ_CLEAN", TimeSpan.FromSeconds(2));
-        await factory.Context.WriteAsciiLineAsync("CLEAN_RESPONSE", 0x0A);
-
-        var actualRes = await newReqTask;
-        actualRes.Should().Be("CLEAN_RESPONSE");
-        actualRes.Should().NotBe("LATE_PHANTOM_RESPONSE");
+        // Next request on this disconnected session must fail-fast without data corruption
+        Func<Task> actClean = async () => await session.RequestAsync<string>("REQ_CLEAN", TimeSpan.FromSeconds(2));
+        await actClean.Should().ThrowAsync<DeviceDisconnectedException>();
     }
 
     [Fact]
@@ -326,30 +326,14 @@ public class SessionInterleavingAndResilienceTests
             await session.RequestAsync<string>("LATE_REQ_1", TimeSpan.FromMilliseconds(50));
         await actTimeout.Should().ThrowAsync<DeviceTimeoutException>();
 
-        // 2. Late response for Request 1 arrives while NO request is active
+        // 2. Late response for Request 1 arrives after session was fail-safe aborted
+        session.IsConnected.Should().BeFalse();
         await factory.Context.WriteAsciiLineAsync("LATE_RESP_1", 0x0A);
         await Task.Delay(50);
 
-        // 3. Request 2 is issued subsequently
-        var req2Task = session.RequestAsync<string>("NORMAL_REQ_2", TimeSpan.FromSeconds(3)).AsTask();
-        await factory.Context.WriteAsciiLineAsync("RESP_2", 0x0A);
-
-        var res2 = await req2Task;
-        // Request 2 should match its own response, not the late response 1!
-        res2.Should().Be("RESP_2");
-
-        // Late response 1 was routed into the unhandled Stream
-        using var streamCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
-        bool foundLate = false;
-        await foreach (var item in session.Stream.WithCancellation(streamCts.Token))
-        {
-            if (item == "LATE_RESP_1")
-            {
-                foundLate = true;
-                break;
-            }
-        }
-        foundLate.Should().BeTrue();
+        // 3. Request 2 on the aborted session must fail-fast without crosstalk
+        Func<Task> actReq2 = async () => await session.RequestAsync<string>("NORMAL_REQ_2", TimeSpan.FromSeconds(3));
+        await actReq2.Should().ThrowAsync<DeviceDisconnectedException>();
     }
 
     [Fact]
@@ -451,11 +435,11 @@ public class SessionInterleavingAndResilienceTests
             await session.RequestAsync<string>("CANCELED_CMD", TimeSpan.FromSeconds(5), callerCts.Token);
         await actCanceled.Should().ThrowAsync<OperationCanceledException>();
 
-        // Subsequent call must succeed seamlessly
-        var nextReq = session.RequestAsync<string>("NEXT_HEALTHY_CMD", TimeSpan.FromSeconds(3));
-        await factory.Context.WriteAsciiLineAsync("HEALTHY_OK", 0x0A);
-        var res = await nextReq;
-        res.Should().Be("HEALTHY_OK");
+        // Fail-safe industrial design: cancellation after transmit aborts session to prevent crosstalk
+        session.IsConnected.Should().BeFalse();
+
+        Func<Task> actNext = async () => await session.RequestAsync<string>("NEXT_HEALTHY_CMD", TimeSpan.FromSeconds(3));
+        await actNext.Should().ThrowAsync<DeviceDisconnectedException>();
     }
 
     [Fact]

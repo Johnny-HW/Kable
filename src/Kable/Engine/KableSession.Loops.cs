@@ -46,36 +46,97 @@ public sealed partial class KableSession<TMessage>
                     }
                 }
 
-                // 2. Encode primary message
-                var commandsToComplete = new List<OutboundCommand>(8) { cmd };
-                _codec.Encode(cmd.Message, output);
-
-                // 3. Batching: drain any currently pending messages before triggering syscall flush
-                while (_outboundUrgentQueue.Reader.TryRead(out var queuedUrgent))
+                // If primary command was canceled while waiting in queue, skip transmission completely
+                if (cmd.IsCanceled)
                 {
-                    commandsToComplete.Add(queuedUrgent);
-                    _codec.Encode(queuedUrgent.Message, output);
+                    cmd.Completion.TrySetCanceled(cmd.CancellationToken);
+                    continue;
                 }
 
-                while (commandsToComplete.Count < 32 && _outboundNormalQueue.Reader.TryRead(out var queuedNormal))
+                // 2. Encode primary and batched messages inside safe bulkhead
+                var commandsToComplete = new List<OutboundCommand>(8) { cmd };
+                try
                 {
-                    commandsToComplete.Add(queuedNormal);
-                    _codec.Encode(queuedNormal.Message, output);
+                    _codec.Encode(cmd.Message, output);
+
+                    // 3. Batching: drain any currently pending messages before triggering syscall flush
+                    while (_outboundUrgentQueue.Reader.TryRead(out var queuedUrgent))
+                    {
+                        if (queuedUrgent.IsCanceled)
+                        {
+                            queuedUrgent.Completion.TrySetCanceled(queuedUrgent.CancellationToken);
+                            continue;
+                        }
+                        commandsToComplete.Add(queuedUrgent);
+                        _codec.Encode(queuedUrgent.Message, output);
+                    }
+
+                    while (commandsToComplete.Count < 32 && _outboundNormalQueue.Reader.TryRead(out var queuedNormal))
+                    {
+                        if (queuedNormal.IsCanceled)
+                        {
+                            queuedNormal.Completion.TrySetCanceled(queuedNormal.CancellationToken);
+                            continue;
+                        }
+                        commandsToComplete.Add(queuedNormal);
+                        _codec.Encode(queuedNormal.Message, output);
+                    }
+                }
+                catch (Exception encodeEx)
+                {
+                    Exception translatedEx = encodeEx;
+                    if (encodeEx is InvalidOperationException ||
+                        encodeEx is System.IO.IOException ||
+                        encodeEx.InnerException is System.Net.Sockets.SocketException ||
+                        encodeEx.InnerException is System.IO.IOException)
+                    {
+                        translatedEx = new DeviceDisconnectedException("Transport disconnected or closed during encoding/writing.", encodeEx);
+                    }
+
+                    foreach (var c in commandsToComplete)
+                    {
+                        c.Completion.TrySetException(translatedEx);
+                    }
+                    throw;
                 }
 
                 // 4. Single consolidated FlushAsync
                 try
                 {
                     var flushResult = await output.FlushAsync(token).ConfigureAwait(false);
+                    if (flushResult.IsCanceled)
+                    {
+                        var discEx = new DeviceDisconnectedException("Hardware connection closed during outbound flush.");
+                        foreach (var c in commandsToComplete)
+                        {
+                            c.Completion.TrySetException(discEx);
+                        }
+                        break;
+                    }
+
+                    if (flushResult.IsCompleted)
+                    {
+                        var discEx = new DeviceDisconnectedException("Transport output pipe completed during flush.");
+                        foreach (var c in commandsToComplete)
+                        {
+                            c.Completion.TrySetException(discEx);
+                        }
+                        break;
+                    }
+
                     foreach (var c in commandsToComplete)
                     {
                         c.Completion.TrySetResult(true);
                     }
-
-                    if (flushResult.IsCompleted || flushResult.IsCanceled)
+                }
+                catch (OperationCanceledException ocex)
+                {
+                    var discEx = new DeviceDisconnectedException("Hardware connection closed during outbound flush.", ocex);
+                    foreach (var c in commandsToComplete)
                     {
-                        break;
+                        c.Completion.TrySetException(discEx);
                     }
+                    break;
                 }
                 catch (Exception flushEx)
                 {
@@ -105,6 +166,9 @@ public sealed partial class KableSession<TMessage>
             _observer?.OnPacketTrace(new PacketTraceRecord(
                 DateTime.UtcNow, PacketDirection.Tx, TrafficKind.SpontaneousAlarm,
                 "IO_FLUSH_ERROR", ReadOnlyMemory<byte>.Empty, ex.Message, TimeSpan.Zero, LogLevel.Error));
+        }
+        finally
+        {
             OnConnectionClosed();
         }
     }
@@ -162,7 +226,7 @@ public sealed partial class KableSession<TMessage>
                 {
                     try
                     {
-                        DispatchMessage(message);
+                        await DispatchMessageAsync(message).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -191,7 +255,7 @@ public sealed partial class KableSession<TMessage>
             {
                 try
                 {
-                    DispatchMessage(residualMessage);
+                    await DispatchMessageAsync(residualMessage).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -204,7 +268,7 @@ public sealed partial class KableSession<TMessage>
         }
     }
 
-    private void DispatchMessage(TMessage message)
+    private async ValueTask DispatchMessageAsync(TMessage message)
     {
         Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
 
@@ -213,13 +277,15 @@ public sealed partial class KableSession<TMessage>
             return;
         }
 
-        // Autonomous / Unsolicited stream check
-        if (_codec.IsAutonomousMessage(message))
+        // Autonomous / Unsolicited stream or Alarm check (Alarms must never be consumed as command responses)
+        bool isAutonomous = _codec.IsAutonomousMessage(message);
+        bool isAlarm = _sessionOptions.IsAlarmMessage != null
+            ? _sessionOptions.IsAlarmMessage(message)
+            : DefaultIsAlarm(message);
+
+        if (isAutonomous || isAlarm)
         {
-            _incomingStream.Writer.TryWrite(message);
-            _observer?.OnPacketTrace(new PacketTraceRecord(
-                DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                "STREAM", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
+            await EnqueueIncomingMessageAsync(message).ConfigureAwait(false);
             return;
         }
 
@@ -229,6 +295,9 @@ public sealed partial class KableSession<TMessage>
             var cid = _codec.ExtractCorrelationId(message);
             if (cid != null && _pendingRequests.TryRemove(cid, out var tcs))
             {
+                _observer?.OnPacketTrace(new PacketTraceRecord(
+                    DateTime.UtcNow, PacketDirection.Rx, TrafficKind.AperiodicCommand,
+                    "RECV_CID", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
                 tcs.TrySetResult(message);
                 return;
             }
@@ -237,16 +306,16 @@ public sealed partial class KableSession<TMessage>
         {
             if (_currentFifoTcs != null && !_currentFifoTcs.Task.IsCompleted)
             {
+                _observer?.OnPacketTrace(new PacketTraceRecord(
+                    DateTime.UtcNow, PacketDirection.Rx, TrafficKind.AperiodicCommand,
+                    "RECV_FIFO", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
                 _currentFifoTcs.TrySetResult(message);
                 return;
             }
         }
 
         // Fallback to incoming stream
-        _incomingStream.Writer.TryWrite(message);
-        _observer?.OnPacketTrace(new PacketTraceRecord(
-            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-            "STREAM", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
+        await EnqueueIncomingMessageAsync(message).ConfigureAwait(false);
     }
 
     private async Task HeartbeatLoopAsync()

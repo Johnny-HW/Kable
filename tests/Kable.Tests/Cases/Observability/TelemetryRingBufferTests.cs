@@ -141,27 +141,34 @@ public class TelemetryRingBufferTests
         var mockObserver = Substitute.For<ICommObserver>();
         var factory = new TestMemoryConnectionFactory();
         var codec = new AsciiLineCodec(delimiter: 0x0A);
-        await using var session = new KableSession<string>(factory, codec, mockObserver);
-        await session.StartAsync();
+        await using (var session = new KableSession<string>(factory, codec, mockObserver))
+        {
+            await session.StartAsync();
 
-        // 1. Request Timeout -> LogLevel.Warning
-        Func<Task> actTimeout = async () =>
-            await session.RequestAsync<string>("SILENT_REQ", TimeSpan.FromMilliseconds(50));
-        await actTimeout.Should().ThrowAsync<DeviceTimeoutException>();
+            // 1. Request Timeout -> LogLevel.Warning (aborts FIFO session to prevent ghost response)
+            Func<Task> actTimeout = async () =>
+                await session.RequestAsync<string>("SILENT_REQ", TimeSpan.FromMilliseconds(50));
+            await actTimeout.Should().ThrowAsync<DeviceTimeoutException>();
 
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Warning &&
-            r.Tag == "DEVICE_TIMEOUT" &&
-            r.Kind == TrafficKind.SpontaneousAlarm));
+            mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
+                r.Level == LogLevel.Warning &&
+                r.Tag == "DEVICE_TIMEOUT" &&
+                r.Kind == TrafficKind.SpontaneousAlarm));
+        }
 
-        // 2. ReadLoop Stream Fault -> LogLevel.Error
-        factory.Context.RemoteWrite.Complete(new System.IO.IOException("Simulated physical pipe corruption"));
-        await Task.Delay(100);
+        // 2. ReadLoop Stream Fault on active session -> LogLevel.Error
+        var factory2 = new TestMemoryConnectionFactory();
+        await using (var session2 = new KableSession<string>(factory2, codec, mockObserver))
+        {
+            await session2.StartAsync();
+            factory2.Context.RemoteWrite.Complete(new System.IO.IOException("Simulated physical pipe corruption"));
+            await Task.Delay(100);
 
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Error &&
-            r.Tag == "READ_LOOP_FAULT" &&
-            r.Kind == TrafficKind.SpontaneousAlarm));
+            mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
+                r.Level == LogLevel.Error &&
+                r.Tag == "READ_LOOP_FAULT" &&
+                r.Kind == TrafficKind.SpontaneousAlarm));
+        }
     }
 
     private sealed class FaultyAutonomousCodec : IProtocolCodec<string>

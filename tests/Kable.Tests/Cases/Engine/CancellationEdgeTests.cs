@@ -30,11 +30,11 @@ public class CancellationEdgeTests
         Func<Task> act1 = async () => await firstTask;
         await act1.Should().ThrowAsync<OperationCanceledException>();
 
-        var secondTask = session.RequestAsync<string>("SECOND_CMD", TimeSpan.FromSeconds(5));
-        await factory.Context.WriteAsciiLineAsync("SECOND_RESP", 0x0A);
-        var secondResp = await secondTask;
+        // Fail-safe industrial design: cancellation after transmit aborts session
+        session.IsConnected.Should().BeFalse();
 
-        secondResp.Should().Be("SECOND_RESP");
+        Func<Task> actSecond = async () => await session.RequestAsync<string>("SECOND_CMD", TimeSpan.FromSeconds(5));
+        await actSecond.Should().ThrowAsync<DeviceDisconnectedException>();
     }
 
     [Fact]

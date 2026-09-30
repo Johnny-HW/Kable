@@ -28,11 +28,12 @@ public class WatchdogTimeoutAndDisconnectTests
         var ex = await actTimeout.Should().ThrowAsync<DeviceTimeoutException>();
         ex.Which.Command.Should().Be("SILENT_CMD");
 
+        // Fail-safe industrial design: FIFO timeout aborts the session
+        session.IsConnected.Should().BeFalse();
 
-        var nextTask = session.RequestAsync<string>("NEXT_CMD", TimeSpan.FromSeconds(2));
-        await factory.Context.WriteAsciiLineAsync("NEXT_ACK", 0x0A);
-        var res = await nextTask;
-        res.Should().Be("NEXT_ACK");
+        // Next request on disconnected session must fail-fast with DeviceDisconnectedException
+        Func<Task> actNext = async () => await session.RequestAsync<string>("NEXT_CMD", TimeSpan.FromSeconds(2));
+        await actNext.Should().ThrowAsync<DeviceDisconnectedException>();
     }
 
     [Fact]

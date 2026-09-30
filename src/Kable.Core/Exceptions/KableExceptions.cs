@@ -62,3 +62,12 @@ public class ProtocolViolationException : KableException
         KableLocalizer.Instance.GetErrorMessage(ErrorCode, Message);
 }
 
+public class AlarmBufferOverflowException : KableException
+{
+    public AlarmBufferOverflowException(string message) 
+        : base(KableErrorCode.BufferOverflow, message) { }
+
+    public AlarmBufferOverflowException(string message, Exception innerException) 
+        : base(KableErrorCode.BufferOverflow, message, innerException) { }
+}
+
