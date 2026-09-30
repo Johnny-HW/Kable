@@ -671,6 +671,62 @@ public class SessionIndustrialReliabilityTests
         summary.UnprocessedCount.Should().Be(2, "Failed and thrown alarms during spooling must be tracked as Unprocessed");
         summary.StoredCount.Should().Be(1, "Successfully stored alarm must be tracked as Stored");
     }
+
+    [Fact(Timeout = 8000)]
+    public async Task TC_REL_29_AlarmSpool_DrainTimeoutDecoupledFromFixed2sCleanup_AwaitsWorkerToCompletion()
+    {
+        // 배출 제한시간은 워커가 관리하고(3초), Dispose는 기존 고정 2초에 끊기지 않고 실제 워커 종료까지 대기함을 검증
+        var factory = new TestMemoryConnectionFactory();
+        var codec = new AsciiLineCodec();
+
+        var options = new KableSessionOptions<string>
+        {
+            AlarmQueueCapacity = 1,
+            AlarmSpoolQueueCapacity = 20,
+            AlarmOverflowMode = AlarmOverflowMode.SpoolToStorage,
+            AlarmSpoolTimeout = TimeSpan.FromSeconds(5),
+            AlarmSpoolDrainTimeout = TimeSpan.FromSeconds(3), // 3초 배출 시간 설정
+            UnspooledAlarmDrainPolicy = UnspooledAlarmDrainPolicy.DrainWithinTimeout,
+            IsAlarmMessage = msg => msg.StartsWith("$ALARM", StringComparison.OrdinalIgnoreCase),
+            OnAlarmOverflowAsync = async (msg, ct) =>
+            {
+                // 메시지당 250ms 소요 -> 12개면 약 3,000ms 소요
+                await Task.Delay(250, ct);
+                return true;
+            }
+        };
+
+        var session = new KableSession<string>(factory, codec, options);
+        await session.StartAsync();
+
+        // 13개 알람 주입 (1개 스트림 + 12개 스풀 큐)
+        for (int i = 1; i <= 13; i++)
+        {
+            await factory.Context.WriteAsciiLineAsync($"$ALARM_{i:D2}", 0x0A);
+        }
+
+        // 워커가 첫 메시지를 가져갈 때까지 잠시 대기
+        await Task.Delay(50);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var disposeTask = session.DisposeAsync().AsTask();
+
+        // 핵심 검증 1: 기존 2.0초 고정 정리 타임아웃 시점(2.1초)에 Dispose가 먼저 완료되지 않아야 함!
+        await Task.Delay(2100);
+        disposeTask.IsCompleted.Should().BeFalse("Dispose must NOT prematurely complete at fixed 2s timeout when drain timeout is 3s");
+
+        // 핵심 검증 2: 3초 배출 완료 시점 이후에는 Dispose가 정상 완료되어야 함
+        await disposeTask.WaitAsync(TimeSpan.FromSeconds(3));
+        stopwatch.Stop();
+
+        disposeTask.IsCompleted.Should().BeTrue();
+        stopwatch.ElapsedMilliseconds.Should().BeGreaterThanOrEqualTo(2500, "Dispose must wait for the 3s worker drain to finish");
+
+        // 핵심 검증 3: Dispose 반환 시점에 모든 알람(12개)의 결과가 Stored + InDoubt + Unprocessed로 정확히 집계됨
+        var summary = session.SpoolSummary;
+        (summary.StoredCount + summary.InDoubtCount + summary.UnprocessedCount).Should().Be(12);
+        summary.StoredCount.Should().BeGreaterThanOrEqualTo(8, "At least 8 messages should be stored in ~2.5-3.0s");
+    }
 }
 
 internal sealed class FailingConnectionFactory : IConnectionFactory

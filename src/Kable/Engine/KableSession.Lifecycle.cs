@@ -196,13 +196,14 @@ public sealed partial class KableSession<TMessage>
 
             OnConnectionClosed(reason);
 
+            // 1. 신규 스풀 등록 차단
             _alarmSpoolQueue?.Writer.TryComplete();
 
+            // 2. 일반 송수신 루프는 기존 종료 정책(고정 2초 타임아웃)으로 정리
             var tasksToWait = new List<Task>();
             if (_readLoopTask != null) tasksToWait.Add(_readLoopTask);
             if (_outboundPumpTask != null) tasksToWait.Add(_outboundPumpTask);
             if (_dispatchLoopTask != null) tasksToWait.Add(_dispatchLoopTask);
-            if (_alarmSpoolWorkerTask != null) tasksToWait.Add(_alarmSpoolWorkerTask);
             if (_heartbeatTask != null) tasksToWait.Add(_heartbeatTask);
 
             if (tasksToWait.Count > 0)
@@ -212,6 +213,21 @@ public sealed partial class KableSession<TMessage>
                 await Task.WhenAny(joinAllTask, timeoutTask).ConfigureAwait(false);
             }
 
+            // 3. _alarmSpoolWorkerTask는 고정 2초에 묶지 않고 직접 await (배출 제한시간은 워커가 관리)
+            Exception? workerException = null;
+            if (_alarmSpoolWorkerTask != null)
+            {
+                try
+                {
+                    await _alarmSpoolWorkerTask.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    workerException = ex;
+                }
+            }
+
+            // 4. 워커 종료(SpoolSummary 확정) 후 연결 리소스 정리
             if (_context != null)
             {
                 try
@@ -232,7 +248,15 @@ public sealed partial class KableSession<TMessage>
                 _lifecycleLock.Release();
             }
 
-            _cleanupTcs.TrySetResult(true);
+            if (workerException != null)
+            {
+                _cleanupTcs.TrySetException(workerException);
+                throw workerException;
+            }
+            else
+            {
+                _cleanupTcs.TrySetResult(true);
+            }
         }
         catch (Exception ex)
         {
