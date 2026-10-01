@@ -64,11 +64,28 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
 
     public override void Encode(string message, IBufferWriter<byte> output)
     {
-        var bytes = _encoding.GetBytes(message);
-        var span = output.GetSpan(bytes.Length + 1);
-        bytes.CopyTo(span);
-        span[bytes.Length] = _delimiter;
-        output.Advance(bytes.Length + 1);
+        if (message == null) throw new ArgumentNullException(nameof(message));
+        int byteCount = _encoding.GetByteCount(message);
+        var span = output.GetSpan(checked(byteCount + 1));
+#if NETCOREAPP || NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        _encoding.GetBytes(message.AsSpan(), span);
+#else
+        var chars = ArrayPool<char>.Shared.Rent(Math.Max(1, message.Length));
+        var bytes = ArrayPool<byte>.Shared.Rent(Math.Max(1, byteCount));
+        try
+        {
+            message.CopyTo(0, chars, 0, message.Length);
+            int written = _encoding.GetBytes(chars, 0, message.Length, bytes, 0);
+            bytes.AsSpan(0, written).CopyTo(span);
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(chars);
+            ArrayPool<byte>.Shared.Return(bytes);
+        }
+#endif
+        span[byteCount] = _delimiter;
+        output.Advance(byteCount + 1);
     }
 
     private string GetStringFromSequence(in ReadOnlySequence<byte> sequence)
