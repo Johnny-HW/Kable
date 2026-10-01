@@ -25,9 +25,38 @@ using Kable.Observability;
 public static class KableSimple
 {
     /// <summary>
-    /// 시리얼(RS-232/422/485) 포트를 개방하고 KableSimple 클라이언트를 시작합니다.
+    /// KableSimpleOptions 구성을 바탕으로 시리얼(RS-232/422/485) 포트를 개방하고 클라이언트를 시작합니다.
     /// </summary>
     public static async ValueTask<IKableSimpleClient> OpenSerialAsync(
+        string portName,
+        int baudRate,
+        Parity parity,
+        int dataBits,
+        StopBits stopBits,
+        KableSimpleOptions options,
+        CancellationToken ct = default)
+    {
+        if (options == null) throw new ArgumentNullException(nameof(options));
+        var codec = new AsciiLineCodec(options.Delimiter, options.Encoding, isAutonomousPredicate: options.IsAutonomousMessage);
+        var builder = new KableClientBuilder<string>()
+            .UseSerialPort(portName, baudRate, parity, dataBits, stopBits)
+            .UseCodec(codec);
+
+        if (options.Observer != null)
+        {
+            builder.UseObserver(options.Observer);
+        }
+
+        var session = builder.Build();
+        var client = new KableSimpleClient(session, options.Observer, options.DefaultTimeout);
+        await client.InitializeAsync(ct).ConfigureAwait(false);
+        return client;
+    }
+
+    /// <summary>
+    /// 시리얼(RS-232/422/485) 포트를 개방하고 KableSimple 클라이언트를 시작합니다.
+    /// </summary>
+    public static ValueTask<IKableSimpleClient> OpenSerialAsync(
         string portName,
         int baudRate = 9600,
         Parity parity = Parity.None,
@@ -38,18 +67,36 @@ public static class KableSimple
         ICommObserver? observer = null,
         CancellationToken ct = default)
     {
-        var codec = new AsciiLineCodec(delimiter, encoding);
+        return OpenSerialAsync(portName, baudRate, parity, dataBits, stopBits, new KableSimpleOptions
+        {
+            Delimiter = delimiter,
+            Encoding = encoding,
+            Observer = observer
+        }, ct);
+    }
+
+    /// <summary>
+    /// KableSimpleOptions 구성을 바탕으로 TCP/IP 소켓을 연결하고 클라이언트를 시작합니다.
+    /// </summary>
+    public static async ValueTask<IKableSimpleClient> OpenTcpAsync(
+        string host,
+        int port,
+        KableSimpleOptions options,
+        CancellationToken ct = default)
+    {
+        if (options == null) throw new ArgumentNullException(nameof(options));
+        var codec = new AsciiLineCodec(options.Delimiter, options.Encoding, isAutonomousPredicate: options.IsAutonomousMessage);
         var builder = new KableClientBuilder<string>()
-            .UseSerialPort(portName, baudRate, parity, dataBits, stopBits)
+            .UseTcp(host, port)
             .UseCodec(codec);
 
-        if (observer != null)
+        if (options.Observer != null)
         {
-            builder.UseObserver(observer);
+            builder.UseObserver(options.Observer);
         }
 
         var session = builder.Build();
-        var client = new KableSimpleClient(session, observer);
+        var client = new KableSimpleClient(session, options.Observer, options.DefaultTimeout);
         await client.InitializeAsync(ct).ConfigureAwait(false);
         return client;
     }
@@ -57,7 +104,7 @@ public static class KableSimple
     /// <summary>
     /// TCP/IP 소켓을 연결하고 KableSimple 클라이언트를 시작합니다.
     /// </summary>
-    public static async ValueTask<IKableSimpleClient> OpenTcpAsync(
+    public static ValueTask<IKableSimpleClient> OpenTcpAsync(
         string host,
         int port,
         byte delimiter = 0x0A,
@@ -65,18 +112,37 @@ public static class KableSimple
         ICommObserver? observer = null,
         CancellationToken ct = default)
     {
-        var codec = new AsciiLineCodec(delimiter, encoding);
+        return OpenTcpAsync(host, port, new KableSimpleOptions
+        {
+            Delimiter = delimiter,
+            Encoding = encoding,
+            Observer = observer
+        }, ct);
+    }
+
+    /// <summary>
+    /// KableSimpleOptions 구성을 바탕으로 Named Pipe를 연결하고 클라이언트를 시작합니다.
+    /// </summary>
+    public static async ValueTask<IKableSimpleClient> OpenNamedPipeAsync(
+        string pipeName,
+        string serverName,
+        int timeoutMs,
+        KableSimpleOptions options,
+        CancellationToken ct = default)
+    {
+        if (options == null) throw new ArgumentNullException(nameof(options));
+        var codec = new AsciiLineCodec(options.Delimiter, options.Encoding, isAutonomousPredicate: options.IsAutonomousMessage);
         var builder = new KableClientBuilder<string>()
-            .UseTcp(host, port)
+            .UseNamedPipe(pipeName, serverName, timeoutMs)
             .UseCodec(codec);
 
-        if (observer != null)
+        if (options.Observer != null)
         {
-            builder.UseObserver(observer);
+            builder.UseObserver(options.Observer);
         }
 
         var session = builder.Build();
-        var client = new KableSimpleClient(session, observer);
+        var client = new KableSimpleClient(session, options.Observer, options.DefaultTimeout);
         await client.InitializeAsync(ct).ConfigureAwait(false);
         return client;
     }
@@ -84,7 +150,7 @@ public static class KableSimple
     /// <summary>
     /// 로컬 고속 IPC인 Named Pipe를 연결하고 KableSimple 클라이언트를 시작합니다.
     /// </summary>
-    public static async ValueTask<IKableSimpleClient> OpenNamedPipeAsync(
+    public static ValueTask<IKableSimpleClient> OpenNamedPipeAsync(
         string pipeName,
         string serverName = ".",
         int timeoutMs = 5000,
@@ -93,20 +159,12 @@ public static class KableSimple
         ICommObserver? observer = null,
         CancellationToken ct = default)
     {
-        var codec = new AsciiLineCodec(delimiter, encoding);
-        var builder = new KableClientBuilder<string>()
-            .UseNamedPipe(pipeName, serverName, timeoutMs)
-            .UseCodec(codec);
-
-        if (observer != null)
+        return OpenNamedPipeAsync(pipeName, serverName, timeoutMs, new KableSimpleOptions
         {
-            builder.UseObserver(observer);
-        }
-
-        var session = builder.Build();
-        var client = new KableSimpleClient(session, observer);
-        await client.InitializeAsync(ct).ConfigureAwait(false);
-        return client;
+            Delimiter = delimiter,
+            Encoding = encoding,
+            Observer = observer
+        }, ct);
     }
 
     /// <summary>
@@ -126,6 +184,7 @@ public static class KableSimple
     {
         private readonly IDeviceSession<string> _session;
         private readonly ICommObserver? _observer;
+        private readonly TimeSpan _defaultTimeout;
         private readonly CancellationTokenSource _cts = new();
         private Task? _readLoopTask;
         private bool _disposed;
@@ -136,10 +195,11 @@ public static class KableSimple
 
         public bool IsConnected => _session.IsConnected;
 
-        public KableSimpleClient(IDeviceSession<string> session, ICommObserver? observer = null)
+        public KableSimpleClient(IDeviceSession<string> session, ICommObserver? observer = null, TimeSpan? defaultTimeout = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _observer = observer;
+            _defaultTimeout = defaultTimeout ?? TimeSpan.FromSeconds(3);
         }
 
         internal async ValueTask InitializeAsync(CancellationToken ct)
@@ -157,7 +217,7 @@ public static class KableSimple
         public async ValueTask<string> QueryAsync(string command, TimeSpan? timeout = null, CancellationToken ct = default)
         {
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
-            var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(3);
+            var effectiveTimeout = timeout ?? _defaultTimeout;
             return await _session.RequestAsync<string>(command, effectiveTimeout, ct).ConfigureAwait(false);
         }
 

@@ -28,11 +28,13 @@ public sealed class KableClientBuilder<TMessage>
 
         _deviceId = options.DeviceId ?? "DEFAULT";
 
+        int connectTimeout = options.ConnectTimeoutMs > 0 ? options.ConnectTimeoutMs : options.TimeoutMs;
+
         switch (options.Transport?.Trim().ToLowerInvariant())
         {
             case "tcp":
             case "socket":
-                UseTcp(options.Host, options.Port);
+                UseTcp(options.Host, options.Port, connectTimeout);
                 break;
 
             case "serial":
@@ -50,7 +52,7 @@ public sealed class KableClientBuilder<TMessage>
             case "namedpipe":
             case "pipe":
             case "ipc":
-                UseNamedPipe(options.PipeName, options.ServerName, options.TimeoutMs);
+                UseNamedPipe(options.PipeName, options.ServerName, connectTimeout);
                 break;
 
             case "simulator":
@@ -82,9 +84,9 @@ public sealed class KableClientBuilder<TMessage>
         return this;
     }
 
-    public KableClientBuilder<TMessage> UseTcp(string host, int port)
+    public KableClientBuilder<TMessage> UseTcp(string host, int port, int connectTimeoutMs = 0)
     {
-        _factory = new TcpConnectionFactory(host, port);
+        _factory = new TcpConnectionFactory(host, port, connectTimeoutMs);
         return this;
     }
 

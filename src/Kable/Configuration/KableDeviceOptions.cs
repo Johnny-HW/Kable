@@ -38,9 +38,20 @@ public record KableDeviceOptions
     #endregion
 
     /// <summary>
-    /// 기본 요청-응답 타임아웃 (밀리초, 기본 3000ms)
+    /// [하위 호환성 유지] 기본 연결 및 요청-응답 통합 타임아웃 (밀리초, 기본 3000ms).
+    /// 보다 명확한 구성을 위해 <see cref="ConnectTimeoutMs"/> 및 <see cref="DefaultRequestTimeoutMs"/> 사용을 권장합니다.
     /// </summary>
     public int TimeoutMs { get; init; } = 3000;
+
+    /// <summary>
+    /// 하드웨어 연결 수립 제한시간 (밀리초, 기본 5000ms).
+    /// </summary>
+    public int ConnectTimeoutMs { get; init; } = 5000;
+
+    /// <summary>
+    /// 개별 명령에 타임아웃이 명시되지 않았을 때 적용되는 기본 요청-응답 제한시간 (밀리초, 기본 3000ms).
+    /// </summary>
+    public int DefaultRequestTimeoutMs { get; init; } = 3000;
 
     /// <summary>
     /// 문자열 파리티(Parity)를 열거형으로 변환합니다.

@@ -12,8 +12,13 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
 {
     private readonly byte _delimiter;
     private readonly Encoding _encoding;
+    private readonly Func<string, bool>? _isAutonomousPredicate;
 
-    public AsciiLineCodec(byte delimiter = 0x0A, Encoding? encoding = null, int maxFrameSize = 65536)
+    public AsciiLineCodec(
+        byte delimiter = 0x0A,
+        Encoding? encoding = null,
+        int maxFrameSize = 65536,
+        Func<string, bool>? isAutonomousPredicate = null)
         : base(new DelimitedFrameOptions
         {
             StartMarker = null,
@@ -25,6 +30,7 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
     {
         _delimiter = delimiter;
         _encoding = encoding ?? Encoding.ASCII;
+        _isAutonomousPredicate = isAutonomousPredicate;
     }
 
     public override bool TryDecode(ref ReadOnlySequence<byte> buffer, out string message)
@@ -47,6 +53,11 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
     public override bool IsAutonomousMessage(string message)
     {
         if (string.IsNullOrEmpty(message)) return false;
+        if (_isAutonomousPredicate != null)
+        {
+            return _isAutonomousPredicate(message);
+        }
+
         char first = message[0];
         return first == '$' || first == '#' || first == '!' || first == '*';
     }

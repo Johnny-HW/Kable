@@ -63,11 +63,13 @@ public sealed class TcpConnectionFactory : IConnectionFactory
 {
     private readonly string _host;
     private readonly int _port;
+    private readonly int _connectTimeoutMs;
 
-    public TcpConnectionFactory(string host, int port)
+    public TcpConnectionFactory(string host, int port, int connectTimeoutMs = 0)
     {
         _host = host;
         _port = port;
+        _connectTimeoutMs = connectTimeoutMs;
     }
 
     public async ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
@@ -77,14 +79,54 @@ public sealed class TcpConnectionFactory : IConnectionFactory
             NoDelay = true
         };
 
-#if NETSTANDARD2_0
-        await Task.Factory.FromAsync(
-            socket.BeginConnect(_host, _port, null, null),
-            socket.EndConnect).ConfigureAwait(false);
-#else
-        await socket.ConnectAsync(_host, _port, ct).ConfigureAwait(false);
-#endif
+        CancellationTokenSource? timeoutCts = null;
+        CancellationTokenSource? linkedCts = null;
+        var effectiveCt = ct;
 
-        return new TcpConnectionContext(socket);
+        if (_connectTimeoutMs > 0)
+        {
+            timeoutCts = new CancellationTokenSource(_connectTimeoutMs);
+            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            effectiveCt = linkedCts.Token;
+        }
+
+        try
+        {
+#if NETSTANDARD2_0
+            var connectTask = Task.Factory.FromAsync(
+                socket.BeginConnect(_host, _port, null, null),
+                socket.EndConnect);
+
+            if (effectiveCt.CanBeCanceled)
+            {
+                using (effectiveCt.Register(() => { try { socket.Dispose(); } catch { } }))
+                {
+                    await connectTask.ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await connectTask.ConfigureAwait(false);
+            }
+#else
+            await socket.ConnectAsync(_host, _port, effectiveCt).ConfigureAwait(false);
+#endif
+            return new TcpConnectionContext(socket);
+        }
+        catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested == true && !ct.IsCancellationRequested)
+        {
+            socket.Dispose();
+            throw new TimeoutException($"TCP connection to {_host}:{_port} timed out after {_connectTimeoutMs}ms.");
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+        finally
+        {
+            linkedCts?.Dispose();
+            timeoutCts?.Dispose();
+        }
     }
 }
