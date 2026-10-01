@@ -11,9 +11,11 @@
   * [구현 및 디렉터리 구조 (Layout)](ko/04_IMPLEMENTATION_LAYOUT.md)
 
 * **신뢰성 및 프로토콜 (Reliability & Protocols)**
+  * [세션 수명 주기 및 장애 복구 (Connection Lifecycle)](ko/CONNECTION_LIFECYCLE.md)
   * [관측성 및 로깅 (Observability)](ko/03_OBSERVABILITY_LOGGING.md)
   * [산업용 체크섬 가이드 (Checksums)](ko/05_INDUSTRIAL_CHECKSUMS.md)
   * [고신뢰성 통신 로드맵 (Roadmap)](ko/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP.md)
+  * [개발자 사용성 개선 보고서 (DX Report)](ko/DEVELOPER_EXPERIENCE_IMPROVEMENT_REPORT.md)
 
 * **규약 및 거버넌스 (Governance & Standards)**
   * [코딩 컨벤션 (Conventions)](ko/CONVENTIONS.md)

@@ -7,6 +7,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-09-30
+
+### Added
+- **Core Engine Concurrency & Reliability Hardening (`KableSession`)**:
+  - **Unified Cleanup & Exception Propagation (`KableSession.Lifecycle.cs`)**:
+    - Performed cleanup exactly once by the first caller, while all concurrent and subsequent callers await `_cleanupTcs.Task`.
+    - Eliminated early return on stopped/disposed state, ensuring calls route through the shared cleanup task without accessing disposed synchronization primitives (`TC_REL_30`).
+    - Guaranteed identical failure propagation across concurrent/subsequent callers without swallowing exceptions, and ensured underlying transport connection disposal exactly once.
+    - Concurrent `StartAsync` deduplication: Guarantees that simultaneous connection attempts invoke `ConnectAsync` exactly once (`TC_REL_19`).
+    - Single cleanup runner safety: Protects against infinite wait or deadlock scenarios during hardware link termination (`TC_REL_18`).
+  - **Decoupled Asynchronous Alarm Spool Architecture (`AlarmSpooler`)**:
+    - Added configurable `AlarmQueueCapacity` and `AlarmOverflowMode` (`ThrowAndAbort`, `SpoolToStorage`, `DropOldestWithWarning`) to isolate high-frequency alarm floods from standard request-response transaction routing (`TC_REL_01`–`TC_REL_17`).
+    - Dedicated background spool worker using bounded channels to decouple persistent disk/network logging from the core dispatch loop (`TC_REL_21`, `TC_REL_22`).
+    - Graceful worker drain contract: Decoupled from arbitrary timeouts to respect `AlarmSpoolDrainTimeout` until full completion (`TC_REL_26`, `TC_REL_29`).
+    - Accurate accounting & forensics: Tracks in-flight cancellations as `InDoubt` and unprocessed alarms on shutdown, exposing `AlarmSpoolSummary` on `KableSession` and logging `ALARM_SPOOL_DRAIN_SUMMARY` trace events (`TC_REL_27`, `TC_REL_28`).
+    - Cancellation token propagation: `OnAlarmOverflowAsync` receives cancellation token and respects `AlarmSpoolTimeout`, preventing orphan worker task leaks on session dispose (`TC_REL_23`–`TC_REL_25`).
+  - **Stream Task Accumulation Defense (`KableSession.Stream.cs`)**:
+    - Reused single-slot wait tasks in `GetStreamAsync` to eliminate memory and task growth under continuous streaming subscriptions.
+    - Dedicated cancellation token source immediately drains and cancels pending channel waiters when the underlying stream breaks (`TC_REL_20`).
+- **Session Industrial Reliability Test Suite (`SessionIndustrialReliabilityTests`)**:
+  - 30 comprehensive industrial test cases (`TC_REL_01` to `TC_REL_30`) verifying edge-case concurrency, link failure recovery, worker leak prevention, and queue overflow behaviors.
+- **BenchmarkDotNet Performance Validation Suite (`Kable.Benchmarks`)**:
+  - Micro-benchmarks for Zero-GC validation, ASCII delimiter codecs, Modbus-TCP framing, and telemetry pipeline throughput.
+- **Demo Dashboard & Telemetry Code Export (`DEMOApp`)**:
+  - Enhanced industrial dashboard views with alarm monitoring panel, dynamic status indicators, and C# struct code export generator for telemetry models.
+
+### Changed
+- **Architectural Decomposition**:
+  - Modularized `KableSession.cs` into focused partial classes: `KableSession.Lifecycle.cs`, `KableSession.Messaging.cs`, `KableSession.Loops.cs`, and `KableSession.Stream.cs`.
+- **Packaging & Governance**:
+  - Harmonized Apache-2.0 open-source licensing across all project files in `Directory.Build.props`.
+  - Configured multi-target CI matrix (`.NET 10.0`, `.NET 8.0 LTS`) and automated build validation.
+
+---
+
+## [1.4.0] - 2026-09-23
+
+### Added
+- **Industrial Security & Process Guard (`Kable.Host`, `Kable.Grpc.Security`)**:
+  - `GuardedProcessLauncher`: Hardened external process execution engine implementing `IProcessLauncher` with strict binary allowlisting, argument injection prevention, working directory checks, and process isolation.
+  - `GrpcAuthInterceptor`: Bearer token authentication middleware for gRPC streaming transport.
+  - `GrpcConcurrencyInterceptor`: Inbound connection and request concurrency throttle preventing edge broker saturation.
+  - `SecurityOptions` & `BusyGuard`: Process mutual-exclusion guards and process host security configuration.
+- **Enterprise UI Library (`Kable.UI.Wpf`)**:
+  - Reusable WPF UI component and styling library inspired by modern Apple/iOS design language.
+  - Clean Apple white theme, rounded DataGrid rows, custom titlebars, and segmented navigation.
+  - `LiveInspectorView`: Master-Detail layout with dual live packet streams and split inspector.
+  - `RawPacketLogStreamView`: Reverse-chronological streaming packet viewer (newest packets first) with search filtering and file export.
+  - `AperiodicCommandConsole`: Interactive command console with automatic engineering-unit to raw hex converter sliders and real-time telemetry verification.
+- **In-Memory Hardware Simulator & Packet Classification**:
+  - Built-in hardware simulator engine with realistic pacing (600ms–1000ms streaming cadence).
+  - Packet catalog categorizing and classifying inbound/outbound industrial telegrams.
+- **Dynamic 7-Language Localization (i18n)**:
+  - Runtime language switching across 7 languages: English (`en`), Korean (`ko`), Traditional Chinese (`zh-TW`), Simplified Chinese (`zh-CN`), Japanese (`ja-JP`), German (`de-DE`), and French (`fr-FR`).
+  - Decoupled UI resource dictionary bindings for zero-restart localization.
+- **Configuration & Telemetry Observability**:
+  - `KableDeviceOptions` POCO record and `.UseOptions(options)` fluent builder extension for unified configuration injection.
+  - `CommandDefinition` and `ScheduledCommandItem` abstractions unifying periodic telemetry polling and aperiodic command dispatch.
+  - Industrial alarm lifecycle states, deadband telemetry filtering, and formatted HexDump packet tracing.
+  - PCAP network packet capture and replay engine for offline protocol diagnostics.
+
+---
+
+## [1.3.1] - 2026-09-21
+
+### Added
+- **Multi-Language Documentation Engine**:
+  - Modernized technical documentation portal built on Docsify with responsive navigation.
+  - Interactive Mermaid.js architectural diagrams via `docsify-mermaid`.
+  - Multilingual documentation support across 7 languages in `docs/{lang}/`.
+  - Automated deployment workflow to GitHub Pages.
+- **IPC & Profile Enhancements**:
+  - Added NamedPipe IPC transport integration to the `KableSimple` async facade.
+  - Added automated test cases for string profile clients, zero-allocation weak state subscriptions, and NamedPipe IPC.
+
+### Changed
+- Decomposed and decoupled `ProfileManager` for cleaner separation of concerns.
+- Integrated `DefaultCommandTimeout` directly into the background periodic polling query loop.
+
+### Fixed
+- **Transport Test Suite Stabilization**:
+  - Added `HardwareTransportTestCollection` disabling xUnit parallelization across TCP listener and Named Pipe test classes to eliminate OS port/pipe collision flakiness.
+  - Ensured deterministic dynamic port selection and guaranteed `DisposeAsync` / broker shutdown in gRPC and MQTT integration tests.
+  - Eliminated race conditions in session resilience and telemetry stream tests.
+
+---
+
+## [1.3.0] - 2026-09-18
+
+### Added
+- **Industrial Protocol Adapters**:
+  - **`Kable.Modbus`**: Modbus-TCP master with MBAP zero-allocation framing, TransactionId pipelining, and async lifecycle management.
+  - **`Kable.Melsec`**: Mitsubishi SLMP / MC Protocol 3E binary frame driver for Q/L/iQ-R PLCs.
+  - **`Kable.Mqtt`**: High-performance telemetry publisher and subscriber built on `MQTTnet`.
+  - **`Kable.OpcUa`**: OPC UA client node bridge built on official `OPCFoundation.NetStandard.Opc.Ua` stack with dynamic node browsing and value subscriptions.
+  - **`Kable.Grpc`**: Full-duplex bidirectional streaming transport adapter using protocol buffer contracts (`kable_transport.proto`).
+- **High-Speed Shared Memory IPC (`Kable.SharedMemory`)**:
+  - Zero-copy lock-free ring buffer backed by `MemoryMappedFile` for ultra-low latency sub-millisecond IPC.
+  - Dedicated waveform buffer for streaming analog sensor arrays and oscilloscope data.
+- **Async Facade & Codec Templates (`KableSimple`)**:
+  - `KableSimple` facade offering intuitive 3-line asynchronous device connectivity.
+  - Resilient base codec templates in `Kable.Core`: `DelimitedFrameCodec` and `LengthFieldCodec`.
+- **Standalone Visual Tooling (`Kable.ConfigStudio`)**:
+  - Standalone WPF visual builder for zero-typo device configuration and TOML generation.
+  - Live echo testing and real-time inspector for Modbus-TCP, Melsec SLMP, MQTT, and OPC UA.
+- **Build & Optimization**:
+  - Central `Directory.Build.props` enabling Tiered Compilation, Profile-Guided Optimization (PGO), and Release optimizations.
+- **Documentation & Governance**:
+  - `docs/06_INDUSTRIAL_HIGH_RELIABILITY_COMM_ROADMAP.md` covering 13 industrial protocols, fieldbus selection matrix, and determinism prerequisites.
+  - Established open-source governance matrix and `THIRD_PARTY_LICENSES.md`.
+
+### Changed
+- Standardized all adapters with modern .NET best practices: DIP interfaces, Microsoft `IOptions` pattern with fail-fast validation, `ILogger` injection, and DI extensions.
+- Introduced single outbound writer pump in session transport to prevent interleaved frame corruption.
+
+### Fixed
+- Fixed P0/P1 reliability defects in session routing, non-blocking DI resolution, and TOML parser fidelity.
+
+---
+
 ## [1.2.0] - 2026-09-07
 
 ### Added

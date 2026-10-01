@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -62,6 +62,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.OpcUa.Tests", "tests\Kable.OpcUa.Tests\Kable.OpcUa.Tests.csproj", "{8E510635-08FD-4FC7-A84D-50450BD7E2CD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.UI.Wpf", "src\Kable.UI.Wpf\Kable.UI.Wpf.csproj", "{569E292B-F15E-4D88-837E-2B5B3866A7E0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{5D20AA90-6969-D8BD-9DCD-8634F4692FDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.QuickStart", "samples\Kable.QuickStart\Kable.QuickStart.csproj", "{F366A182-CFBB-441D-B4E3-95C96A38877C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -397,6 +401,18 @@ Global
 		{569E292B-F15E-4D88-837E-2B5B3866A7E0}.Release|x64.Build.0 = Release|Any CPU
 		{569E292B-F15E-4D88-837E-2B5B3866A7E0}.Release|x86.ActiveCfg = Release|Any CPU
 		{569E292B-F15E-4D88-837E-2B5B3866A7E0}.Release|x86.Build.0 = Release|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Debug|x64.Build.0 = Debug|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Debug|x86.Build.0 = Debug|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Release|x64.ActiveCfg = Release|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Release|x64.Build.0 = Release|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Release|x86.ActiveCfg = Release|Any CPU
+		{F366A182-CFBB-441D-B4E3-95C96A38877C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -429,5 +445,6 @@ Global
 		{FB1C8952-0849-4934-AB06-8FCE525C6D0E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{8E510635-08FD-4FC7-A84D-50450BD7E2CD} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{569E292B-F15E-4D88-837E-2B5B3866A7E0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{F366A182-CFBB-441D-B4E3-95C96A38877C} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 	EndGlobalSection
 EndGlobal

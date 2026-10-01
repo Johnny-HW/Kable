@@ -7,7 +7,7 @@
 [![Targets](https://img.shields.io/badge/Targets-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
 [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-178%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-267%20Passing-brightgreen.svg)]()
 
 ---
 
@@ -28,6 +28,12 @@
 
 - **Pure Multi-Targeting**: Native support for `.NET 10.0`, `.NET 8.0 (LTS)`, and `netstandard2.0` (.NET Framework 4.8 / Legacy systems).
 - **Zero-Copy Pipelines & Zero-GC Budget**: Vector-accelerated buffer parsing via `System.IO.Pipelines` and `ReadOnlySequence<byte>` (<1KB allocation budget per transaction).
+- **Industrial Multi-Protocol Adapter Suite**:
+  - **Modbus-TCP** (`Kable.Modbus`), **Mitsubishi SLMP / MC Protocol 3E** (`Kable.Melsec`), **OPC UA Client** (`Kable.OpcUa`), **MQTT Telemetry** (`Kable.Mqtt`), and **gRPC Full-Duplex Streaming** (`Kable.Grpc`).
+- **Ultra-Low Latency Shared Memory IPC (`Kable.SharedMemory`)**:
+  - Sub-millisecond zero-copy lock-free ring buffer backed by Windows `MemoryMappedFile` for high-frequency analog waveform streaming.
+- **Ultra-Simple 3-Line Async Facade (`KableSimple`)**:
+  - High-level zero-boilerplate API for connecting and querying serial, TCP, or NamedPipe devices in just 3 lines of code.
 - **Industrial Multi-Language Localization (7 Languages)**:
   - English (`en-US`), Korean (`ko-KR`), Chinese Simplified (`zh-CN`), Chinese Traditional (`zh-TW`), Japanese (`ja-JP`), German (`de-DE`), French (`fr-FR`).
   - Runtime culture switching via `KableLocalizer.Instance.SetCulture(...)` with auto-translated error messages for equipment operators.
@@ -37,16 +43,21 @@
   - Full in-memory zero-network cross-piped loopback simulator enabling sequence logic development before physical hardware delivery.
 - **Standard Wireshark PCAP Capture & Packet Replay**:
   - Export live packet sessions directly to `.pcap` files and replay captured field anomalies with speed multipliers (`PacketReplayer`).
-- **Real-Time Jitter & RTT Watchdog (`SessionHealthMonitor`)**:
-  - Circular buffer moving average & standard deviation (Jitter) calculation with automatic SECS-GEM / MES warning alarm dispatch.
-- **Alarm Lifecycle Manager (`AlarmManager`)**:
-  - Semiconductor 4-tier severity (`Info`, `Warning`, `Critical`, `Fatal`) and state tracking (`Set`/`Clear`) with lock-free `ChannelReader` streaming.
-- **Analog Deadband Filter (`DeadbandFilter<T>`)**:
-  - Thread-safe jitter noise suppressor preventing unnecessary high-frequency reporting to host MES.
+- **Industrial Reliability Hardening & Alarm Spooling (`AlarmOverflowMode`, `AlarmSpooler`)**:
+  - Verified across 30 extreme reliability tests (`TC_REL_01`–`30`), single cleanup lifecycle guarantees, and asynchronous alarm spooling preventing session stalls during alarm floods.
 
 ---
 
 ## 🚀 Quick Start
+ 
+> 💡 **10-Minute Onboarding Sample with Local Mock Hardware:**  
+> Run the runnable sample in [samples/Kable.QuickStart](samples/Kable.QuickStart) to immediately spin up a local mock TCP device, query commands, and receive autonomous events via `KableSimple`:
+> ```powershell
+> dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
+> ```
+> For timeout, cancellation, and recovery semantics, refer to the **[Connection Lifecycle Guide](docs/ko/CONNECTION_LIFECYCLE.md)**.
+
+---
 
 ### 1. Configuration-Driven Session (`KableDeviceOptions`)
 
@@ -71,6 +82,10 @@ await using var session = new KableClientBuilder<string>()
     .Build();
 
 await session.StartAsync();
+
+// Send request and await strongly typed response:
+string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(2));
+Console.WriteLine($"Robot Status: {status}");
 ```
 
 ### 2. Fluent Builder with Offline Simulator
@@ -83,7 +98,8 @@ using Kable.Codecs;
 await using var session = new KableClientBuilder<string>()
     .UseSimulator(sim =>
     {
-        sim.OnCommand("STATUS", "STATUS:READY")
+        sim.WithLatency(TimeSpan.FromMilliseconds(50)) // Simulate mechanical latency
+           .OnCommand("STATUS", "STATUS:READY")
            .OnCommand("GET_TEMP", "TEMP:24.5");
     })
     // For real hardware:
@@ -100,7 +116,18 @@ string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSecond
 Console.WriteLine(status); // "STATUS:READY"
 ```
 
-### 2. Ready-Made WPF UI Terminal (`Kable.UI.Wpf`)
+### 3. Ultra-Simple 3-Line Async Facade (`KableSimple`)
+
+```csharp
+using Kable.Simple;
+
+// Connect to a TCP socket and query without complex builders:
+await using var client = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
+string idn = await client.QueryAsync("*IDN?");
+Console.WriteLine($"Connected Device: {idn}");
+```
+
+### 4. Ready-Made WPF UI Terminal (`Kable.UI.Wpf`)
 
 Add real-time hardware communication terminal to your WPF application in XAML:
 
@@ -128,7 +155,7 @@ vm.ManualSendRequested += async (cmd) => await session.SendAsync(cmd);
 builder.WithObserver(vm);
 ```
 
-### 3. Industrial Localization (i18n)
+### 5. Industrial Localization (i18n)
 
 ```csharp
 using System.Globalization;
@@ -148,7 +175,7 @@ catch (DeviceTimeoutException ex)
 }
 ```
 
-### 4. Wireshark PCAP Dump & Anomaly Replay
+### 6. Wireshark PCAP Dump & Anomaly Replay
 
 ```csharp
 using Kable.Observability;
@@ -159,13 +186,15 @@ builder.WithObserver(pcapObserver);
 
 // 2. Replay captured packets at double speed in lab
 var replayer = new PacketReplayer(capturedRecords).WithSpeed(2.0);
-await replayer.ReplayAsync(async packet =>
+await replayer.ReplayAsync(async record =>
 {
-    await simulatedSession.ProcessPacketAsync(packet);
+    Console.WriteLine($"[{record.TimestampUtc:O}] {record.Direction} {record.Tag}: {record.PayloadString}");
+    // Inject captured payload bytes into mock hardware channel
+    await mockChannel.Writer.WriteAsync(record.Payload);
 });
 ```
 
-### 5. Type-Safe Device Profile Manager (`KableProfileManager`)
+### 7. Type-Safe Device Profile Manager (`KableProfileManager`)
 
 ```csharp
 using Kable.Engine.Profiles;
@@ -184,6 +213,19 @@ config.AddAperiodic(RobotControl.ServoOn, "CMD:SERVO=1");
 
 await using var client = await KableProfileManager.ConnectAsync(config);
 string result = await client.ExecuteAsync(RobotControl.ServoOn);
+```
+
+### 8. Industrial Protocol & High-Speed Shared Memory Extensions
+
+```csharp
+using Kable.SharedMemory.Memory;
+
+// Ultra-low latency sub-millisecond MMF IPC ring buffer:
+using var serverBuffer = SharedMemoryRingBuffer.Create("wafer_aligner_channel", 65536);
+using var clientBuffer = SharedMemoryRingBuffer.Open("wafer_aligner_channel");
+
+byte[] payload = System.Text.Encoding.UTF8.GetBytes("HIGH_SPEED_STREAM_DATA");
+serverBuffer.Write(payload);
 ```
 
 ---

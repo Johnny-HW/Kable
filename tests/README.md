@@ -19,5 +19,5 @@
 ## 🚀 테스트 실행 방법
 
 ```powershell
-dotnet test D:/Johnny/00.New/02.SoftwareLib/01.Kable/Kable.slnx --logger "console;verbosity=detailed"
+dotnet test Kable.sln --logger "console;verbosity=detailed"
 ```
