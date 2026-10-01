@@ -37,6 +37,7 @@ public static partial class KableSimple
         CancellationToken ct = default)
     {
         if (options == null) throw new ArgumentNullException(nameof(options));
+        options.Validate();
         var codec = new AsciiLineCodec(options.Delimiter, options.Encoding, isAutonomousPredicate: options.IsAutonomousMessage);
         var builder = new KableClientBuilder<string>()
             .UseSerialPort(portName, baudRate, parity, dataBits, stopBits)
@@ -85,9 +86,10 @@ public static partial class KableSimple
         CancellationToken ct = default)
     {
         if (options == null) throw new ArgumentNullException(nameof(options));
+        options.Validate();
         var codec = new AsciiLineCodec(options.Delimiter, options.Encoding, isAutonomousPredicate: options.IsAutonomousMessage);
         var builder = new KableClientBuilder<string>()
-            .UseTcp(host, port)
+            .UseTcp(host, port, options.ConnectTimeoutMs)
             .UseCodec(codec);
 
         if (options.Observer != null)
@@ -131,6 +133,7 @@ public static partial class KableSimple
         CancellationToken ct = default)
     {
         if (options == null) throw new ArgumentNullException(nameof(options));
+        options.Validate();
         var codec = new AsciiLineCodec(options.Delimiter, options.Encoding, isAutonomousPredicate: options.IsAutonomousMessage);
         var builder = new KableClientBuilder<string>()
             .UseNamedPipe(pipeName, serverName, timeoutMs)

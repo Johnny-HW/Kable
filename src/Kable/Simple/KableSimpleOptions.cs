@@ -25,6 +25,16 @@ public sealed record KableSimpleOptions
     /// </summary>
     public TimeSpan DefaultTimeout { get; init; } = TimeSpan.FromSeconds(3);
 
+    /// <summary>TCP connection deadline in milliseconds. Zero keeps the transport default; OpenAsync uses device options.</summary>
+    public int ConnectTimeoutMs { get; init; }
+
+    internal void Validate()
+    {
+        if (DefaultTimeout <= TimeSpan.Zero || DefaultTimeout.TotalMilliseconds > int.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(DefaultTimeout));
+        if (ConnectTimeoutMs < 0) throw new ArgumentOutOfRangeException(nameof(ConnectTimeoutMs));
+    }
+
     /// <summary>
     /// 장비가 보낸 메시지가 요청의 응답이 아닌 자발 이벤트(Unsolicited Event/Alarm)인지 판별하는 사용자 정의 함수.
     /// null인 경우 Kable 기본 접두사 규칙($, #, !, *)을 사용합니다.

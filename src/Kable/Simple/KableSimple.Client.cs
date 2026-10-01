@@ -38,8 +38,16 @@ public static partial class KableSimple
 
         internal async ValueTask InitializeAsync(CancellationToken ct)
         {
-            await _session.StartAsync(ct).ConfigureAwait(false);
-            _readLoopTask = Task.Run(ConsumeStreamAsync);
+            try
+            {
+                await _session.StartAsync(ct).ConfigureAwait(false);
+                _readLoopTask = Task.Run(ConsumeStreamAsync);
+            }
+            catch
+            {
+                await DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
         }
 
         public ValueTask SendLineAsync(string command, CancellationToken ct = default)

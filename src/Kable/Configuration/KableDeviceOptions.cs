@@ -9,6 +9,7 @@ using System.IO.Ports;
 /// </summary>
 public record KableDeviceOptions
 {
+    private int? _connectTimeoutMs;
     /// <summary>
     /// 장비 고유 식별자 (로깅 및 옵저버 추적용)
     /// </summary>
@@ -38,15 +39,16 @@ public record KableDeviceOptions
     #endregion
 
     /// <summary>
-    /// [하위 호환성 유지] 기본 연결 및 요청-응답 통합 타임아웃 (밀리초, 기본 3000ms).
+    /// [하위 호환성 유지] ConnectTimeoutMs가 명시되지 않았을 때의 연결 제한시간 (기본 3000ms).
+    /// 요청 제한시간에는 적용되지 않습니다.
     /// 보다 명확한 구성을 위해 <see cref="ConnectTimeoutMs"/> 및 <see cref="DefaultRequestTimeoutMs"/> 사용을 권장합니다.
     /// </summary>
     public int TimeoutMs { get; init; } = 3000;
 
     /// <summary>
-    /// 하드웨어 연결 수립 제한시간 (밀리초, 기본 5000ms).
+    /// TCP/Named Pipe 연결 수립 제한시간. 생략 시 TimeoutMs를 사용합니다. 시리얼에는 적용되지 않습니다.
     /// </summary>
-    public int ConnectTimeoutMs { get; init; } = 5000;
+    public int ConnectTimeoutMs { get => _connectTimeoutMs ?? TimeoutMs; init => _connectTimeoutMs = value; }
 
     /// <summary>
     /// 개별 명령에 타임아웃이 명시되지 않았을 때 적용되는 기본 요청-응답 제한시간 (밀리초, 기본 3000ms).

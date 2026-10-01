@@ -16,12 +16,12 @@ public static partial class KableSimple
         if (device == null) throw new ArgumentNullException(nameof(device));
         var configured = options ?? new KableSimpleOptions
         { DefaultTimeout = TimeSpan.FromMilliseconds(device.DefaultRequestTimeoutMs) };
-        if (configured.DefaultTimeout <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(options));
-        var session = new KableClientBuilder<string>().UseOptions(device)
+        configured.Validate();
+        var builder = new KableClientBuilder<string>().UseOptions(device)
             .UseCodec(new AsciiLineCodec(configured.Delimiter, configured.Encoding,
-                isAutonomousPredicate: configured.IsAutonomousMessage))
-            .UseObserver(configured.Observer!).Build();
+                isAutonomousPredicate: configured.IsAutonomousMessage));
+        if (configured.Observer != null) builder.UseObserver(configured.Observer);
+        var session = builder.Build();
         var client = new KableSimpleClient(session, configured.Observer, configured.DefaultTimeout);
         try
         {

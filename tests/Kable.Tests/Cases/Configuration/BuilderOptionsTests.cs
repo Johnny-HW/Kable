@@ -1,5 +1,7 @@
 namespace Kable.Tests.Cases.Configuration;
 
+using System.Buffers;
+using System.Text;
 using Kable.Codecs;
 using Kable.Configuration;
 using Kable.Core;
@@ -12,6 +14,14 @@ using Xunit;
 
 public class BuilderOptionsTests
 {
+    [Fact]
+    public void LegacyConnectTimeout_RemainsEffectiveUntilExplicitlyOverridden()
+    {
+        var legacy = new KableDeviceOptions { TimeoutMs = 1200 };
+        Assert.Equal(1200, legacy.ConnectTimeoutMs);
+        Assert.Equal(600, (legacy with { ConnectTimeoutMs = 600 }).ConnectTimeoutMs);
+    }
+
     [Fact]
     public async Task DefaultTimeout_FromDeviceOptions_IsUsedByTypedRequest()
     {
@@ -67,7 +77,7 @@ public class BuilderOptionsTests
         await session.StartAsync();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         var result = await server.Input.ReadAsync(cts.Token);
-        Assert.True(result.Buffer.Length > 0);
+        Assert.Equal("PING\n", Encoding.ASCII.GetString(result.Buffer.ToArray()));
         server.Input.AdvanceTo(result.Buffer.End);
     }
 

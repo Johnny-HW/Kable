@@ -34,7 +34,8 @@ public sealed class KableClientBuilder<TMessage>
 
         _deviceId = options.DeviceId ?? "DEFAULT";
 
-        int connectTimeout = options.ConnectTimeoutMs > 0 ? options.ConnectTimeoutMs : options.TimeoutMs;
+        int connectTimeout = options.ConnectTimeoutMs;
+        if (connectTimeout <= 0) throw new ArgumentOutOfRangeException(nameof(options.ConnectTimeoutMs));
 
         switch (options.Transport?.Trim().ToLowerInvariant())
         {
