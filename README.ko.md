@@ -1,13 +1,13 @@
 # 🔌 Kable (한국어 개발자 가이드)
 
-> **.NET 기반 초고성능 Zero-Allocation 반응형 하드웨어 통신 프레임워크**  
+> **.NET 기반 버퍼 재사용 중심의 비동기 하드웨어 통신 프레임워크**
 > 마이크로소프트 Bedrock의 `System.IO.Pipelines` 파이프라인 추상화와 RSocket 인터랙션 패턴, 레디메이드 WPF 통신 모니터링 컨트롤, 산업용 7개 국어 다국어 지원 엔진을 결합한 장비 제어 통신 솔루션입니다.
 
 [![Language](https://img.shields.io/badge/언어-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
 [![Targets](https://img.shields.io/badge/타깃-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
 [![Docs](https://img.shields.io/badge/문서-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
 [![License](https://img.shields.io/badge/라이선스-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/단위테스트-267개%20통과-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/단위테스트-CI-blue.svg)](https://github.com/Johnny-HW/Kable/actions)
 
 ---
 
@@ -28,8 +28,8 @@
 
 1. **순수 멀티 타기팅 (Multi-Targeting)**
    - 최신 `.NET 10.0`, LTS 버전인 `.NET 8.0`, 레거시 설비 및 .NET Framework 4.8 연동을 위한 `netstandard2.0`을 100% 네이티브 지원합니다.
-2. **Zero-Copy & Zero-GC 버퍼 파이프라인**
-   - 메모리 복사 없는 `System.IO.Pipelines` 및 `ReadOnlySequence<byte>` 기반의 벡터 가속 버퍼 파싱을 통해 트랜잭션당 1KB 미만의 극저할당(Zero-GC Budget)을 달성했습니다.
+2. **버퍼 재사용 파이프라인**
+   - `System.IO.Pipelines`와 `ReadOnlySequence<byte>`로 버퍼를 처리합니다. 문자열 수신과 비동기 질의는 메모리를 할당합니다. 측정 조건과 실제 수치는 [성능 기준](docs/ko/PERFORMANCE_BASELINE.md)을 참고하십시오.
 3. **산업용 멀티 프로토콜 어댑터 스위트**
    - **Modbus-TCP** (`Kable.Modbus`), **미쓰비시 SLMP/MC 프로토콜 3E** (`Kable.Melsec`), **OPC UA 클라이언트** (`Kable.OpcUa`), **MQTT 텔레메트리** (`Kable.Mqtt`), **gRPC 양방향 스트리밍** (`Kable.Grpc`).
 4. **초저지연 공유 메모리 IPC (`Kable.SharedMemory`)**
@@ -62,6 +62,8 @@
 ---
 
 ## 🛠️ 실전 코드 예제
+
+기본 제한시간, 고급 빌더 설정, 이벤트와 자동 재연결은 [개발자 API 사용 가이드](docs/ko/DEVELOPER_USAGE.md)를 참고하십시오. 컴파일·실행 예제는 `samples/Kable.QuickStart`에서 관리합니다.
 
 ### 1. 설정 모델(Config / Options)로 시작하기 (INI, JSON, YAML 등 연동)
 

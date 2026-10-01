@@ -14,6 +14,7 @@ public static class Program
     public static async Task Main(string[] args)
     {
         Console.WriteLine("=== Kable QuickStart Demo ===");
+        await AdvancedUsage.RunConfiguredAsync();
 
         // 1. Start a local mock equipment server on loopback
         var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -75,7 +76,8 @@ public static class Program
         {
             cts.Cancel();
             listener.Stop();
-            try { await serverTask; } catch { /* ignore server stop exception */ }
+            try { await serverTask; }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
         }
     }
 

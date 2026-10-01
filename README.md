@@ -1,13 +1,13 @@
 # 🔌 Kable
 
-> **High-Performance, Zero-Allocation Reactive Hardware Communication Engine for .NET**  
+> **Asynchronous Hardware Communication Engine for .NET with Reusable Buffers**
 > Combining Microsoft Bedrock's `System.IO.Pipelines` transport abstraction with RSocket interaction patterns, ready-made WPF terminal diagnostics, and industrial-grade multi-language localization.
 
 [![Language](https://img.shields.io/badge/Language-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
 [![Targets](https://img.shields.io/badge/Targets-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
 [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-267%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-CI-blue.svg)](https://github.com/Johnny-HW/Kable/actions)
 
 ---
 
@@ -27,7 +27,7 @@
 ## ✨ Key Features
 
 - **Pure Multi-Targeting**: Native support for `.NET 10.0`, `.NET 8.0 (LTS)`, and `netstandard2.0` (.NET Framework 4.8 / Legacy systems).
-- **Zero-Copy Pipelines & Zero-GC Budget**: Vector-accelerated buffer parsing via `System.IO.Pipelines` and `ReadOnlySequence<byte>` (<1KB allocation budget per transaction).
+- **Reusable Pipeline Buffers**: Buffer processing through `System.IO.Pipelines` and `ReadOnlySequence<byte>`. String decoding and asynchronous requests allocate memory; see the [measured scope and baseline](docs/ko/PERFORMANCE_BASELINE.md).
 - **Industrial Multi-Protocol Adapter Suite**:
   - **Modbus-TCP** (`Kable.Modbus`), **Mitsubishi SLMP / MC Protocol 3E** (`Kable.Melsec`), **OPC UA Client** (`Kable.OpcUa`), **MQTT Telemetry** (`Kable.Mqtt`), and **gRPC Full-Duplex Streaming** (`Kable.Grpc`).
 - **Ultra-Low Latency Shared Memory IPC (`Kable.SharedMemory`)**:
@@ -49,6 +49,8 @@
 ---
 
 ## 🚀 Quick Start
+
+See the [developer API guide](docs/ko/DEVELOPER_USAGE.md) for defaults, advanced builder options, event contracts, and opt-in recovery. Compiled examples are maintained in `samples/Kable.QuickStart`.
  
 > 💡 **10-Minute Onboarding Sample with Local Mock Hardware:**  
 > Run the runnable sample in [samples/Kable.QuickStart](samples/Kable.QuickStart) to immediately spin up a local mock TCP device, query commands, and receive autonomous events via `KableSimple`:

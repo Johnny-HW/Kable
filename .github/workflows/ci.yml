@@ -48,6 +48,9 @@ jobs:
       - name: Validate NuGet Packaging
         run: dotnet pack Kable.sln --configuration Release --output ./nupkgs --no-build
 
+      - name: Run documented QuickStart and advanced configuration
+        run: dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj --configuration Release --no-build
+
   test-linux:
     name: Build & Test (Ubuntu - Cross-Platform Core)
     runs-on: ubuntu-latest

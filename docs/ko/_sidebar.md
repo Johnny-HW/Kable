@@ -3,6 +3,8 @@
 * **시작하기 (Getting Started)**
   * [개요 및 퀵스타트 (Overview)](ko/README.md)
   * [마스터 인덱스 (Master Index)](ko/INDEX.md)
+  * [개발자 API 사용 가이드](ko/DEVELOPER_USAGE.md)
+  * [성능 측정 결과와 범위](ko/PERFORMANCE_BASELINE.md)
   * [프로젝트 사양서 (Project Spec)](ko/PROJECT_SPEC.md)
 
 * **아키텍처 및 설계 (Architecture & Design)**

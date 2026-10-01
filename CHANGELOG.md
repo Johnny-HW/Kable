@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] - Developer usability (2026-10-01)
+
+### Added
+- Configured default request timeouts, same-message-type request extension, and `KableSimple.OpenAsync(KableDeviceOptions)`.
+- Builder configuration for session queues, alarm handling, and heartbeat.
+- Opt-in `ReconnectingKableClient` with finite attempts, fresh connections, preserved subscriptions, and no command replay.
+- Compiled advanced usage examples and CI execution of QuickStart.
+
+### Fixed
+- Legacy `TimeoutMs` remains effective until `ConnectTimeoutMs` is explicitly supplied.
+- Simple clients release resources on initialization failure and validate default timeout options.
+- ASCII/UTF-8 encoding writes directly to output buffers on modern .NET; netstandard2.0 uses pooled arrays.
+
+### Documentation
+- Clarified event delivery, lifecycle and recovery contracts; restored top-level specification entry points.
+- Replaced blanket allocation claims with scoped Release measurements for 16 codec/session cases.
+
 ## [1.5.0] - 2026-09-30
 
 ### Added
