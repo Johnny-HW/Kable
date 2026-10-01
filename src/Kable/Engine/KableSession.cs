@@ -9,7 +9,7 @@ using Kable.Codecs;
 using Kable.Core;
 using Kable.Observability;
 
-public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
+public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, IRequestTimeoutProvider
 {
     private readonly IConnectionFactory _connectionFactory;
     private readonly IProtocolCodec<TMessage> _codec;
@@ -41,6 +41,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>
     private long _spoolUnprocessedCount;
 
     public string DeviceId { get; }
+    public TimeSpan DefaultRequestTimeout { get; internal set; } = TimeSpan.FromSeconds(3);
     public bool IsConnected => State == SessionLifecycleState.Running && Volatile.Read(ref _isConnected) == 1;
 
     /// <summary>

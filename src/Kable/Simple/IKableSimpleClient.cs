@@ -17,7 +17,8 @@ public interface IKableSimpleClient : IAsyncDisposable, IDisposable
     bool IsConnected { get; }
 
     /// <summary>
-    /// 장비로부터 텍스트 라인이 수신되었을 때 발생하는 이벤트
+    /// 요청 응답으로 소비되지 않은 라인을 백그라운드 스레드에서 전달합니다.
+    /// QueryAsync 응답은 포함되지 않습니다. UI 갱신은 Dispatcher로 전환하십시오.
     /// </summary>
     event Action<string>? LineReceived;
 
@@ -32,7 +33,7 @@ public interface IKableSimpleClient : IAsyncDisposable, IDisposable
     event Action<Exception?>? Disconnected;
 
     /// <summary>
-    /// 명령어를 전송하고 즉시 반환합니다. (개행문자는 자동으로 추가됨)
+    /// 명령어를 전송하고 출력 flush 완료까지 기다립니다. 응답을 기다리지 않으며 개행을 자동 추가합니다.
     /// </summary>
     ValueTask SendLineAsync(string command, CancellationToken ct = default);
 

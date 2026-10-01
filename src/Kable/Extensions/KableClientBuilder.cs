@@ -18,6 +18,9 @@ public sealed class KableClientBuilder<TMessage>
     private IProtocolCodec<TMessage>? _codec;
     private ICommObserver? _observer;
     private string _deviceId = "DEFAULT";
+    private TimeSpan _defaultRequestTimeout = TimeSpan.FromSeconds(3);
+    private KableSessionOptions<TMessage>? _sessionOptions;
+    private HeartbeatOptions<TMessage>? _heartbeatOptions;
 
     /// <summary>
     /// KableDeviceOptions 설정 객체를 주입하여 전송 계층 및 장비 ID를 일괄 바인딩합니다.
@@ -25,6 +28,9 @@ public sealed class KableClientBuilder<TMessage>
     public KableClientBuilder<TMessage> UseOptions(KableDeviceOptions options)
     {
         if (options == null) throw new ArgumentNullException(nameof(options));
+        if (options.DefaultRequestTimeoutMs <= 0)
+            throw new ArgumentOutOfRangeException(nameof(options.DefaultRequestTimeoutMs));
+        _defaultRequestTimeout = TimeSpan.FromMilliseconds(options.DefaultRequestTimeoutMs);
 
         _deviceId = options.DeviceId ?? "DEFAULT";
 
@@ -145,6 +151,20 @@ public sealed class KableClientBuilder<TMessage>
         return this;
     }
 
+    /// <summary>Configures inbound queues and alarm overflow handling before Build.</summary>
+    public KableClientBuilder<TMessage> UseSessionOptions(KableSessionOptions<TMessage> options)
+    {
+        _sessionOptions = options ?? throw new ArgumentNullException(nameof(options));
+        return this;
+    }
+
+    /// <summary>Enables heartbeat on the session. Configure this before Build.</summary>
+    public KableClientBuilder<TMessage> UseHeartbeat(HeartbeatOptions<TMessage> options)
+    {
+        _heartbeatOptions = options ?? throw new ArgumentNullException(nameof(options));
+        return this;
+    }
+
     public IDeviceSession<TMessage> Build()
     {
         if (_factory == null)
@@ -153,7 +173,9 @@ public sealed class KableClientBuilder<TMessage>
         if (_codec == null)
             throw new InvalidOperationException("ProtocolCodec must be configured (e.g. UseCodec).");
 
-        return new KableSession<TMessage>(_factory, _codec, _observer, deviceId: _deviceId);
+        return new KableSession<TMessage>(_factory, _codec, _observer,
+            heartbeatOptions: _heartbeatOptions, deviceId: _deviceId, sessionOptions: _sessionOptions)
+        { DefaultRequestTimeout = _defaultRequestTimeout };
     }
 
     private sealed class DelegateConnectionFactory : IConnectionFactory
