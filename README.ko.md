@@ -44,7 +44,7 @@
 8. **오프라인 모의 시뮬레이터 (`UseSimulator`)**
    - 실물 하드웨어(로봇, 얼라이너, PLC)가 아직 입고되지 않은 개발 초기에도 인메모리 루프백 시뮬레이터로 상위 시퀀스를 즉시 개발할 수 있습니다.
 9. **Wireshark 표준 PCAP 덤프 및 패킷 리플레이어 (`PacketReplayer`)**
-   - 통신 세션을 표준 `.pcap` 파일로 자동 기록하고, 현장에서 발생한 간헐적 패킷 이상을 연구실에서 타임스탬프 기반 배속 재생으로 100% 재현합니다.
+   - 통신 세션을 표준 `.pcap` 파일로 자동 기록하고, 현장 라인(Fab/Site)에서 발생한 간헐적 통신 장애를 개발 PC 및 오프라인 테스트 환경에서 타임스탬프 기반 배속 재생으로 재현합니다.
 10. **산업용 신뢰성 하든 및 알람 스풀 (`AlarmOverflowMode`, `AlarmSpooler`)**
     - 30종 극한 신뢰성 테스트(`TC_REL_01`~`30`)를 전수 통과한 라이프사이클 보호, 단일 클린업 수명주기, 고빈도 알람 폭주 시 세션 안전 격리 및 비동기 드레인을 보장합니다.
 
@@ -188,7 +188,7 @@ using Kable.Observability;
 var pcapObserver = new PcapStreamObserver("equipment_trace.pcap");
 builder.WithObserver(pcapObserver);
 
-// 2. 연구실에서 수집된 패킷을 2배속으로 리플레이하여 간헐적 장애 재현
+// 2. 캡처된 패킷 로그를 개발 PC 환경에서 2배속으로 리플레이하여 간헐적 장애 재현
 var replayer = new PacketReplayer(capturedList).WithSpeed(2.0);
 await replayer.ReplayAsync(async record =>
 {

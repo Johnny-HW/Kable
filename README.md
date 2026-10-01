@@ -184,7 +184,7 @@ using Kable.Observability;
 var pcapObserver = new PcapStreamObserver("dump.pcap");
 builder.WithObserver(pcapObserver);
 
-// 2. Replay captured packets at double speed in lab
+// 2. Replay captured packets at double speed in dev/test environment
 var replayer = new PacketReplayer(capturedRecords).WithSpeed(2.0);
 await replayer.ReplayAsync(async record =>
 {
