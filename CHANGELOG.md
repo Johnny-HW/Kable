@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] - Developer usability (2026-10-01)
+## [1.6.0] - 2026-10-01
 
 ### Added
 - Configured default request timeouts, same-message-type request extension, and `KableSimple.OpenAsync(KableDeviceOptions)`.
