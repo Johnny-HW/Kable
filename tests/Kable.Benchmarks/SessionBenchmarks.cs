@@ -1,147 +1,87 @@
 namespace Kable.Benchmarks;
 
-using System;
-using System.Buffers;
 using System.IO.Pipelines;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using Kable.Codecs;
 using Kable.Core;
 using Kable.Engine;
+using Kable.Observability;
+using Kable.Transports;
 
 [MemoryDiagnoser]
 public class SessionBenchmarks
 {
-    private LoopbackConnectionContext _connContext = null!;
+    [Params(32, 1024)] public int Characters { get; set; }
+    [Params(false, true)] public bool Observe { get; set; }
     private KableSession<string> _session = null!;
-    private CancellationTokenSource _cts = null!;
-    private Task _echoServerTask = null!;
+    private IConnectionContext _server = null!;
+    private CancellationTokenSource _stop = null!;
+    private Task _echo = null!;
+    private string _request = null!;
+    private byte[] _reply = null!;
+    private byte[] _telemetry = null!;
 
     [GlobalSetup]
-    public void GlobalSetup()
+    public async Task Setup()
     {
-        _cts = new CancellationTokenSource();
-        _connContext = new LoopbackConnectionContext();
-        var factory = new SimpleFactory(_connContext);
-        var codec = new AsciiLineCodec(delimiter: 0x0A);
-        _session = new KableSession<string>(factory, codec);
-        _session.StartAsync().AsTask().GetAwaiter().GetResult();
+        _stop = new CancellationTokenSource();
+        var (client, server) = InMemoryConnectionContext.CreatePair();
+        _server = server;
+        _request = new string('Q', Characters);
+        _reply = Encoding.ASCII.GetBytes(new string('R', Characters) + "\n");
+        _telemetry = Encoding.ASCII.GetBytes("$" + new string('T', Characters - 1) + "\n");
+        _session = new KableSession<string>(new Factory(client), new AsciiLineCodec(),
+            observer: Observe ? new CommObserver() : null);
+        await _session.StartAsync();
+        _echo = EchoAsync();
+    }
 
-        // Echo server for request-response
-        _echoServerTask = Task.Run(async () =>
+    private async Task EchoAsync()
+    {
+        var codec = new AsciiLineCodec();
+        try
         {
-            var reader = _connContext.RemoteRead;
-            var writer = _connContext.RemoteWrite;
-            var token = _cts.Token;
-
-            while (!token.IsCancellationRequested)
+            while (!_stop.IsCancellationRequested)
             {
-                var result = await reader.ReadAsync(token);
-                var buffer = result.Buffer;
-
-                while (TryReadLine(ref buffer, out var line))
-                {
-                    if (line.StartsWith("REQ"))
-                    {
-                        var reply = Encoding.ASCII.GetBytes("RSP:OK\n");
-                        await writer.WriteAsync(reply, token);
-                        await writer.FlushAsync(token);
-                    }
-                }
-
-                reader.AdvanceTo(buffer.Start, buffer.End);
-                if (result.IsCompleted || result.IsCanceled) break;
+                var result = await _server.Input.ReadAsync(_stop.Token);
+                var remaining = result.Buffer;
+                while (codec.TryDecode(ref remaining, out _))
+                    await _server.Output.WriteAsync(_reply, _stop.Token);
+                _server.Input.AdvanceTo(remaining.Start, remaining.End);
+                if (result.IsCompleted) break;
             }
-        });
-    }
-
-    [GlobalCleanup]
-    public void GlobalCleanup()
-    {
-        _cts.Cancel();
-        _session.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        try { _echoServerTask.Wait(500); } catch { }
-        _cts.Dispose();
-    }
-
-    [Benchmark(Description = "KableSession.RequestAsync (RoundTrip Latency & Alloc)")]
-    public async Task<string> RequestResponse_RoundTrip()
-    {
-        return await _session.RequestAsync<string>("REQ_PING", TimeSpan.FromSeconds(2));
-    }
-
-    [Benchmark(Description = "KableSession.Streaming (100 Inbound Unsolicited Messages)")]
-    public async Task<int> InboundStreaming_Burst100()
-    {
-        var raw = Encoding.ASCII.GetBytes("$DATA,001,VAL=12.34\n");
-        var writer = _connContext.RemoteWrite;
-
-        for (int i = 0; i < 100; i++)
-        {
-            await writer.WriteAsync(raw);
         }
-        await writer.FlushAsync();
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+    }
 
+    [Benchmark]
+    public async Task<string> RequestResponse()
+        => await _session.RequestAsync<string>(_request, TimeSpan.FromSeconds(5));
+
+    [Benchmark(OperationsPerInvoke = 100)]
+    public async Task<int> Stream100()
+    {
+        for (int i = 0; i < 100; i++) await _server.Output.WriteAsync(_telemetry);
         int count = 0;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        await foreach (var item in _session.GetStreamAsync(cts.Token))
-        {
-            count++;
-            if (count == 100) break;
-        }
-
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await foreach (var message in _session.GetStreamAsync(timeout.Token))
+            if (++count == 100) break;
         return count;
     }
 
-    private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out string line)
+    [GlobalCleanup]
+    public async Task Cleanup()
     {
-        var pos = buffer.PositionOf((byte)0x0A);
-        if (pos == null)
-        {
-            line = string.Empty;
-            return false;
-        }
-
-        var slice = buffer.Slice(0, pos.Value);
-        line = Encoding.ASCII.GetString(slice.ToArray());
-        buffer = buffer.Slice(buffer.GetPosition(1, pos.Value));
-        return true;
+        _stop.Cancel();
+        await _echo;
+        await _session.DisposeAsync();
+        await _server.DisposeAsync();
+        _stop.Dispose();
     }
 
-    private sealed class LoopbackConnectionContext : IConnectionContext
+    private sealed class Factory(IConnectionContext context) : IConnectionFactory
     {
-        private readonly Pipe _inPipe = new();
-        private readonly Pipe _outPipe = new();
-        private readonly CancellationTokenSource _cts = new();
-
-        public string ConnectionId => "LOOPBACK";
-        public string EndpointDescription => "In-Memory Loopback";
-        public PipeReader Input => _inPipe.Reader;
-        public PipeWriter Output => _outPipe.Writer;
-        public CancellationToken ConnectionClosed => _cts.Token;
-
-        public PipeReader RemoteRead => _outPipe.Reader;
-        public PipeWriter RemoteWrite => _inPipe.Writer;
-
-        public void Abort(string reason) => _cts.Cancel();
-
-        public ValueTask DisposeAsync()
-        {
-            _cts.Cancel();
-            _inPipe.Reader.Complete();
-            _inPipe.Writer.Complete();
-            _outPipe.Reader.Complete();
-            _outPipe.Writer.Complete();
-            return default;
-        }
-    }
-
-    private sealed class SimpleFactory : IConnectionFactory
-    {
-        private readonly IConnectionContext _ctx;
-        public SimpleFactory(IConnectionContext ctx) => _ctx = ctx;
-        public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct) => new(_ctx);
+        public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default) => new(context);
     }
 }

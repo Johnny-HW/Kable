@@ -11,7 +11,7 @@
     <PackageId>Kable</PackageId>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
-    <Description>High-performance, Zero-Allocation reactive hardware communication engine combining Bedrock Pipelines and RSocket interaction patterns.</Description>
+    <Description>Asynchronous hardware communication engine with reusable pipeline buffers, configurable request routing, and optional connection recovery.</Description>
     <PackageTags>industrial;hardware;serial;socket;namedpipe;pipelines;rsocket;reactive;zerogc</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
