@@ -63,8 +63,11 @@ public class SessionTimeoutAndRaceConditionTests
         public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default) => new(ctx);
     }
 
-    [Fact]
-    public async Task RequestAsync_LateArrivingCidResponse_DoesNotCorruptSubsequentRequest()
+    [Theory]
+    [InlineData("CID:100:REQ_TIMEOUT", "CID:100:LATE_RESPONSE", "CID:101:REQ_OK", "CID:101:VALID_RESPONSE")]
+    [InlineData("CID:ALPHA:SLOW", "CID:ALPHA:LATE", "CID:BETA:FAST", "CID:BETA:FAST_ACK")]
+    public async Task RequestAsync_LateArrivingCidResponse_DoesNotCorruptSubsequentRequest(
+        string timedOutReq, string lateResp, string followUpReq, string followUpResp)
     {
         var (client, server) = InMemoryConnectionContext.CreatePair();
         var session = new KableSession<string>(new MockFactory(client), new CidAsciiCodec());
@@ -73,32 +76,32 @@ public class SessionTimeoutAndRaceConditionTests
         try
         {
             // 1. Send CID request with tight timeout
-            var timeoutTask = session.RequestAsync<string>("CID:100:REQ_TIMEOUT", TimeSpan.FromMilliseconds(50));
+            var timeoutTask = session.RequestAsync<string>(timedOutReq, TimeSpan.FromMilliseconds(50));
             Func<Task> act = async () => await timeoutTask;
             await act.Should().ThrowAsync<DeviceTimeoutException>();
 
             // Session remains running in CID full-duplex mode
             session.IsConnected.Should().BeTrue();
 
-            // 2. Late response for CID 100 arrives after timeout
-            await server.Output.WriteAsync(Encoding.ASCII.GetBytes("CID:100:LATE_RESPONSE\n"));
-            await Task.Delay(50);
+            // 2. Late response for the timed-out CID arrives after timeout
+            await server.Output.WriteAsync(Encoding.ASCII.GetBytes(lateResp + "\n"));
+            await Task.Delay(30);
 
-            // 3. Send a new request with CID 101 and answer it
+            // 3. Send a new request with distinct CID and answer it
             var echoTask = Task.Run(async () =>
             {
                 var reader = new SequenceReader<byte>((await server.Input.ReadAsync()).Buffer);
                 if (reader.TryReadTo(out ReadOnlySequence<byte> line, (byte)'\n'))
                 {
                     server.Input.AdvanceTo(reader.Position);
-                    await server.Output.WriteAsync(Encoding.ASCII.GetBytes("CID:101:VALID_RESPONSE\n"));
+                    await server.Output.WriteAsync(Encoding.ASCII.GetBytes(followUpResp + "\n"));
                 }
             });
 
-            var result = await session.RequestAsync<string>("CID:101:REQ_OK", TimeSpan.FromSeconds(2));
+            var result = await session.RequestAsync<string>(followUpReq, TimeSpan.FromSeconds(2));
             await echoTask;
 
-            result.Should().Be("CID:101:VALID_RESPONSE");
+            result.Should().Be(followUpResp);
         }
         finally
         {
