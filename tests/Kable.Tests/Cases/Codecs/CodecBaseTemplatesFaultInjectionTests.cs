@@ -41,31 +41,55 @@ public class CodecBaseTemplatesFaultInjectionTests
         public override void Encode(string message, IBufferWriter<byte> output) => throw new NotImplementedException();
     }
 
-    [Fact]
-    public void LengthFieldCodec_WithGarbagePrefix_ResynchronizesToHeaderMarker()
+    public static TheoryData<LengthFieldOptions, byte[], string, int> LengthFieldDecodeCases => new()
     {
-        // HeaderMarker = 0x02 (STX), LengthFieldOffset = 1, LengthFieldLength = 2 (BigEndian, IncludesHeader: false)
-        var options = new LengthFieldOptions
+        // 1. STX marker with garbage prefix and resynchronization enabled
         {
-            HeaderMarker = 0x02,
-            LengthFieldOffset = 1,
-            LengthFieldLength = 2,
-            IsBigEndian = true,
-            LengthIncludesHeader = false,
-            ResynchronizeOnInvalidHeader = true,
-            MaxFrameSize = 1024
-        };
-        var codec = new TestLengthFieldCodec(options);
+            new LengthFieldOptions
+            {
+                HeaderMarker = 0x02,
+                LengthFieldOffset = 1,
+                LengthFieldLength = 2,
+                IsBigEndian = true,
+                LengthIncludesHeader = false,
+                ResynchronizeOnInvalidHeader = true,
+                MaxFrameSize = 1024
+            },
+            new byte[] { 0xFF, 0xEE, 0xDD, 0x02, 0x00, 0x04, (byte)'D', (byte)'A', (byte)'T', (byte)'A' },
+            "DATA",
+            0
+        },
+        // 2. LengthIncludesHeader + TrailerLength (checksum byte)
+        {
+            new LengthFieldOptions
+            {
+                HeaderMarker = 0xAA,
+                LengthFieldOffset = 1,
+                LengthFieldLength = 2,
+                IsBigEndian = true,
+                LengthIncludesHeader = true,
+                TrailerLength = 1,
+                MaxFrameSize = 1024
+            },
+            new byte[] { 0xAA, 0x00, 0x07, (byte)'T', (byte)'E', (byte)'S', (byte)'T', 0x55 },
+            "TEST",
+            0
+        }
+    };
 
-        // Noise (3 bytes: 0xFF, 0xEE, 0xDD) + STX(0x02) + Length(ushort 4 = "DATA") + "DATA"
-        byte[] raw = new byte[] { 0xFF, 0xEE, 0xDD, 0x02, 0x00, 0x04, (byte)'D', (byte)'A', (byte)'T', (byte)'A' };
-        var seq = new ReadOnlySequence<byte>(raw);
+    [Theory]
+    [MemberData(nameof(LengthFieldDecodeCases))]
+    public void LengthFieldCodec_ValidScenarios_DecodesExpectedPayload(
+        LengthFieldOptions options, byte[] rawInput, string expectedMessage, int expectedRemainingBytes)
+    {
+        var codec = new TestLengthFieldCodec(options);
+        var seq = new ReadOnlySequence<byte>(rawInput);
 
         bool success = codec.TryDecode(ref seq, out var msg);
 
         success.Should().BeTrue();
-        msg.Should().Be("DATA");
-        seq.Length.Should().Be(0);
+        msg.Should().Be(expectedMessage);
+        seq.Length.Should().Be(expectedRemainingBytes);
     }
 
     [Fact]
@@ -89,50 +113,44 @@ public class CodecBaseTemplatesFaultInjectionTests
            .WithMessage("*Invalid leading bytes*");
     }
 
-    [Fact]
-    public void DelimitedFrameCodec_MultiByteDelimiter_HandlesCRLF()
+    public static TheoryData<DelimitedFrameOptions, byte[], string, int> DelimitedDecodeCases => new()
     {
-        var options = new DelimitedFrameOptions
+        // 1. CRLF Multi-byte delimiter with trailing bytes
         {
-            EndDelimiter = new byte[] { 0x0D, 0x0A }, // \r\n
-            StripDelimiters = true,
-            MaxFrameSize = 1024
-        };
-        var codec = new TestDelimitedCodec(options);
+            new DelimitedFrameOptions { EndDelimiter = new byte[] { 0x0D, 0x0A }, StripDelimiters = true, MaxFrameSize = 1024 },
+            Encoding.ASCII.GetBytes("HELLO WORLD\r\nNEXT"),
+            "HELLO WORLD",
+            4
+        },
+        // 2. Start marker (STX) with leading garbage noise and ETX delimiter
+        {
+            new DelimitedFrameOptions { StartMarker = 0x02, EndDelimiter = new byte[] { 0x03 }, StripDelimiters = true, ResynchronizeOnGarbage = true, MaxFrameSize = 1024 },
+            new byte[] { 0xAA, 0xBB, 0xCC, 0x02, (byte)'V', (byte)'A', (byte)'L', (byte)'I', (byte)'D', 0x03 },
+            "VALID",
+            0
+        },
+        // 3. Exact MaxFrameSize boundary payload allowed
+        {
+            new DelimitedFrameOptions { EndDelimiter = new byte[] { 0x0A }, StripDelimiters = true, MaxFrameSize = 10 },
+            Encoding.ASCII.GetBytes("1234567890\n"),
+            "1234567890",
+            0
+        }
+    };
 
-        byte[] raw = Encoding.ASCII.GetBytes("HELLO WORLD\r\nNEXT");
-        var seq = new ReadOnlySequence<byte>(raw);
+    [Theory]
+    [MemberData(nameof(DelimitedDecodeCases))]
+    public void DelimitedFrameCodec_ValidScenarios_DecodesExpectedPayloadAndRemnant(
+        DelimitedFrameOptions options, byte[] rawInput, string expectedMessage, int expectedRemainingBytes)
+    {
+        var codec = new TestDelimitedCodec(options);
+        var seq = new ReadOnlySequence<byte>(rawInput);
 
         bool success = codec.TryDecode(ref seq, out var msg);
 
         success.Should().BeTrue();
-        msg.Should().Be("HELLO WORLD");
-        seq.Length.Should().Be(4); // "NEXT" remains
-    }
-
-    [Fact]
-    public void DelimitedFrameCodec_WithStartMarkerAndGarbage_ResynchronizesCleanly()
-    {
-        // Start: 0x02 (STX), End: 0x03 (ETX)
-        var options = new DelimitedFrameOptions
-        {
-            StartMarker = 0x02,
-            EndDelimiter = new byte[] { 0x03 },
-            StripDelimiters = true,
-            ResynchronizeOnGarbage = true,
-            MaxFrameSize = 1024
-        };
-        var codec = new TestDelimitedCodec(options);
-
-        // Noise bytes + STX + "VALID" + ETX
-        byte[] raw = new byte[] { 0xAA, 0xBB, 0xCC, 0x02, (byte)'V', (byte)'A', (byte)'L', (byte)'I', (byte)'D', 0x03 };
-        var seq = new ReadOnlySequence<byte>(raw);
-
-        bool success = codec.TryDecode(ref seq, out var msg);
-
-        success.Should().BeTrue();
-        msg.Should().Be("VALID");
-        seq.Length.Should().Be(0);
+        msg.Should().Be(expectedMessage);
+        seq.Length.Should().Be(expectedRemainingBytes);
     }
 
     [Fact]
@@ -152,59 +170,6 @@ public class CodecBaseTemplatesFaultInjectionTests
         Action act = () => codec.TryDecode(ref seq, out _);
         act.Should().Throw<ProtocolViolationException>()
            .WithMessage("*Frame size limit exceeded*");
-    }
-
-    [Fact]
-    public void DelimitedFrameCodec_ExactMaxFrameSize_PayloadAllowed()
-    {
-        // MaxFrameSize is 10. Payload is exactly 10 bytes, plus 1 byte delimiter (total frame = 11).
-        // Under payload-based limit, payload length 10 <= 10 is allowed!
-        var options = new DelimitedFrameOptions
-        {
-            EndDelimiter = new byte[] { 0x0A },
-            StripDelimiters = true,
-            MaxFrameSize = 10
-        };
-        var codec = new TestDelimitedCodec(options);
-
-        byte[] raw = Encoding.ASCII.GetBytes("1234567890\n"); // 10 bytes + delimiter
-        var seq = new ReadOnlySequence<byte>(raw);
-
-        bool success = codec.TryDecode(ref seq, out var msg);
-        success.Should().BeTrue();
-        msg.Should().Be("1234567890");
-        seq.Length.Should().Be(0);
-    }
-
-    [Fact]
-    public void LengthFieldCodec_LengthIncludesHeaderAndTrailer_CalculatesCorrectly()
-    {
-        // HeaderMarker = 0xAA (1B), LengthFieldOffset = 1, LengthFieldLength = 2 (BigEndian)
-        // LengthIncludesHeader = true, TrailerLength = 1 (Checksum byte 0x55)
-        var options = new LengthFieldOptions
-        {
-            HeaderMarker = 0xAA,
-            LengthFieldOffset = 1,
-            LengthFieldLength = 2,
-            IsBigEndian = true,
-            LengthIncludesHeader = true,
-            TrailerLength = 1,
-            MaxFrameSize = 1024
-        };
-        var codec = new TestLengthFieldCodec(options);
-
-        // Header(1B) + Length(2B) = 3B min header.
-        // Payload = "TEST" (4B).
-        // Total raw length recorded in length field = 3(header) + 4(payload) = 7.
-        // Trailer = 0x55 (1B).
-        // Total frame size = 7 + 1 = 8 bytes.
-        byte[] raw = new byte[] { 0xAA, 0x00, 0x07, (byte)'T', (byte)'E', (byte)'S', (byte)'T', 0x55 };
-        var seq = new ReadOnlySequence<byte>(raw);
-
-        bool success = codec.TryDecode(ref seq, out var msg);
-        success.Should().BeTrue();
-        msg.Should().Be("TEST");
-        seq.Length.Should().Be(0);
     }
 
     private sealed class ChecksumValidatingCodec : LengthFieldCodec<string>
