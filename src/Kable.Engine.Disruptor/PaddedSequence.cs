@@ -1,5 +1,6 @@
 namespace Kable.Engine.Disruptor;
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -13,7 +14,9 @@ public struct PaddedSequence
     [FieldOffset(64)]
     public long Value;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public long ReadVolatile() => Volatile.Read(ref Value);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteVolatile(long val) => Volatile.Write(ref Value, val);
 }
