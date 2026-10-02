@@ -95,7 +95,7 @@ public sealed partial class KableSession<TMessage>
             {
                 _context = context;
                 _context.ConnectionClosed.Register(OnConnectionClosed);
-                Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
+                Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
                 Volatile.Write(ref _isConnected, 1);
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Running);
 

@@ -12,10 +12,10 @@
 Kable의 핫패스 I/O 및 데이터 전송 파이프라인 전체에 대해 정의된 **6대 핵심 점검 원칙(단기 스택할당 안전 경계, SIMD 가속, 클로저 캡처 방지, 구조체 인라인화, 수명주기/ValueTask, Zero-Copy 및 엔디언 정합성)**을 바탕으로 Group 1~11의 감사 결과를 기록했으며, 코어 개선과 회귀 테스트 및 **Group 11 P99/CV 지연 실측 성적서 확보를 완료**했습니다. Group 8·9의 상위 어댑터 잔여 최적화 과제는 차기 버전 개선 항목으로 유지됩니다.
 
 - **전체 프로젝트 빌드**: Release 모드 경고/오류 0개 (Green)
-- **전체 단위 및 통합 테스트**: **12개 테스트 프로젝트, 총 319개 테스트 100% 통과 (실패 0개)**
-  - `Kable.Tests`: 278개 통과 (노이즈 복구, 1B 파편화, CID 지연응답 격리 매개변수화 2개 포함)
+- **전체 단위 및 통합 테스트**: **12개 테스트 프로젝트, 총 320개 테스트 100% 통과 (실패 0개)**
+  - `Kable.Tests`: 278개 통과 (노이즈 복구, 1B 파편화, CID 지연응답 격리, TimeProvider 가상시간 워치독 포함)
   - `Kable.Generators.Tests`: 8개 통과
-  - `Kable.SharedMemory.Tests`: 6개 통과 (버퍼 포화 WaitForSpace 타임아웃 및 드레인 회복 검증)
+  - `Kable.SharedMemory.Tests`: 7개 통과 (버퍼 포화 WaitForSpace 타임아웃, 드레인 회복, 비동기 읽기/쓰기-Dispose TOCTOU 경합 안전성 검증)
   - `Kable.Host.Tests`: 5개 통과
   - `Kable.Modbus.Tests`: 4개 통과
   - `Kable.Melsec.Tests`: 4개 통과

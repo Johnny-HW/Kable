@@ -8,12 +8,14 @@ public sealed class HeartbeatOptions<TMessage>
     public TimeSpan Timeout { get; }
     public Func<TMessage> PingFactory { get; }
     public Func<TMessage, bool>? IsPongResponse { get; }
+    public TimeProvider TimeProvider { get; }
 
     public HeartbeatOptions(
         TimeSpan interval,
         TimeSpan timeout,
         Func<TMessage> pingFactory,
-        Func<TMessage, bool>? isPongResponse = null)
+        Func<TMessage, bool>? isPongResponse = null,
+        TimeProvider? timeProvider = null)
     {
         if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval), "Interval must be positive.");
         if (timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(timeout), "Timeout must be positive.");
@@ -22,5 +24,6 @@ public sealed class HeartbeatOptions<TMessage>
         Timeout = timeout;
         PingFactory = pingFactory ?? throw new ArgumentNullException(nameof(pingFactory));
         IsPongResponse = isPongResponse;
+        TimeProvider = timeProvider ?? TimeProvider.System;
     }
 }

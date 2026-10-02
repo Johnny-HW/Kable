@@ -9,6 +9,7 @@ using Kable.Core;
 using Kable.Engine;
 using Kable.Exceptions;
 using Kable.Tests.Fixtures;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 public sealed class HeartbeatWatchdogTests
@@ -45,7 +46,7 @@ public sealed class HeartbeatWatchdogTests
             }
         });
 
-        await Task.Delay(150);
+        await Task.Delay(200);
         await echoTask;
 
         pingCount.Should().BeGreaterThanOrEqualTo(2);
@@ -57,18 +58,24 @@ public sealed class HeartbeatWatchdogTests
     {
         var factory = new TestMemoryConnectionFactory();
         var codec = new AsciiLineCodec(delimiter: 0x0A);
+        var fakeTime = new FakeTimeProvider();
 
         var options = new HeartbeatOptions<string>(
             interval: TimeSpan.FromMilliseconds(40),
             timeout: TimeSpan.FromMilliseconds(80),
             pingFactory: () => "SILENT_PING",
-            isPongResponse: s => s == "PONG");
+            isPongResponse: s => s == "PONG",
+            timeProvider: fakeTime);
 
         await using var session = new KableSession<string>(factory, codec, heartbeatOptions: options);
         await session.StartAsync();
 
-        // Server does not respond with PONG
-        await Task.Delay(200);
+        // Advance time in small increments to allow each Task.Delay iteration to complete and evaluate elapsed
+        for (int i = 0; i < 10; i++)
+        {
+            fakeTime.Advance(TimeSpan.FromMilliseconds(20));
+            await Task.Delay(20);
+        }
 
         // Session must be disconnected due to heartbeat timeout
         session.IsConnected.Should().BeFalse();

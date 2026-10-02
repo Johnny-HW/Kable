@@ -16,6 +16,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
     private readonly ICommObserver? _observer;
     private readonly KableSessionOptions<TMessage> _sessionOptions;
     private readonly HeartbeatOptions<TMessage>? _heartbeatOptions;
+    private readonly TimeProvider _timeProvider;
 
     // Inbound Dispatch Queue
     private readonly Channel<TMessage> _dispatchQueue = Channel.CreateBounded<TMessage>(new BoundedChannelOptions(10000)
@@ -72,6 +73,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
         _codec = codec;
         _observer = observer;
         _heartbeatOptions = heartbeatOptions;
+        _timeProvider = heartbeatOptions?.TimeProvider ?? TimeProvider.System;
         DeviceId = deviceId ?? "DEFAULT";
         _sessionOptions = sessionOptions ?? new KableSessionOptions<TMessage>();
 

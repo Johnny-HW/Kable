@@ -187,7 +187,7 @@ public sealed partial class KableSession<TMessage>
 
                 while (_codec.TryDecode(ref buffer, out var message))
                 {
-                    Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
+                    Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
                     await _dispatchQueue.Writer.WriteAsync(message, token).ConfigureAwait(false);
                 }
 
@@ -270,7 +270,7 @@ public sealed partial class KableSession<TMessage>
 
     private async ValueTask DispatchMessageAsync(TMessage message)
     {
-        Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
+        Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
 
         if (_heartbeatOptions?.IsPongResponse != null && _heartbeatOptions.IsPongResponse(message))
         {
@@ -321,16 +321,22 @@ public sealed partial class KableSession<TMessage>
     private async Task HeartbeatLoopAsync()
     {
         if (_heartbeatOptions == null) return;
-        var checkInterval = TimeSpan.FromMilliseconds(Math.Max(100, _heartbeatOptions.Interval.TotalMilliseconds / 2));
+        var checkInterval = TimeSpan.FromMilliseconds(Math.Max(10, _heartbeatOptions.Interval.TotalMilliseconds / 2));
 
         try
         {
             while (!_sessionCts.Token.IsCancellationRequested)
             {
+                var timeProvider = _heartbeatOptions.TimeProvider;
+#if NET8_0_OR_GREATER
+                await Task.Delay(checkInterval, timeProvider, _sessionCts.Token).ConfigureAwait(false);
+#else
                 await Task.Delay(checkInterval, _sessionCts.Token).ConfigureAwait(false);
+#endif
 
                 var lastTicks = Volatile.Read(ref _lastInboundTicks);
-                var elapsed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - lastTicks);
+                var currentTimestamp = timeProvider.GetTimestamp();
+                var elapsed = timeProvider.GetElapsedTime(lastTicks, currentTimestamp);
 
                 if (elapsed > _heartbeatOptions.Timeout)
                 {
