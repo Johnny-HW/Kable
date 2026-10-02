@@ -58,7 +58,7 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
 
     public int Capacity { get; }
     public int Mask { get; }
-    public bool IsClosed => Volatile.Read(ref _header->IsClosed) != 0;
+    public bool IsClosed => Volatile.Read(ref _isDisposed) != 0 || Volatile.Read(ref _header->IsClosed) != 0;
 
     private SharedMemoryRingBuffer(
         MemoryMappedFile mmf,
