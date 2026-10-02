@@ -81,4 +81,62 @@ public class SharedMemorySafetyTests
         bool hasSpaceAfterDrain = serverBuffer.WaitForSpace(50);
         Assert.True(hasSpaceAfterDrain);
     }
+
+    [Fact]
+    public async Task SharedMemoryRingBuffer_ConcurrentReadWriteAndDispose_NeverThrowsAccessViolationOrCrashes()
+    {
+        // Stress test: Multiple threads writing and reading at high frequency
+        // while Dispose is asynchronously called on another thread.
+        // Must never throw AccessViolationException or unhandled crash.
+        for (int run = 0; run < 10; run++)
+        {
+            string channel = "test_race_" + Guid.NewGuid().ToString("N")[..8];
+            var serverBuffer = SharedMemoryRingBuffer.Create(channel, 4096);
+            var clientBuffer = SharedMemoryRingBuffer.Open(channel);
+
+            using var cts = new CancellationTokenSource();
+            var token = cts.Token;
+
+            var writerTask = Task.Run(() =>
+            {
+                byte[] data = new byte[64];
+                while (!token.IsCancellationRequested && !serverBuffer.IsClosed)
+                {
+                    try
+                    {
+                        serverBuffer.Write(data);
+                    }
+                    catch (ObjectDisposedException) { break; }
+                }
+            });
+
+            var readerTask = Task.Run(() =>
+            {
+                byte[] readBuf = new byte[64];
+                while (!token.IsCancellationRequested && !clientBuffer.IsClosed)
+                {
+                    try
+                    {
+                        clientBuffer.Read(readBuf);
+                    }
+                    catch (ObjectDisposedException) { break; }
+                }
+            });
+
+            // Let them spin concurrently for a random short burst (1~5ms)
+            await Task.Delay(Random.Shared.Next(1, 5));
+
+            // Concurrently dispose both buffers from test thread
+            clientBuffer.Dispose();
+            serverBuffer.Dispose();
+
+            cts.Cancel();
+
+            await Task.WhenAll(writerTask, readerTask);
+
+            // Re-verify that subsequent accesses cleanly return 0
+            Assert.Equal(0, serverBuffer.Write(new byte[10]));
+            Assert.Equal(0, clientBuffer.Read(new byte[10]));
+        }
+    }
 }

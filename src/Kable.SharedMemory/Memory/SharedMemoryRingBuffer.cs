@@ -55,6 +55,7 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
     private readonly EventWaitHandle _spaceAvailableEvent;
     private readonly bool _ownsMmf;
     private int _isDisposed;
+    private int _activeIoCount;
 
     public int Capacity { get; }
     public int Mask { get; }
@@ -158,29 +159,42 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
     {
         if (source.IsEmpty || IsClosed) return 0;
 
-        long head = Volatile.Read(ref _header->Head);
-        long tail = Volatile.Read(ref _header->Tail);
-
-        long availableSpace = Capacity - (head - tail);
-        if (availableSpace <= 0) return 0;
-
-        int bytesToWrite = (int)Math.Min(source.Length, availableSpace);
-        int headIndex = (int)(head & Mask);
-
-        // 원형 버퍼 랩어라운드(Wrap-around) 복사 처리
-        int firstChunk = Math.Min(bytesToWrite, Capacity - headIndex);
-        source.Slice(0, firstChunk).CopyTo(new Span<byte>(_dataArea + headIndex, firstChunk));
-
-        int secondChunk = bytesToWrite - firstChunk;
-        if (secondChunk > 0)
+        Interlocked.Increment(ref _activeIoCount);
+        try
         {
-            source.Slice(firstChunk, secondChunk).CopyTo(new Span<byte>(_dataArea, secondChunk));
+            if (Volatile.Read(ref _isDisposed) != 0 || Volatile.Read(ref _header->IsClosed) != 0)
+            {
+                return 0;
+            }
+
+            long head = Volatile.Read(ref _header->Head);
+            long tail = Volatile.Read(ref _header->Tail);
+
+            long availableSpace = Capacity - (head - tail);
+            if (availableSpace <= 0) return 0;
+
+            int bytesToWrite = (int)Math.Min(source.Length, availableSpace);
+            int headIndex = (int)(head & Mask);
+
+            // 원형 버퍼 랩어라운드(Wrap-around) 복사 처리
+            int firstChunk = Math.Min(bytesToWrite, Capacity - headIndex);
+            source.Slice(0, firstChunk).CopyTo(new Span<byte>(_dataArea + headIndex, firstChunk));
+
+            int secondChunk = bytesToWrite - firstChunk;
+            if (secondChunk > 0)
+            {
+                source.Slice(firstChunk, secondChunk).CopyTo(new Span<byte>(_dataArea, secondChunk));
+            }
+
+            Volatile.Write(ref _header->Head, head + bytesToWrite);
+            _dataAvailableEvent.Set();
+
+            return bytesToWrite;
         }
-
-        Volatile.Write(ref _header->Head, head + bytesToWrite);
-        _dataAvailableEvent.Set();
-
-        return bytesToWrite;
+        finally
+        {
+            Interlocked.Decrement(ref _activeIoCount);
+        }
     }
 
     /// <summary>
@@ -189,30 +203,43 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Read(Span<byte> destination)
     {
-        if (destination.IsEmpty) return 0;
+        if (destination.IsEmpty || IsClosed) return 0;
 
-        long tail = Volatile.Read(ref _header->Tail);
-        long head = Volatile.Read(ref _header->Head);
-
-        long availableData = head - tail;
-        if (availableData <= 0) return 0;
-
-        int bytesToRead = (int)Math.Min(destination.Length, availableData);
-        int tailIndex = (int)(tail & Mask);
-
-        int firstChunk = Math.Min(bytesToRead, Capacity - tailIndex);
-        new ReadOnlySpan<byte>(_dataArea + tailIndex, firstChunk).CopyTo(destination.Slice(0, firstChunk));
-
-        int secondChunk = bytesToRead - firstChunk;
-        if (secondChunk > 0)
+        Interlocked.Increment(ref _activeIoCount);
+        try
         {
-            new ReadOnlySpan<byte>(_dataArea, secondChunk).CopyTo(destination.Slice(firstChunk, secondChunk));
+            if (Volatile.Read(ref _isDisposed) != 0 || Volatile.Read(ref _header->IsClosed) != 0)
+            {
+                return 0;
+            }
+
+            long tail = Volatile.Read(ref _header->Tail);
+            long head = Volatile.Read(ref _header->Head);
+
+            long availableData = head - tail;
+            if (availableData <= 0) return 0;
+
+            int bytesToRead = (int)Math.Min(destination.Length, availableData);
+            int tailIndex = (int)(tail & Mask);
+
+            int firstChunk = Math.Min(bytesToRead, Capacity - tailIndex);
+            new ReadOnlySpan<byte>(_dataArea + tailIndex, firstChunk).CopyTo(destination.Slice(0, firstChunk));
+
+            int secondChunk = bytesToRead - firstChunk;
+            if (secondChunk > 0)
+            {
+                new ReadOnlySpan<byte>(_dataArea, secondChunk).CopyTo(destination.Slice(firstChunk, secondChunk));
+            }
+
+            Volatile.Write(ref _header->Tail, tail + bytesToRead);
+            _spaceAvailableEvent.Set();
+
+            return bytesToRead;
         }
-
-        Volatile.Write(ref _header->Tail, tail + bytesToRead);
-        _spaceAvailableEvent.Set();
-
-        return bytesToRead;
+        finally
+        {
+            Interlocked.Decrement(ref _activeIoCount);
+        }
     }
 
     /// <summary>
@@ -267,6 +294,13 @@ public unsafe sealed class SharedMemoryRingBuffer : IDisposable
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
 
         Close();
+
+        // Spin-wait until any in-flight Read or Write operation exits the unsafe pointer section
+        var spinner = new SpinWait();
+        while (Volatile.Read(ref _activeIoCount) > 0)
+        {
+            spinner.SpinOnce();
+        }
 
         if (_pointer != null)
         {
