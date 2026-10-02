@@ -3,8 +3,8 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.6.0</Version>
-    <PackageVersion>1.6.0</PackageVersion>
+    <Version>1.7.0</Version>
+    <PackageVersion>1.7.0</PackageVersion>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

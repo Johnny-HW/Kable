@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-10-02
+
+### Added
+- **High-Frequency Latency Profiler & Zero-Alloc Metric Runner (`Kable.Benchmarks`)**:
+  - Implemented `ZeroAllocLatencyCollector` backed by pre-allocated circular ring buffer for zero-overhead, 0-GC latency sampling.
+  - Added [LatencyProfileRunner.cs](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/tests/Kable.Benchmarks/LatencyProfileRunner.cs) evaluating 50,000 round-trip loopback requests:
+    - **Mean**: 21.84 μs, **P50**: 20.10 μs, **P95**: 31.90 μs, **P99**: 55.60 μs, **CV**: 1.2386.
+- **Deterministic Time Virtualization (`TimeProvider`)**:
+  - Integrated `TimeProvider` into `HeartbeatOptions` and `KableSession` with multi-targeting support (`netstandard2.0`, `net8.0`, `net10.0`).
+  - Virtualized heartbeat watchdog and timeout test suite (`HeartbeatWatchdogTests`) using `FakeTimeProvider` for zero-wall-clock-flakiness CI verification.
+
+### Fixed
+- **SharedMemory TOCTOU Concurrency Safety (`Kable.SharedMemory`)**:
+  - Eliminated `AccessViolationException` caused by concurrent pointer access during `Dispose()` via atomic in-flight I/O tracking (`_activeIoCount`) and spin-wait unmapping guardrails.
+  - Added concurrent read/write vs. dispose stress test suite (`SharedMemorySafetyTests`).
+
+### Performance
+- **MQTT Telemetry Zero-Copy & Allocation Reduction (`Kable.Mqtt`)**:
+  - `PublishRawAsync`: Replaced buffer duplication (`.ToArray()`) with zero-copy `ArraySegment<byte>` extraction via `MemoryMarshal.TryGetArray`.
+  - `PublishMetricAsync`: Switched JSON serialization to `Utf8JsonWriter` over streaming buffers.
+
+### Refactoring & Samples
+- **Sample Directory Layout Standardization**:
+  - Reorganized root `DEMO/` application into standard layout at `samples/Kable.ConfigStudio/` with full Release build validation.
+- **Zero-GC & Micro-Latency Audit Report Completion**:
+  - Finalized [DESIGN/zero_gc_audit_report.md](file:///d:/Johnny/00.New/02.SoftwareLib/01.Kable/DESIGN/zero_gc_audit_report.md) with comprehensive verification across all 12 test projects (320 tests, 100% pass).
+
 ## [1.6.0] - 2026-10-01
 
 ### Added
