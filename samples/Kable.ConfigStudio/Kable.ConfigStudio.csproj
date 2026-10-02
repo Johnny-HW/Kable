@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Kable.ConfigStudio</RootNamespace>
+    <AssemblyName>Kable.ConfigStudio</AssemblyName>
+    <ApplicationTitle>Kable Config Studio</ApplicationTitle>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.0-preview.1.25080.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Kable.Core\Kable.Core.csproj" />
+    <ProjectReference Include="..\..\src\Kable\Kable.csproj" />
+    <ProjectReference Include="..\..\src\Kable.Modbus\Kable.Modbus.csproj" />
+    <ProjectReference Include="..\..\src\Kable.Melsec\Kable.Melsec.csproj" />
+    <ProjectReference Include="..\..\src\Kable.Mqtt\Kable.Mqtt.csproj" />
+    <ProjectReference Include="..\..\src\Kable.OpcUa\Kable.OpcUa.csproj" />
+    <ProjectReference Include="..\..\src\Kable.UI.Wpf\Kable.UI.Wpf.csproj" />
+  </ItemGroup>
+
+</Project>
