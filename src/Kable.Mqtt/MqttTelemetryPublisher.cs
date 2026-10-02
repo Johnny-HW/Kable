@@ -81,23 +81,41 @@ public sealed class MqttTelemetryPublisher : IMqttTelemetryPublisher
 
     /// <summary>
     /// 단일 텔레메트리 메트릭을 JSON 형태로 MQTT 브로커에 비동기 발행합니다.
+    /// Utf8JsonWriter와 재사용 버퍼를 활용하여 불필요한 객체 할당을 최소화합니다.
     /// </summary>
     public async Task PublishMetricAsync(TelemetryMetric metric, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtMostOnce, CancellationToken ct = default)
     {
         if (!_client.IsConnected) return;
 
         string topic = $"{_topicPrefix}/{metric.Name}";
-        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(new
+        
+        using var stream = new System.IO.MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
         {
-            name = metric.Name,
-            value = metric.Value,
-            timestamp = metric.TimestampTicks,
-            tags = metric.Tags
-        });
+            writer.WriteStartObject();
+            writer.WriteString("name", metric.Name);
+            writer.WriteNumber("value", metric.Value);
+            writer.WriteNumber("timestamp", metric.TimestampTicks);
+
+            if (metric.Tags != null)
+            {
+                writer.WriteStartObject("tags");
+                foreach (var (k, v) in metric.Tags)
+                {
+                    writer.WriteString(k, v);
+                }
+                writer.WriteEndObject();
+            }
+            else
+            {
+                writer.WriteNull("tags");
+            }
+            writer.WriteEndObject();
+        }
 
         var message = new MqttApplicationMessageBuilder()
             .WithTopic(topic)
-            .WithPayload(payload)
+            .WithPayload(stream.ToArray())
             .WithQualityOfServiceLevel(qos)
             .Build();
 
@@ -106,18 +124,28 @@ public sealed class MqttTelemetryPublisher : IMqttTelemetryPublisher
 
     /// <summary>
     /// 원시(Raw) 바이트 페이로드를 특정 하위 토픽으로 발행합니다.
+    /// underlying byte[] 배열이 있는 경우 불필요한 복사(ToArray) 없이 직접 ArraySegment로 전달합니다.
     /// </summary>
     public async Task PublishRawAsync(string subTopic, ReadOnlyMemory<byte> payload, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtMostOnce, CancellationToken ct = default)
     {
         if (!_client.IsConnected) return;
 
         string topic = $"{_topicPrefix}/{subTopic.TrimStart('/')}";
-        var message = new MqttApplicationMessageBuilder()
-            .WithTopic(topic)
-            .WithPayload(payload.ToArray())
-            .WithQualityOfServiceLevel(qos)
-            .Build();
 
+        var builder = new MqttApplicationMessageBuilder()
+            .WithTopic(topic)
+            .WithQualityOfServiceLevel(qos);
+
+        if (System.Runtime.InteropServices.MemoryMarshal.TryGetArray(payload, out ArraySegment<byte> segment))
+        {
+            builder.WithPayload(segment);
+        }
+        else
+        {
+            builder.WithPayload(payload.ToArray());
+        }
+
+        var message = builder.Build();
         await _client.PublishAsync(message, ct).ConfigureAwait(false);
     }
 
