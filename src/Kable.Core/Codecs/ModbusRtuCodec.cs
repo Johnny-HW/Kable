@@ -75,6 +75,14 @@ public sealed class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>>
             expectedLength = (int)buffer.Length;
         }
 
+        // 허용 상한선 초과 시 즉시 무효 패킷 처리 (1바이트 슬라이스하여 재동기화)
+        if (expectedLength > _maxFrameSize)
+        {
+            buffer = buffer.Slice(1);
+            message = ReadOnlyMemory<byte>.Empty;
+            return false;
+        }
+
         if (buffer.Length < expectedLength)
         {
             message = ReadOnlyMemory<byte>.Empty;
@@ -82,21 +90,38 @@ public sealed class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>>
         }
 
         var frameSeq = buffer.Slice(0, expectedLength);
-        Span<byte> frameSpan = stackalloc byte[expectedLength];
-        frameSeq.CopyTo(frameSpan);
 
-        // CRC 자동 검증
-        if (!Crc16Modbus.Validate(frameSpan))
+        // 스택 임계값(256B) 이하는 stackalloc, 초과 시에만 ArrayPool fallback
+        const int StackAllocThreshold = 256;
+        byte[]? rented = null;
+        Span<byte> frameSpan = expectedLength <= StackAllocThreshold
+            ? stackalloc byte[expectedLength]
+            : (rented = ArrayPool<byte>.Shared.Rent(expectedLength)).AsSpan(0, expectedLength);
+
+        try
         {
-            // CRC 불일치 시 1바이트 슬라이스하여 동기화 복구 시도
-            buffer = buffer.Slice(1);
-            message = ReadOnlyMemory<byte>.Empty;
-            return false;
-        }
+            frameSeq.CopyTo(frameSpan);
 
-        message = frameSpan.ToArray();
-        buffer = buffer.Slice(buffer.GetPosition(expectedLength));
-        return true;
+            // CRC 자동 검증
+            if (!Crc16Modbus.Validate(frameSpan))
+            {
+                // CRC 불일치 시 1바이트 슬라이스하여 동기화 복구 시도
+                buffer = buffer.Slice(1);
+                message = ReadOnlyMemory<byte>.Empty;
+                return false;
+            }
+
+            message = frameSpan.ToArray();
+            buffer = buffer.Slice(buffer.GetPosition(expectedLength));
+            return true;
+        }
+        finally
+        {
+            if (rented != null)
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
     }
 
     public string? ExtractCorrelationId(ReadOnlyMemory<byte> message) => null;
