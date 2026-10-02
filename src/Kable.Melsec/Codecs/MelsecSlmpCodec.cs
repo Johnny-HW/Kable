@@ -83,6 +83,14 @@ public sealed class MelsecSlmpCodec : IProtocolCodec<Slmp3EFrame>
         ushort responseDataLength = BinaryPrimitives.ReadUInt16LittleEndian(header.Slice(7, 2));
         int totalFrameSize = 9 + responseDataLength;
 
+        // MC Protocol 3E 응답 바디는 최소 EndCode(2B)를 포함해야 하므로 최소 11B
+        if (totalFrameSize < 11 || totalFrameSize > _maxFrameSize)
+        {
+            buffer = buffer.Slice(1);
+            message = null!;
+            return false;
+        }
+
         if (buffer.Length < totalFrameSize)
         {
             message = null!;
