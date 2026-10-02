@@ -68,6 +68,15 @@ public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>
         ushort length = BinaryPrimitives.ReadUInt16BigEndian(headerBytes.Slice(4, 2));
         int totalFrameSize = 6 + length;
 
+        // Modbus TCP 프레임 최소 크기(MBAP 7바이트 + 최소 FC 1바이트 = 8) 및 최대 상한선 검증
+        if (totalFrameSize < 8 || totalFrameSize > _maxFrameSize)
+        {
+            // 비정상 프레임 수신 시 1바이트 전진하여 재동기화
+            buffer = buffer.Slice(1);
+            message = null!;
+            return false;
+        }
+
         if (buffer.Length < totalFrameSize)
         {
             message = null!;
