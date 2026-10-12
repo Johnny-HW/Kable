@@ -1,6 +1,7 @@
 namespace Kable.Tests.Cases.Simple.Reconnecting;
 
 using Kable.Exceptions;
+using Kable.Observability;
 using Kable.Simple;
 using Kable.Simple.Reconnecting;
 using Xunit;
@@ -97,6 +98,7 @@ public class ReconnectingClientTests
     private sealed class FakeClient : IKableSimpleClient
     {
         public bool IsConnected { get; private set; } = true;
+        public CommHealthMetrics HealthMetrics => CommHealthMetrics.Empty;
         public bool Disposed { get; private set; }
         public bool FailQuery { get; init; }
         public int Queries { get; private set; }

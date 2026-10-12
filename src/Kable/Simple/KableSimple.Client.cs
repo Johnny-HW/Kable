@@ -27,6 +27,7 @@ public static partial class KableSimple
         public event Action<Exception?>? Disconnected;
 
         public bool IsConnected => _session.IsConnected;
+        public CommHealthMetrics HealthMetrics => _session.HealthMetrics;
 
         public KableSimpleClient(IDeviceSession<string> session, ICommObserver? observer = null, TimeSpan? defaultTimeout = null)
         {

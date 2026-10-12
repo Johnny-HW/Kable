@@ -31,6 +31,21 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
     [ObservableProperty]
     private string _statusMessage = "Ready";
 
+    [ObservableProperty]
+    private DeviceConnectionState _connectionState = DeviceConnectionState.Disconnected;
+
+    [ObservableProperty]
+    private string _rttText = "- ms";
+
+    [ObservableProperty]
+    private string _packetCounterText = "TX: 0 / RX: 0";
+
+    [ObservableProperty]
+    private string _errorRateText = "Err: 0.0%";
+
+    [ObservableProperty]
+    private string _stateBadgeColor = "#94A3B8";
+
     public ObservableCollection<PacketDisplayModel> Packets { get; } = new();
 
     public ChannelReader<PacketTraceRecord> CommandStream => throw new NotSupportedException();
@@ -80,6 +95,29 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
                 Packets.RemoveAt(Packets.Count - 1);
             }
             Packets.Insert(0, model);
+        });
+    }
+
+    /// <summary>
+    /// 외부 세션 또는 백그라운드 폴러로부터 통신 건전성 지표를 전달받아 UI를 갱신합니다.
+    /// </summary>
+    public void UpdateHealthMetrics(CommHealthMetrics metrics)
+    {
+        _dispatcher.BeginInvoke(() =>
+        {
+            ConnectionState = metrics.State;
+            RttText = metrics.LastRttMs > 0 ? $"{metrics.LastRttMs:F1} ms (avg {metrics.AvgRttMs:F1})" : "- ms";
+            PacketCounterText = $"TX: {metrics.TotalTxPackets:N0} / RX: {metrics.TotalRxPackets:N0}";
+            ErrorRateText = $"Err: {metrics.ErrorRatePercentage:F2}% ({metrics.ErrorPackets:N0})";
+
+            StateBadgeColor = metrics.State switch
+            {
+                DeviceConnectionState.Connected => "#34C759", // Green
+                DeviceConnectionState.Simulated => "#FF9F0A", // Orange/Yellow
+                DeviceConnectionState.Connecting => "#0071E3", // Blue
+                DeviceConnectionState.Faulted => "#FF3B30",   // Red
+                _ => "#94A3B8"                               // Gray
+            };
         });
     }
 

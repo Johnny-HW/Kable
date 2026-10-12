@@ -25,6 +25,7 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
     private bool _disposed;
 
     public bool IsConnected => _client.IsConnected;
+    public CommHealthMetrics HealthMetrics => _client.HealthMetrics;
     public event Action<TPeriodic, string>? PeriodicDataReceived;
     public event Action<Exception?>? Disconnected;
 

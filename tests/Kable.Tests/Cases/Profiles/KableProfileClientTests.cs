@@ -189,6 +189,7 @@ public class KableProfileClientTests
     private sealed class EchoDummySimpleClient : Kable.Simple.IKableSimpleClient
     {
         public bool IsConnected => true;
+        public Kable.Observability.CommHealthMetrics HealthMetrics => Kable.Observability.CommHealthMetrics.Empty;
         public event Action<string>? LineReceived { add { } remove { } }
         public event Action<Exception>? ErrorOccurred { add { } remove { } }
         public event Action<Exception?>? Disconnected { add { } remove { } }
@@ -203,6 +204,7 @@ public class KableProfileClientTests
     private sealed class DummySimpleClient : Kable.Simple.IKableSimpleClient
     {
         public bool IsConnected => true;
+        public Kable.Observability.CommHealthMetrics HealthMetrics => Kable.Observability.CommHealthMetrics.Empty;
         public event Action<string>? LineReceived { add { } remove { } }
         public event Action<Exception>? ErrorOccurred { add { } remove { } }
         public event Action<Exception?>? Disconnected { add { } remove { } }

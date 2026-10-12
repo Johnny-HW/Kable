@@ -128,6 +128,7 @@ public sealed partial class KableSession<TMessage>
                     {
                         c.Completion.TrySetResult(true);
                     }
+                    _healthTracker.RecordTx(commandsToComplete.Count);
                 }
                 catch (OperationCanceledException ocex)
                 {
@@ -188,6 +189,7 @@ public sealed partial class KableSession<TMessage>
                 while (_codec.TryDecode(ref buffer, out var message))
                 {
                     Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
+                    _healthTracker.RecordRx(1);
                     await _dispatchQueue.Writer.WriteAsync(message, token).ConfigureAwait(false);
                 }
 
@@ -201,6 +203,7 @@ public sealed partial class KableSession<TMessage>
         }
         catch (Exception ex)
         {
+            _healthTracker.RecordError(1);
             _observer?.OnPacketTrace(new PacketTraceRecord(
                 DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                 "READ_LOOP_FAULT", ReadOnlyMemory<byte>.Empty,

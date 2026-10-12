@@ -40,10 +40,12 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
     private long _spoolStoredCount;
     private long _spoolInDoubtCount;
     private long _spoolUnprocessedCount;
+    private readonly CommHealthTracker _healthTracker = new();
 
     public string DeviceId { get; }
     public TimeSpan DefaultRequestTimeout { get; internal set; } = TimeSpan.FromSeconds(3);
     public bool IsConnected => State == SessionLifecycleState.Running && Volatile.Read(ref _isConnected) == 1;
+    public CommHealthMetrics HealthMetrics => _healthTracker.GetMetricsSnapshot();
 
     /// <summary>
     /// 세션 종료 후 또는 실시간 알람 스풀 워커 처리 결과 집계 리포트 (저장 완료, 저장 여부 불명, 미처리)

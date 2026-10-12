@@ -18,8 +18,19 @@
             <DockPanel LastChildFill="False">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                     <TextBlock Text="📡 Raw Packet Stream Log" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="#64748B" FontSize="11"/>
+                    
+                    <!-- Health & Metrics Badge Strip -->
+                    <Border Background="{Binding StateBadgeColor}" CornerRadius="10" Padding="8,3" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ConnectionState}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="10"/>
+                    </Border>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,3" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding RttText, StringFormat='⏱ {0}'}" Foreground="#334155" FontSize="11" FontWeight="SemiBold"/>
+                    </Border>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,3" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding PacketCounterText}" Foreground="#334155" FontSize="11"/>
+                    </Border>
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="6,3" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ErrorRateText}" Foreground="#E11D48" FontSize="11" FontWeight="SemiBold"/>
                     </Border>
                     <!-- Pause / Resume -->
                     <Button Content="{loc:Loc Btn_Pause}" Command="{Binding TogglePauseCommand}" 

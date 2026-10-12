@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-10-12
+
+### Added
+- **Multi-Transport Communication Health & Quality Metrics (`Kable.Core`)**:
+  - Introduced unified `CommHealthMetrics` snapshot and `DeviceConnectionState` (`Disconnected`, `Connecting`, `Connected`, `Simulated`, `Faulted`).
+  - Added zero-allocation lock-free tracker `CommHealthTracker` backed by `Interlocked` primitives and `ZeroAllocLatencyCollector`:
+    - Real-time round-trip latency (`LastRttMs`), exponential moving average (`AvgRttMs`, $\alpha=0.2$), and jitter/percentile metrics (`P99RttMs`).
+    - Full packet counters (`TotalTxPackets`, `TotalRxPackets`, `ErrorPackets`) and dynamic error percentage (`ErrorRatePercentage`).
+  - Exposed `HealthMetrics` property across `IDeviceSession<TMessage>`, `IKableSimpleClient`, and `KableProfileClientBase`.
+  - Automatically attached hardware/simulated detection: virtual and mock connection contexts default to `Simulated` state.
+- **WPF Health & Metrics Monitoring Strip (`Kable.UI.Wpf`)**:
+  - Integrated dynamic status badge strip into `RawPacketLogStreamView`:
+    - Visual connection state badge (`Connected` green, `Simulated` orange, `Connecting` blue, `Faulted` red).
+    - Real-time RTT display, Tx/Rx counters, and error rate tracking.
+- **OpenTelemetry Error & Health Bridge (`Kable.Observability.OpenTelemetry`)**:
+  - Added `kable.packets.errors` counter and `RecordHealthMetrics` session bridge to Prometheus/OTel exporters.
+
 ## [1.7.0] - 2026-10-02
 
 ### Added

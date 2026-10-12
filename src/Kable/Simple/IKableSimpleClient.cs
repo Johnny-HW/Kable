@@ -17,6 +17,11 @@ public interface IKableSimpleClient : IAsyncDisposable, IDisposable
     bool IsConnected { get; }
 
     /// <summary>
+    /// 통신 건전성 및 런타임 품질 지표 (연결 상태, RTT, 패킷 카운터, 에러율 등)
+    /// </summary>
+    Kable.Observability.CommHealthMetrics HealthMetrics { get; }
+
+    /// <summary>
     /// 요청 응답으로 소비되지 않은 라인을 백그라운드 스레드에서 전달합니다.
     /// QueryAsync 응답은 포함되지 않습니다. UI 갱신은 Dispatcher로 전환하십시오.
     /// </summary>

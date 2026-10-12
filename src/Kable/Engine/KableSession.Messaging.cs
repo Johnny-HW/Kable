@@ -58,6 +58,8 @@ public sealed partial class KableSession<TMessage>
         bool hasCid = _codec.SupportsCorrelationId;
         string? cid = hasCid ? _codec.ExtractCorrelationId(request) : null;
 
+        long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+
         if (string.IsNullOrEmpty(cid))
         {
             // Strict FIFO Mode
@@ -74,6 +76,7 @@ public sealed partial class KableSession<TMessage>
             {
                 if (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
                 {
+                    _healthTracker.RecordError(1);
                     throw new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
                 }
                 throw;
@@ -95,10 +98,12 @@ public sealed partial class KableSession<TMessage>
                 }
                 catch (ChannelClosedException cce)
                 {
+                    _healthTracker.RecordError(1);
                     throw new DeviceDisconnectedException("Hardware connection has been disconnected.", cce);
                 }
 
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
+                _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
 
                 if (responseMsg is TResponse typedResp)
                 {
@@ -116,6 +121,7 @@ public sealed partial class KableSession<TMessage>
             {
                 if (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
                 {
+                    _healthTracker.RecordError(1);
                     _observer?.OnPacketTrace(new PacketTraceRecord(
                         DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                         "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
@@ -156,6 +162,7 @@ public sealed partial class KableSession<TMessage>
                 await WaitWithCancellationAsync(cmd.Completion.Task, effectiveToken).ConfigureAwait(false);
 
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
+                _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
 
                 if (responseMsg is TResponse typedResp)
                 {
@@ -171,10 +178,12 @@ public sealed partial class KableSession<TMessage>
             }
             catch (ChannelClosedException cce)
             {
+                _healthTracker.RecordError(1);
                 throw new DeviceDisconnectedException("Hardware connection has been disconnected.", cce);
             }
             catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
             {
+                _healthTracker.RecordError(1);
                 _observer?.OnPacketTrace(new PacketTraceRecord(
                     DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                     "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,

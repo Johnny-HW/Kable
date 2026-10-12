@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kable.Core;
 using Kable.Exceptions;
+using Kable.Observability;
 
 public enum SessionLifecycleState
 {
@@ -54,6 +55,7 @@ public sealed partial class KableSession<TMessage>
             else if (currentState == SessionLifecycleState.Created)
             {
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Starting);
+                _healthTracker.SetState(DeviceConnectionState.Connecting);
                 isStarter = true;
             }
             else
@@ -98,6 +100,11 @@ public sealed partial class KableSession<TMessage>
                 Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
                 Volatile.Write(ref _isConnected, 1);
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Running);
+
+                bool isSimulated = context.EndpointDescription?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true
+                    || context.EndpointDescription?.Contains("Mock", StringComparison.OrdinalIgnoreCase) == true
+                    || context.EndpointDescription?.Contains("Simulat", StringComparison.OrdinalIgnoreCase) == true;
+                _healthTracker.SetState(isSimulated ? DeviceConnectionState.Simulated : DeviceConnectionState.Connected);
 
                 _outboundPumpTask = Task.Run(OutboundPumpLoopAsync);
                 _dispatchLoopTask = Task.Run(DispatchLoopAsync);
@@ -312,6 +319,7 @@ public sealed partial class KableSession<TMessage>
         {
             var ex = specificReason ?? new DeviceDisconnectedException("Hardware connection has been disconnected. (Fail-fast aborting all pending requests)");
             _disconnectReason = ex;
+            _healthTracker.SetState(specificReason != null ? DeviceConnectionState.Faulted : DeviceConnectionState.Disconnected);
 
             _currentFifoTcs?.TrySetException(ex);
             foreach (var kvp in _pendingRequests)
