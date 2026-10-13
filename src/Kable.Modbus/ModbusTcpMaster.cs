@@ -57,6 +57,88 @@ public sealed class ModbusTcpMaster : IModbusMaster
 
 
     /// <summary>
+    /// FC02 Read Discrete Inputs 실행
+    /// </summary>
+    public async Task<bool[]> ReadDiscreteInputsAsync(ushort startAddress, ushort count, byte? unitId = null, CancellationToken ct = default)
+    {
+        ushort transId = GetNextTransactionId();
+        byte targetUnit = unitId ?? DefaultUnitId;
+        var request = ModbusTcpMessage.CreateReadDiscreteInputs(transId, targetUnit, startAddress, count);
+
+        var response = await _session.RequestAsync<ModbusTcpMessage>(request, DefaultTimeout, ct).ConfigureAwait(false);
+
+        if (response.IsException)
+        {
+            throw new InvalidOperationException($"Modbus Exception Response: Code 0x{response.ExceptionCode:X2}");
+        }
+
+        var span = response.Payload.Span;
+        if (span.Length < 1) throw new InvalidOperationException("Invalid Modbus response length.");
+
+        byte byteCount = span[0];
+        var bits = new bool[count];
+        for (int i = 0; i < count; i++)
+        {
+            int byteIdx = 1 + (i / 8);
+            if (byteIdx < span.Length)
+            {
+                int bitIdx = i % 8;
+                bits[i] = (span[byteIdx] & (1 << bitIdx)) != 0;
+            }
+        }
+
+        return bits;
+    }
+
+    /// <summary>
+    /// FC04 Read Input Registers 실행
+    /// </summary>
+    public async Task<ushort[]> ReadInputRegistersAsync(ushort startAddress, ushort count, byte? unitId = null, CancellationToken ct = default)
+    {
+        ushort transId = GetNextTransactionId();
+        byte targetUnit = unitId ?? DefaultUnitId;
+        var request = ModbusTcpMessage.CreateReadRegisters(transId, targetUnit, 0x04, startAddress, count);
+
+        var response = await _session.RequestAsync<ModbusTcpMessage>(request, DefaultTimeout, ct).ConfigureAwait(false);
+
+        if (response.IsException)
+        {
+            throw new InvalidOperationException($"Modbus Exception Response: Code 0x{response.ExceptionCode:X2}");
+        }
+
+        var span = response.Payload.Span;
+        if (span.Length < 1) throw new InvalidOperationException("Invalid Modbus response length.");
+
+        byte byteCount = span[0];
+        int registerCount = byteCount / 2;
+        var registers = new ushort[registerCount];
+
+        for (int i = 0; i < registerCount; i++)
+        {
+            registers[i] = BinaryPrimitives.ReadUInt16BigEndian(span.Slice(1 + (i * 2), 2));
+        }
+
+        return registers;
+    }
+
+    /// <summary>
+    /// FC05 Write Single Coil 실행
+    /// </summary>
+    public async Task WriteSingleCoilAsync(ushort address, bool value, byte? unitId = null, CancellationToken ct = default)
+    {
+        ushort transId = GetNextTransactionId();
+        byte targetUnit = unitId ?? DefaultUnitId;
+        var request = ModbusTcpMessage.CreateWriteSingleCoil(transId, targetUnit, address, value);
+
+        var response = await _session.RequestAsync<ModbusTcpMessage>(request, DefaultTimeout, ct).ConfigureAwait(false);
+
+        if (response.IsException)
+        {
+            throw new InvalidOperationException($"Modbus Exception Response: Code 0x{response.ExceptionCode:X2}");
+        }
+    }
+
+    /// <summary>
     /// FC03 Read Holding Registers 실행
     /// </summary>
     public async Task<ushort[]> ReadHoldingRegistersAsync(ushort startAddress, ushort count, byte? unitId = null, CancellationToken ct = default)

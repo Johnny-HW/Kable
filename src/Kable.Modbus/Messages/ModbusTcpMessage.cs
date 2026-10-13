@@ -27,6 +27,17 @@ public sealed class ModbusTcpMessage
     }
 
     /// <summary>
+    /// FC02 Read Discrete Inputs 요청 생성 헬퍼
+    /// </summary>
+    public static ModbusTcpMessage CreateReadDiscreteInputs(ushort transactionId, byte unitId, ushort startAddress, ushort quantity)
+    {
+        byte[] payload = new byte[4];
+        BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(0, 2), startAddress);
+        BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(2, 2), quantity);
+        return new ModbusTcpMessage(transactionId, unitId, 0x02, payload);
+    }
+
+    /// <summary>
     /// FC03 / FC04 Read Holding/Input Registers 요청 생성 헬퍼
     /// </summary>
     public static ModbusTcpMessage CreateReadRegisters(ushort transactionId, byte unitId, byte functionCode, ushort startAddress, ushort quantity)
@@ -35,6 +46,17 @@ public sealed class ModbusTcpMessage
         BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(0, 2), startAddress);
         BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(2, 2), quantity);
         return new ModbusTcpMessage(transactionId, unitId, functionCode, payload);
+    }
+
+    /// <summary>
+    /// FC05 Write Single Coil 요청 생성 헬퍼
+    /// </summary>
+    public static ModbusTcpMessage CreateWriteSingleCoil(ushort transactionId, byte unitId, ushort address, bool state)
+    {
+        byte[] payload = new byte[4];
+        BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(0, 2), address);
+        BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(2, 2), state ? (ushort)0xFF00 : (ushort)0x0000);
+        return new ModbusTcpMessage(transactionId, unitId, 0x05, payload);
     }
 
     /// <summary>
