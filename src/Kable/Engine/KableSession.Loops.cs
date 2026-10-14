@@ -298,9 +298,6 @@ public sealed partial class KableSession<TMessage>
             var cid = _codec.ExtractCorrelationId(message);
             if (cid != null && _pendingRequests.TryRemove(cid, out var tcs))
             {
-                _observer?.OnPacketTrace(new PacketTraceRecord(
-                    DateTime.UtcNow, PacketDirection.Rx, TrafficKind.AperiodicCommand,
-                    "RECV_CID", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
                 tcs.TrySetResult(message);
                 return;
             }
@@ -309,9 +306,6 @@ public sealed partial class KableSession<TMessage>
         {
             if (_currentFifoTcs != null && !_currentFifoTcs.Task.IsCompleted)
             {
-                _observer?.OnPacketTrace(new PacketTraceRecord(
-                    DateTime.UtcNow, PacketDirection.Rx, TrafficKind.AperiodicCommand,
-                    "RECV_FIFO", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));
                 _currentFifoTcs.TrySetResult(message);
                 return;
             }

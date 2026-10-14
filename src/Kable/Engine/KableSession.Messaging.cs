@@ -95,6 +95,12 @@ public sealed partial class KableSession<TMessage>
                 {
                     await _outboundNormalQueue.Writer.WriteAsync(cmd, effectiveToken).ConfigureAwait(false);
                     await WaitWithCancellationAsync(cmd.Completion.Task, effectiveToken).ConfigureAwait(false);
+
+                    var effectiveKind = CommTrafficContext.CurrentKind;
+                    ReadOnlyMemory<byte> rawTx = request is IRawByteProvider pTx ? pTx.ToRawBytes() : ReadOnlyMemory<byte>.Empty;
+                    _observer?.OnPacketTrace(new PacketTraceRecord(
+                        DateTime.UtcNow, PacketDirection.Tx, effectiveKind,
+                        "REQ_TX", rawTx, request?.ToString(), TimeSpan.Zero, LogLevel.Information, DeviceId));
                 }
                 catch (ChannelClosedException cce)
                 {
@@ -103,7 +109,14 @@ public sealed partial class KableSession<TMessage>
                 }
 
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
+                var latency = _timeProvider.GetElapsedTime(startTimestamp);
                 _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
+
+                var respKind = CommTrafficContext.CurrentKind;
+                ReadOnlyMemory<byte> rawRx = responseMsg is IRawByteProvider pRx ? pRx.ToRawBytes() : ReadOnlyMemory<byte>.Empty;
+                _observer?.OnPacketTrace(new PacketTraceRecord(
+                    DateTime.UtcNow, PacketDirection.Rx, respKind,
+                    "RESP_RX", rawRx, responseMsg?.ToString(), latency, LogLevel.Information, DeviceId));
 
                 if (responseMsg is TResponse typedResp)
                 {
@@ -161,8 +174,21 @@ public sealed partial class KableSession<TMessage>
                 await _outboundNormalQueue.Writer.WriteAsync(cmd, effectiveToken).ConfigureAwait(false);
                 await WaitWithCancellationAsync(cmd.Completion.Task, effectiveToken).ConfigureAwait(false);
 
+                var effectiveKind = CommTrafficContext.CurrentKind;
+                ReadOnlyMemory<byte> rawTx = request is IRawByteProvider pTx ? pTx.ToRawBytes() : ReadOnlyMemory<byte>.Empty;
+                _observer?.OnPacketTrace(new PacketTraceRecord(
+                    DateTime.UtcNow, PacketDirection.Tx, effectiveKind,
+                    "REQ_TX", rawTx, request?.ToString(), TimeSpan.Zero, LogLevel.Information, DeviceId));
+
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
+                var latency = _timeProvider.GetElapsedTime(startTimestamp);
                 _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
+
+                var respKind = CommTrafficContext.CurrentKind;
+                ReadOnlyMemory<byte> rawRx = responseMsg is IRawByteProvider pRx ? pRx.ToRawBytes() : ReadOnlyMemory<byte>.Empty;
+                _observer?.OnPacketTrace(new PacketTraceRecord(
+                    DateTime.UtcNow, PacketDirection.Rx, respKind,
+                    "RESP_RX", rawRx, responseMsg?.ToString(), latency, LogLevel.Information, DeviceId));
 
                 if (responseMsg is TResponse typedResp)
                 {
