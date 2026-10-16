@@ -71,7 +71,7 @@ public sealed partial class KableSession<TMessage>
         // 최초 시작자가 아닌 모든 동시 호출자는 최초 시작자의 Task만 기다림 (중복 ConnectAsync 호출 완전 차단)
         if (!isStarter)
         {
-            await _startTcs.Task.ConfigureAwait(false);
+            await WaitWithCancellationAsync(_startTcs.Task, linkedCts.Token).ConfigureAwait(false);
             return;
         }
 
