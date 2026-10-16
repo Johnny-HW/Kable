@@ -158,15 +158,16 @@ public sealed partial class KableSession<TMessage>
         else
         {
             // Full-Duplex Multiplexed CID Mode
+            // Validate timeout and create cancellation resources before reserving a CID.
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            var effectiveToken = linkedCts.Token;
+
             var tcs = new TaskCompletionSource<TMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (!_pendingRequests.TryAdd(cid!, tcs))
             {
                 throw new InvalidOperationException($"Duplicate in-flight Correlation ID '{cid}' detected.");
             }
-
-            using var timeoutCts = new CancellationTokenSource(timeout);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-            var effectiveToken = linkedCts.Token;
 
             var cmd = new OutboundCommand(request, isUrgent: false, effectiveToken);
             try
