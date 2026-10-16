@@ -73,18 +73,13 @@ public sealed class ModbusTcpMaster : IModbusMaster
         }
 
         var span = response.Payload.Span;
-        if (span.Length < 1) throw new InvalidOperationException("Invalid Modbus response length.");
-
-        byte byteCount = span[0];
+        ValidateReadPayload(span, (count + 7) / 8);
         var bits = new bool[count];
         for (int i = 0; i < count; i++)
         {
             int byteIdx = 1 + (i / 8);
-            if (byteIdx < span.Length)
-            {
-                int bitIdx = i % 8;
-                bits[i] = (span[byteIdx] & (1 << bitIdx)) != 0;
-            }
+            int bitIdx = i % 8;
+            bits[i] = (span[byteIdx] & (1 << bitIdx)) != 0;
         }
 
         return bits;
@@ -107,10 +102,8 @@ public sealed class ModbusTcpMaster : IModbusMaster
         }
 
         var span = response.Payload.Span;
-        if (span.Length < 1) throw new InvalidOperationException("Invalid Modbus response length.");
-
-        byte byteCount = span[0];
-        int registerCount = byteCount / 2;
+        ValidateReadPayload(span, count * 2);
+        int registerCount = count;
         var registers = new ushort[registerCount];
 
         for (int i = 0; i < registerCount; i++)
@@ -156,10 +149,8 @@ public sealed class ModbusTcpMaster : IModbusMaster
 
         // Response Payload: ByteCount(1) + RegisterValues(N * 2)
         var span = response.Payload.Span;
-        if (span.Length < 1) throw new InvalidOperationException("Invalid Modbus response length.");
-
-        byte byteCount = span[0];
-        int registerCount = byteCount / 2;
+        ValidateReadPayload(span, count * 2);
+        int registerCount = count;
         var registers = new ushort[registerCount];
 
         for (int i = 0; i < registerCount; i++)
@@ -201,6 +192,14 @@ public sealed class ModbusTcpMaster : IModbusMaster
         if (response.IsException)
         {
             throw new InvalidOperationException($"Modbus Exception Response: Code 0x{response.ExceptionCode:X2}");
+        }
+    }
+
+    private static void ValidateReadPayload(ReadOnlySpan<byte> payload, int expectedByteCount)
+    {
+        if (payload.Length != 1 + expectedByteCount || payload[0] != expectedByteCount)
+        {
+            throw new InvalidOperationException("Modbus response byte count or payload length does not match the requested quantity.");
         }
     }
 
