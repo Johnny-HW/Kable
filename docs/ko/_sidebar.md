@@ -2,8 +2,10 @@
 
 * **시작하기 (Getting Started)**
   * [개요 및 퀵스타트 (Overview)](ko/README.md)
+  * [처음 연결하기와 API 선택](ko/GETTING_STARTED.md)
+  * [설정과 이벤트 계약](ko/DEVELOPER_USAGE.md)
+  * [실패 처리와 종료](ko/ERROR_HANDLING.md)
   * [마스터 인덱스 (Master Index)](ko/INDEX.md)
-  * [개발자 API 사용 가이드](ko/DEVELOPER_USAGE.md)
   * [성능 측정 결과와 범위](ko/PERFORMANCE_BASELINE.md)
   * [프로젝트 사양서 (Project Spec)](ko/PROJECT_SPEC.md)
 

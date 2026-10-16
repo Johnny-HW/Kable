@@ -1,3 +1,7 @@
+* **Start / 시작하기**
+  * [한국어 첫 연결](ko/GETTING_STARTED.md)
+  * [English first connection](en/GETTING_STARTED.md)
+
 <!-- docs/_sidebar.md -->
 
 * **🌐 Language Selection / 언어 선택**

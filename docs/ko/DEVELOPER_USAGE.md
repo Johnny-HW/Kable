@@ -1,5 +1,34 @@
 # 개발자 API 사용 가이드
 
+[처음 연결하는 순서](ko/GETTING_STARTED.md)에서 Simple/Profile/Builder를 선택한 뒤 이 문서의
+설정 우선순위와 이벤트 계약을 참고한다. 실패 후 다음 행동은 [실패 처리와 종료](ko/ERROR_HANDLING.md)에 있다.
+
+## 통신 루프와 호출자 Task
+
+Simple과 Profile은 연결과 내부 송수신을 시작한 클라이언트를 반환한다.
+일반 질의를 위해 Thread나 Task.Run을 만들 필요는 없다. Builder는 Build 후 StartAsync를 호출한다.
+앱 고유의 반복 작업만 Task로 보관하고 종료 시 취소 후 await한다.
+이벤트는 백그라운드에서 전달되므로 await 사용 여부와 별개로 UI 스레드 전환이 필요하다.
+
+## Simple의 연결/응답 제한시간
+
+```csharp
+using Kable.Simple;
+
+var options = new KableSimpleOptions
+{
+    ConnectTimeoutMs = 5000,
+    DefaultTimeout = TimeSpan.FromSeconds(2)
+};
+await using var device = await KableSimple.OpenTcpAsync("192.168.0.100", 9000, options);
+string status = await device.QueryAsync("STATUS?");
+string version = await device.QueryAsync("VERSION?", TimeSpan.FromSeconds(4));
+Console.WriteLine($"{status}; {version}");
+```
+
+연결 수립은 5초, 기본 질의는 2초, VERSION 질의만 4초다.
+연결 제한시간을 늘려도 개별 응답 대기 시간이 늘어나지 않는다.
+
 ## 기본 제한시간과 타입 안전한 요청
 
 ```csharp
@@ -63,6 +92,6 @@ client.LineReceived -= onLine;
 
 ## 자동 재연결
 
-[연결 수명과 복구](CONNECTION_LIFECYCLE.md)를 참고한다. 자동 재연결은 명시적으로 `ReconnectingKableClient`를 사용하는 경우에만 동작한다. 기존 Simple 클라이언트의 수명 계약은 유지된다.
+[연결 수명과 복구](ko/CONNECTION_LIFECYCLE.md)를 참고한다. 자동 재연결은 명시적으로 `ReconnectingKableClient`를 사용하는 경우에만 동작한다. 기존 Simple 클라이언트의 수명 계약은 유지된다.
 
 진행 중 이동·쓰기 명령은 실패로 호출자에게 반환된다. 재연결이 완료돼도 같은 명령을 자동 실행하지 않는다. 실제 장비 상태를 조회한 뒤 상위 시퀀스가 후속 동작을 결정해야 한다.

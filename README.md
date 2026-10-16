@@ -1,239 +1,87 @@
-# 🔌 Kable
+# Kable
 
-> **Asynchronous Hardware Communication Engine for .NET with Reusable Buffers**
-> Combining Microsoft Bedrock's `System.IO.Pipelines` transport abstraction with RSocket interaction patterns, ready-made WPF terminal diagnostics, and industrial-grade multi-language localization.
+Asynchronous device communication for .NET 8, .NET 10 and netstandard2.0.
+Connect, query, poll and recover connections using the API that matches your equipment.
 
-[![Language](https://img.shields.io/badge/Language-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
-[![Targets](https://img.shields.io/badge/Targets-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
-[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-CI-blue.svg)](https://github.com/Johnny-HW/Kable/actions)
+## Start with one query
 
----
+Add the package from your .NET application project directory. For a new app, first run `dotnet new console -n KableDemo` and `cd KableDemo`.
 
-## 📖 Live Web Documentation (Docsify)
-👉 **[Browse Interactive Documentation Portal (7 Languages)](https://Johnny-HW.github.io/Kable/)**
-
----
-
-## 🌐 Documentation Languages
-
-- [English (Current)](README.md)
-- [한국어 (Korean)](README.ko.md)
-- [Web Documentation Portal (All Languages)](https://Johnny-HW.github.io/Kable/)
-
----
-
-## ✨ Key Features
-
-- **Pure Multi-Targeting**: Native support for `.NET 10.0`, `.NET 8.0 (LTS)`, and `netstandard2.0` (.NET Framework 4.8 / Legacy systems).
-- **Reusable Pipeline Buffers**: Buffer processing through `System.IO.Pipelines` and `ReadOnlySequence<byte>`. String decoding and asynchronous requests allocate memory; see the [measured scope and baseline](docs/ko/PERFORMANCE_BASELINE.md).
-- **Industrial Multi-Protocol Adapter Suite**:
-  - **Modbus-TCP** (`Kable.Modbus`), **Mitsubishi SLMP / MC Protocol 3E** (`Kable.Melsec`), **OPC UA Client** (`Kable.OpcUa`), **MQTT Telemetry** (`Kable.Mqtt`), and **gRPC Full-Duplex Streaming** (`Kable.Grpc`).
-- **Ultra-Low Latency Shared Memory IPC (`Kable.SharedMemory`)**:
-  - Sub-millisecond zero-copy lock-free ring buffer backed by Windows `MemoryMappedFile` for high-frequency analog waveform streaming.
-- **Ultra-Simple 3-Line Async Facade (`KableSimple`)**:
-  - High-level zero-boilerplate API for connecting and querying serial, TCP, or NamedPipe devices in just 3 lines of code.
-- **Industrial Multi-Language Localization (7 Languages)**:
-  - English (`en-US`), Korean (`ko-KR`), Chinese Simplified (`zh-CN`), Chinese Traditional (`zh-TW`), Japanese (`ja-JP`), German (`de-DE`), French (`fr-FR`).
-  - Runtime culture switching via `KableLocalizer.Instance.SetCulture(...)` with auto-translated error messages for equipment operators.
-- **Ready-Made WPF Terminal (`Kable.UI.Wpf`)**:
-  - Drag-and-drop `<kable:CommTerminalView />` XAML UserControl with live packet inspection, Wireshark-style hex dump, and manual command injection.
-- **Offline Mock Simulator (`UseSimulator`)**:
-  - Full in-memory zero-network cross-piped loopback simulator enabling sequence logic development before physical hardware delivery.
-- **Standard Wireshark PCAP Capture & Packet Replay**:
-  - Export live packet sessions directly to `.pcap` files and replay captured field anomalies with speed multipliers (`PacketReplayer`).
-- **Industrial Reliability Hardening & Alarm Spooling (`AlarmOverflowMode`, `AlarmSpooler`)**:
-  - Verified across 30 extreme reliability tests (`TC_REL_01`–`30`), single cleanup lifecycle guarantees, and asynchronous alarm spooling preventing session stalls during alarm floods.
-
----
-
-## 🚀 Quick Start
-
-See the [developer API guide](docs/ko/DEVELOPER_USAGE.md) for defaults, advanced builder options, event contracts, and opt-in recovery. Compiled examples are maintained in `samples/Kable.QuickStart`.
- 
-> 💡 **10-Minute Onboarding Sample with Local Mock Hardware:**  
-> Run the runnable sample in [samples/Kable.QuickStart](samples/Kable.QuickStart) to immediately spin up a local mock TCP device, query commands, and receive autonomous events via `KableSimple`:
-> ```powershell
-> dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
-> ```
-> For timeout, cancellation, and recovery semantics, refer to the **[Connection Lifecycle Guide](docs/ko/CONNECTION_LIFECYCLE.md)**.
-
----
-
-### 1. Configuration-Driven Session (`KableDeviceOptions`)
-
-```csharp
-using Kable.Extensions;
-using Kable.Configuration;
-using Kable.Codecs;
-
-// Inject options mapped from JSON, INI, YAML, TOML, or DB:
-var options = new KableDeviceOptions
-{
-    DeviceId = "WAFER_ROBOT",
-    Transport = "Serial",   // "Tcp", "Serial", "NamedPipe", "Simulator"
-    PortName = "COM3",
-    BaudRate = 115200,
-    TimeoutMs = 3000
-};
-
-await using var session = new KableClientBuilder<string>()
-    .UseOptions(options)
-    .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-    .Build();
-
-await session.StartAsync();
-
-// Send request and await strongly typed response:
-string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(2));
-Console.WriteLine($"Robot Status: {status}");
+```bash
+dotnet add package Kable
 ```
-
-### 2. Fluent Builder with Offline Simulator
-
-```csharp
-using Kable.Extensions;
-using Kable.Codecs;
-
-// Develop against an offline mock simulator in 5 lines:
-await using var session = new KableClientBuilder<string>()
-    .UseSimulator(sim =>
-    {
-        sim.WithLatency(TimeSpan.FromMilliseconds(50)) // Simulate mechanical latency
-           .OnCommand("STATUS", "STATUS:READY")
-           .OnCommand("GET_TEMP", "TEMP:24.5");
-    })
-    // For real hardware:
-    // .UseTcp("192.168.0.100", 9000)
-    // .UseSerialPort("COM3", baudRate: 9600)
-    // .UseNamedPipe("local_hardware_pipe")
-    .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-    .WithDeviceId("ROBOT_A")
-    .Build();
-
-await session.StartAsync();
-
-string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(2));
-Console.WriteLine(status); // "STATUS:READY"
-```
-
-### 3. Ultra-Simple 3-Line Async Facade (`KableSimple`)
 
 ```csharp
 using Kable.Simple;
 
-// Connect to a TCP socket and query without complex builders:
-await using var client = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
-string idn = await client.QueryAsync("*IDN?");
-Console.WriteLine($"Connected Device: {idn}");
+await using var device = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
+string status = await device.QueryAsync("STATUS?");
+Console.WriteLine(status);
 ```
 
-### 4. Ready-Made WPF UI Terminal (`Kable.UI.Wpf`)
+Replace the endpoint and command with your device's specification. The defaults are ASCII
+and LF framing. OpenTcpAsync returns a started client; no separate Thread, Task.Run or
+StartAsync is required for ordinary communication. Await using performs asynchronous cleanup.
 
-Add real-time hardware communication terminal to your WPF application in XAML:
+Without hardware, run the repository's local mock-device example:
 
-```xml
-<Window x:Class="MyEquipmentApp.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:kable="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf">
-    <Grid>
-        <!-- Ready-made diagnostic terminal with live list, hex dump, and manual send -->
-        <kable:CommTerminalView x:Name="CommTerminal" />
-    </Grid>
-</Window>
+```bash
+dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 ```
 
-Code-behind:
-```csharp
-var vm = new CommTerminalViewModel();
-CommTerminal.DataContext = vm;
+## Choose your API
 
-// Hook up manual injection
-vm.ManualSendRequested += async (cmd) => await session.SendAsync(cmd);
+| Your task | Entry point |
+| --- | --- |
+| String command and one-line reply | `KableSimple` |
+| Periodic polling and latest-value cache | `KableProfileManager` |
+| Binary/custom protocol and framing | `KableClientBuilder<T>` with a codec |
+| Modbus or MELSEC | `Kable.Modbus` or `Kable.Melsec` client |
+| Optional recovery after disconnection | `ReconnectingKableClient` |
 
-// Hook session observer to VM
-builder.WithObserver(vm);
-```
+Builder sessions need StartAsync after Build. Simple Open and Profile Connect return started clients.
+Internal asynchronous loops handle sending, receiving and reply routing; they do not each reserve
+a dedicated OS thread. Keep and cancel a Task only for application-owned repeated work.
 
-### 5. Industrial Localization (i18n)
+## Read in this order
 
-```csharp
-using System.Globalization;
-using Kable.Localization;
+1. [First connection and polling](docs/en/GETTING_STARTED.md): transports, API choice, Tasks and Profile.
+2. [Configuration and events](docs/en/DEVELOPER_USAGE.md): connection/query deadlines, event routing and UI dispatch.
+3. [Failures and shutdown](docs/en/ERROR_HANDLING.md): timeout handling, optional recovery and cleanup.
+4. [Connection lifecycle](docs/en/CONNECTION_LIFECYCLE.md): FIFO/CID contracts and session reuse.
 
-// Switch runtime language to Japanese or German
-KableLocalizer.Instance.SetCulture(new CultureInfo("ja-JP"));
+## Configuration and failure rules
 
-try
-{
-    await session.RequestAsync<string>("MOVE_AXIS", TimeSpan.FromSeconds(3));
-}
-catch (DeviceTimeoutException ex)
-{
-    // Returns translated localized message: "コマンド 'MOVE_AXIS' の応答が 3000ms 待機後にタイムアウトしました。"
-    MessageBox.Show(ex.GetLocalizedMessage());
-}
-```
+- Connection timeout and reply timeout are separate settings.
+- QueryAsync returns the matched reply. LineReceived delivers unmatched/event lines on a background path.
+- Handle query errors where you await the query; ErrorOccurred is not an all-errors channel.
+- A transmitted FIFO request that times out or is canceled closes its connection. Create a new client.
+- The recovery wrapper restores connectivity using new clients and does not replay failed commands.
+- Before repeating a motion/write command, check actual device state.
+- Cancel and await application workers, unsubscribe handlers and dispose asynchronously.
 
-### 6. Wireshark PCAP Dump & Anomaly Replay
+## Packages and extension points
 
-```csharp
-using Kable.Observability;
+| Package | Purpose |
+| --- | --- |
+| `Kable` | Simple, Profile, Builder, TCP/Serial/Named Pipe, codecs and simulator |
+| `Kable.Core` | Contracts, protocol building blocks and shared types |
+| `Kable.Modbus`, `Kable.Melsec` | Modbus-TCP and MELSEC SLMP clients/codecs |
+| `Kable.OpcUa`, `Kable.Mqtt`, `Kable.Grpc` | Protocol bridges and streaming integrations |
+| `Kable.SharedMemory` | Windows shared-memory transport and waveform buffers |
+| `Kable.UI.Wpf` | WPF communication terminal and diagnostics controls |
+| `Kable.Observability.OpenTelemetry` | OpenTelemetry integration |
 
-// 1. Dump session to Wireshark .pcap
-var pcapObserver = new PcapStreamObserver("dump.pcap");
-builder.WithObserver(pcapObserver);
+The library reuses pipeline buffers. String decoding and asynchronous queries allocate;
+see the [measured scope](docs/ko/PERFORMANCE_BASELINE.md) before interpreting allocation claims.
 
-// 2. Replay captured packets at double speed in dev/test environment
-var replayer = new PacketReplayer(capturedRecords).WithSpeed(2.0);
-await replayer.ReplayAsync(async record =>
-{
-    Console.WriteLine($"[{record.TimestampUtc:O}] {record.Direction} {record.Tag}: {record.PayloadString}");
-    // Inject captured payload bytes into mock hardware channel
-    await mockChannel.Writer.WriteAsync(record.Payload);
-});
-```
+For extension contracts and dependency injection, continue with
+[architecture](docs/en/01_ARCHITECTURE_OVERVIEW.md), [core interfaces](docs/en/02_CORE_INTERFACES.md)
+and [observability](docs/en/03_OBSERVABILITY_LOGGING.md).
 
-### 7. Type-Safe Device Profile Manager (`KableProfileManager`)
+## Documentation and source
 
-```csharp
-using Kable.Engine.Profiles;
-
-public enum RobotTelemetry { Status, ArmPosition, VacuumPressure }
-public enum RobotControl   { ServoOn, MoveHome, PickWafer }
-
-var config = new KableProfileConfig<RobotTelemetry, RobotControl>
-{
-    Host = "192.168.0.100",
-    Port = 9000
-};
-
-config.AddPeriodic(RobotTelemetry.Status, "?STATUS", TimeSpan.FromMilliseconds(100));
-config.AddAperiodic(RobotControl.ServoOn, "CMD:SERVO=1");
-
-await using var client = await KableProfileManager.ConnectAsync(config);
-string result = await client.ExecuteAsync(RobotControl.ServoOn);
-```
-
-### 8. Industrial Protocol & High-Speed Shared Memory Extensions
-
-```csharp
-using Kable.SharedMemory.Memory;
-
-// Ultra-low latency sub-millisecond MMF IPC ring buffer:
-using var serverBuffer = SharedMemoryRingBuffer.Create("wafer_aligner_channel", 65536);
-using var clientBuffer = SharedMemoryRingBuffer.Open("wafer_aligner_channel");
-
-byte[] payload = System.Text.Encoding.UTF8.GetBytes("HIGH_SPEED_STREAM_DATA");
-serverBuffer.Write(payload);
-```
-
----
-
-## 📄 License & Governance
-
-- **Core Engine & Framework**: [Apache License 2.0](LICENSE)
-- **Third-Party Open-Source Notices**: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)
-- **Zero-Copyleft Guarantee**: Fully permissive for 100% closed-source commercial equipment control binary distribution.
+- [한국어 시작 가이드](README.ko.md)
+- [GitHub Pages documentation](https://johnny-hw.github.io/Kable/)
+- [Compiled QuickStart examples](https://github.com/Johnny-HW/Kable/tree/main/samples/Kable.QuickStart)
+- [Repository](https://github.com/Johnny-HW/Kable) · [Apache-2.0 license](LICENSE)

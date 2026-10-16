@@ -1,247 +1,86 @@
-# 🔌 Kable (한국어 개발자 가이드)
+# Kable
 
-> **.NET 기반 버퍼 재사용 중심의 비동기 하드웨어 통신 프레임워크**
-> 마이크로소프트 Bedrock의 `System.IO.Pipelines` 파이프라인 추상화와 RSocket 인터랙션 패턴, 레디메이드 WPF 통신 모니터링 컨트롤, 산업용 7개 국어 다국어 지원 엔진을 결합한 장비 제어 통신 솔루션입니다.
+.NET 8, .NET 10, netstandard2.0용 비동기 장비 통신 라이브러리.
+장비에 맞는 API를 선택해 연결·질의·주기 조회·연결 복구를 구성한다.
 
-[![Language](https://img.shields.io/badge/언어-C%23%2014-blue.svg)](https://learn.microsoft.com/dotnet/csharp/)
-[![Targets](https://img.shields.io/badge/타깃-.NET%2010%20%7C%20.NET%208%20%7C%20netstandard2.0-purple.svg)](https://dotnet.microsoft.com/)
-[![Docs](https://img.shields.io/badge/문서-GitHub%20Pages-blue.svg)](https://Johnny-HW.github.io/Kable/)
-[![License](https://img.shields.io/badge/라이선스-Apache%202.0-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/단위테스트-CI-blue.svg)](https://github.com/Johnny-HW/Kable/actions)
+## 한 번의 질의부터 시작하기
 
----
+기존 .NET 앱의 프로젝트 폴더에서 패키지를 추가한다. 새 앱이라면 먼저 `dotnet new console -n KableDemo`와 `cd KableDemo`를 실행한다.
 
-## 📖 실시간 웹 기술 문서 포털 (Docsify)
-👉 **[Kable 대화형 웹 기술 문서 사이트 바로가기 (7개 국어 지원)](https://Johnny-HW.github.io/Kable/)**
-
----
-
-## 🌐 문서 언어 선택
-
-- [English (글로벌 표준 영문)](README.md)
-- [한국어 (현재 문서)](README.ko.md)
-- [웹 문서 포털 (7개 언어 지원)](https://Johnny-HW.github.io/Kable/)
-
----
-
-## ✨ 핵심 아키텍처 및 주요 기능
-
-1. **순수 멀티 타기팅 (Multi-Targeting)**
-   - 최신 `.NET 10.0`, LTS 버전인 `.NET 8.0`, 레거시 설비 및 .NET Framework 4.8 연동을 위한 `netstandard2.0`을 100% 네이티브 지원합니다.
-2. **버퍼 재사용 파이프라인**
-   - `System.IO.Pipelines`와 `ReadOnlySequence<byte>`로 버퍼를 처리합니다. 문자열 수신과 비동기 질의는 메모리를 할당합니다. 측정 조건과 실제 수치는 [성능 기준](docs/ko/PERFORMANCE_BASELINE.md)을 참고하십시오.
-3. **산업용 멀티 프로토콜 어댑터 스위트**
-   - **Modbus-TCP** (`Kable.Modbus`), **미쓰비시 SLMP/MC 프로토콜 3E** (`Kable.Melsec`), **OPC UA 클라이언트** (`Kable.OpcUa`), **MQTT 텔레메트리** (`Kable.Mqtt`), **gRPC 양방향 스트리밍** (`Kable.Grpc`).
-4. **초저지연 공유 메모리 IPC (`Kable.SharedMemory`)**
-   - Windows `MemoryMappedFile` 기반 락프리 링버퍼로 서브밀리초 초고속 IPC 및 아날로그 센서 파형(Waveform) 스트리밍을 지원합니다.
-5. **초간단 3줄 비동기 파사드 (`KableSimple`)**
-   - 복잡한 세션/빌더 구성 없이 단 3줄 코드로 직렬, TCP, NamedPipe 통신 세션을 가동할 수 있는 Zero-Boilerplate 고수준 API를 제공합니다.
-6. **글로벌 반도체/FA 7개 언어 현지화 (i18n)**
-   - **한국어(`ko-KR`)**, **영어(`en-US`)**, **중국어 간체(`zh-CN`)**, **중국어 번체(`zh-TW`)**, **일본어(`ja-JP`)**, **독일어(`de-DE`)**, **프랑스어(`fr-FR`)** 내장.
-   - 런타임 언어 즉시 전환(`SetCulture`) 및 설비 오퍼레이터 화면용 예외 메시지 자동 번역 지원.
-7. **WPF 전용 레디메이드 통신 터미널 (`Kable.UI.Wpf`)**
-   - XAML 태그 한 줄(`<kable:CommTerminalView />`)로 송수신 패킷 모니터링, 와이어샤크 스타일 16진수 헥사 덤프, 수동 커맨드 즉시 전송(Manual Injection) UI를 제공합니다.
-8. **오프라인 모의 시뮬레이터 (`UseSimulator`)**
-   - 실물 하드웨어(로봇, 얼라이너, PLC)가 아직 입고되지 않은 개발 초기에도 인메모리 루프백 시뮬레이터로 상위 시퀀스를 즉시 개발할 수 있습니다.
-9. **Wireshark 표준 PCAP 덤프 및 패킷 리플레이어 (`PacketReplayer`)**
-   - 통신 세션을 표준 `.pcap` 파일로 자동 기록하고, 현장 라인(Fab/Site)에서 발생한 간헐적 통신 장애를 개발 PC 및 오프라인 테스트 환경에서 타임스탬프 기반 배속 재생으로 재현합니다.
-10. **산업용 신뢰성 하든 및 알람 스풀 (`AlarmOverflowMode`, `AlarmSpooler`)**
-    - 30종 극한 신뢰성 테스트(`TC_REL_01`~`30`)를 전수 통과한 라이프사이클 보호, 단일 클린업 수명주기, 고빈도 알람 폭주 시 세션 안전 격리 및 비동기 드레인을 보장합니다.
-
----
-
-## 🚀 빠른 시작 가이드 (Quick Start)
-
-> 💡 **로컬 모의 장비 기반 10분 온보딩 샘플:**  
-> 저장소 내 [samples/Kable.QuickStart](samples/Kable.QuickStart) 프로젝트를 실행하면 별도 하드웨어 없이 즉시 로컬 TCP 모의 장비를 띄우고 `KableSimple` 연결, 질의응답, 자발 이벤트 수신을 검증할 수 있습니다.
-> ```powershell
-> dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
-> ```
-> 세션 수명 주기 및 타임아웃/단절 시 안전한 복구 패턴은 **[세션 수명 주기 및 장애 복구 가이드](docs/ko/CONNECTION_LIFECYCLE.md)**를 참조하십시오.
-
----
-
-## 🛠️ 실전 코드 예제
-
-기본 제한시간, 고급 빌더 설정, 이벤트와 자동 재연결은 [개발자 API 사용 가이드](docs/ko/DEVELOPER_USAGE.md)를 참고하십시오. 컴파일·실행 예제는 `samples/Kable.QuickStart`에서 관리합니다.
-
-### 1. 설정 모델(Config / Options)로 시작하기 (INI, JSON, YAML 등 연동)
-
-```csharp
-using Kable.Extensions;
-using Kable.Configuration;
-using Kable.Codecs;
-
-// 상위 앱이 JSON, INI, YAML, TOML 등에서 읽어온 설정을 POCO 레코드로 주입:
-var options = new KableDeviceOptions
-{
-    DeviceId = "WAFER_ROBOT",
-    Transport = "Serial",   // "Tcp", "Serial", "NamedPipe", "Simulator"
-    PortName = "COM3",
-    BaudRate = 115200,
-    TimeoutMs = 3000
-};
-
-await using var session = new KableClientBuilder<string>()
-    .UseOptions(options)
-    .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-    .Build();
-
-await session.StartAsync();
-
-// 장비로 요청 전송 및 응답 수신:
-string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(2));
-Console.WriteLine($"Robot Status: {status}");
+```bash
+dotnet add package Kable
 ```
-
-### 2. 오프라인 시뮬레이터로 시작하기 (실물 하드웨어 불필요)
-
-```csharp
-using Kable.Extensions;
-using Kable.Codecs;
-
-// 하드웨어 없이 5줄로 통신 세션 구축:
-await using var session = new KableClientBuilder<string>()
-    .UseSimulator(sim =>
-    {
-        sim.WithLatency(TimeSpan.FromMilliseconds(50)) // 기구 응답 지연 모사
-           .OnCommand("STATUS", "STATUS:READY")
-           .OnCommand("GET_TEMP", "TEMP:24.5");
-    })
-    // 실물 장비 연결 시 한 줄로 전환:
-    // .UseTcp("192.168.0.100", 9000)
-    // .UseSerialPort("COM3", baudRate: 9600)
-    // .UseNamedPipe("local_hardware_pipe")
-    .UseCodec(new AsciiLineCodec(delimiter: 0x0A))
-    .WithDeviceId("ROBOT_A")
-    .Build();
-
-await session.StartAsync();
-
-string status = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(2));
-Console.WriteLine(status); // "STATUS:READY" 출력
-```
-
-### 3. 초간단 3줄 비동기 파사드 (`KableSimple`)
 
 ```csharp
 using Kable.Simple;
 
-// 복잡한 빌더 없이 3줄로 TCP 소켓 연결 및 질의응답
-await using var client = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
-string idn = await client.QueryAsync("*IDN?");
-Console.WriteLine($"Connected Device: {idn}");
+await using var device = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
+string status = await device.QueryAsync("STATUS?");
+Console.WriteLine(status);
 ```
 
-### 4. WPF 화면에 통신 터미널 UserControl 연결하기 (`Kable.UI.Wpf`)
+주소·포트·명령을 장비 사양에 맞게 바꾼다. 기본값은 ASCII와 LF 줄 구분자다.
+OpenTcpAsync는 이미 시작된 클라이언트를 반환하므로 일반 통신을 위해
+Thread, Task.Run 또는 별도 StartAsync를 만들 필요 없다. await using으로 비동기 정리한다.
 
-#### XAML
-```xml
-<Window x:Class="MyEquipmentApp.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:kable="clr-namespace:Kable.UI.Wpf;assembly=Kable.UI.Wpf">
-    <Grid>
-        <!-- 실시간 송수신 목록, 헥사 덤프, 필터, 수동 전송창이 내장된 컨트롤 -->
-        <kable:CommTerminalView x:Name="TerminalView" />
-    </Grid>
-</Window>
+장비가 없다면 저장소의 로컬 모의 장비 예제로 시작한다.
+
+```bash
+dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 ```
 
-#### C# 비하인드 코드
-```csharp
-var terminalVm = new CommTerminalViewModel();
-TerminalView.DataContext = terminalVm;
+## 어떤 API를 선택할까?
 
-// 수동 전송 버튼 클릭 시 세션으로 발송
-terminalVm.ManualSendRequested += async (cmd) => await session.SendAsync(cmd);
+| 하려는 작업 | 시작점 |
+| --- | --- |
+| 문자열 명령과 한 줄 응답 | `KableSimple` |
+| 주기 조회와 최신값 캐시 | `KableProfileManager` |
+| 바이너리/장비 전용 프로토콜 | `KableClientBuilder<T>`와 코덱 |
+| Modbus / MELSEC 장비 | `Kable.Modbus` / `Kable.Melsec` 클라이언트 |
+| 단절 후 선택적 연결 복구 | `ReconnectingKableClient` |
 
-// 세션 옵저버에 바인딩
-builder.WithObserver(terminalVm);
-```
+Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 시작된 클라이언트를 반환한다.
+내부 비동기 루프가 송신·수신·응답 매칭을 담당하며 각 루프가 전용 OS 스레드를 점유하지 않는다.
+앱 고유의 반복 작업을 만들 때만 해당 Task를 보관하고 종료 시 취소 후 await한다.
 
-### 5. 글로벌 7개 국어 다국어 예외 처리
+## 이 순서로 읽기
 
-```csharp
-using System.Globalization;
-using Kable.Localization;
+1. [처음 연결하는 순서](docs/ko/GETTING_STARTED.md): 전송 선택, Task, Profile.
+2. [설정과 이벤트 계약](docs/ko/DEVELOPER_USAGE.md): 연결/응답 제한시간, 이벤트 분류, UI 전환.
+3. [실패 처리와 종료](docs/ko/ERROR_HANDLING.md): 예외별 다음 행동, 선택적 재연결, 정리.
+4. [세션 수명 계약](docs/ko/CONNECTION_LIFECYCLE.md): FIFO/CID 차이와 세션 재사용.
 
-// 일본 현지 팹 납품 시 일본어로 즉시 변경
-KableLocalizer.Instance.SetCulture(new CultureInfo("ja-JP"));
+## 먼저 알아둘 계약
 
-try
-{
-    await session.RequestAsync<string>("MOVE_AXIS", TimeSpan.FromSeconds(3));
-}
-catch (DeviceTimeoutException ex)
-{
-    // 일본어로 자동 번역된 메시지 출력:
-    // "コマンド 'MOVE_AXIS' の応答が 3000ms 待機後にタイムアウトしました。"
-    MessageBox.Show(ex.GetLocalizedMessage());
-}
-```
+- 연결 수립 제한시간과 개별 응답 제한시간은 서로 다른 설정이다.
+- 질의 응답은 QueryAsync 반환값으로 받고, LineReceived는 소비되지 않은 라인/이벤트를 전달한다.
+- QueryAsync의 오류는 await한 곳에서 처리한다. ErrorOccurred가 모든 오류를 대신 받지 않는다.
+- FIFO 송신 후 타임아웃/취소가 발생하면 연결이 종료된다. 기존 클라이언트를 폐기하고 새로 연결한다.
+- 재연결 래퍼는 새 연결로 복구하며 실패한 명령을 자동 재전송하지 않는다.
+- 이동·쓰기 명령을 반복하기 전 실제 장비 상태를 확인한다.
+- 앱 작업 취소·await, 이벤트 구독 해제 후 비동기로 클라이언트를 정리한다.
 
-### 6. 와이어샤크 PCAP 덤프 및 패킷 리플레이 (장애 재현)
+## 패키지와 확장 기능
 
-```csharp
-using Kable.Observability;
+| 패키지 | 용도 |
+| --- | --- |
+| `Kable` | Simple, Profile, Builder, TCP/Serial/Named Pipe, 코덱과 시뮬레이터 |
+| `Kable.Core` | 추상 계약, 프로토콜 기반 타입과 공통 타입 |
+| `Kable.Modbus`, `Kable.Melsec` | Modbus-TCP / MELSEC SLMP 클라이언트·코덱 |
+| `Kable.OpcUa`, `Kable.Mqtt`, `Kable.Grpc` | 프로토콜 브리지와 스트리밍 통합 |
+| `Kable.SharedMemory` | Windows 공유 메모리 전송과 파형 버퍼 |
+| `Kable.UI.Wpf` | WPF 통신 터미널·진단 컨트롤 |
+| `Kable.Observability.OpenTelemetry` | OpenTelemetry 연동 |
 
-// 1. 현장에서 통신 패킷을 Wireshark 표준 .pcap 파일로 기록
-var pcapObserver = new PcapStreamObserver("equipment_trace.pcap");
-builder.WithObserver(pcapObserver);
+파이프라인 버퍼는 재사용하지만 문자열 수신과 비동기 질의는 메모리를 할당한다.
+[성능 측정 범위](docs/ko/PERFORMANCE_BASELINE.md)를 기준으로 판단한다.
 
-// 2. 캡처된 패킷 로그를 개발 PC 환경에서 2배속으로 리플레이하여 간헐적 장애 재현
-var replayer = new PacketReplayer(capturedList).WithSpeed(2.0);
-await replayer.ReplayAsync(async record =>
-{
-    Console.WriteLine($"[{record.TimestampUtc:O}] {record.Direction} {record.Tag}: {record.PayloadString}");
-    // 모의 장비 채널이나 파이프라인으로 패킷 바이트 주입
-    await mockChannel.Writer.WriteAsync(record.Payload);
-});
-```
+사용자 정의 프로토콜과 DI는 [아키텍처](docs/ko/01_ARCHITECTURE_OVERVIEW.md),
+[핵심 인터페이스](docs/ko/02_CORE_INTERFACES.md), [관측성](docs/ko/03_OBSERVABILITY_LOGGING.md)으로 이어진다.
 
-### 7. Enum 기반 디바이스 프로필 관리 (`KableProfileManager`)
+## 문서와 소스
 
-```csharp
-using Kable.Engine.Profiles;
-
-// 장비 제어 커맨드 정의 (Enum 표준)
-public enum RobotTelemetry { Status, ArmPosition, VacuumPressure }
-public enum RobotControl   { ServoOn, MoveHome, PickWafer }
-
-var config = new KableProfileConfig<RobotTelemetry, RobotControl>
-{
-    Host = "192.168.0.100",
-    Port = 9000
-};
-
-// 100ms 주기 배경 폴링 등록
-config.AddPeriodic(RobotTelemetry.Status, "?STATUS", TimeSpan.FromMilliseconds(100));
-config.AddAperiodic(RobotControl.ServoOn, "CMD:SERVO=1");
-
-await using var client = await KableProfileManager.ConnectAsync(config);
-
-// 배경 폴링과 스레드 경합 없이 안전하게 서보 온 실행
-string result = await client.ExecuteAsync(RobotControl.ServoOn);
-```
-
-### 8. 산업용 프로토콜 및 고속 공유메모리 확장 (`Kable.Modbus`, `Kable.SharedMemory`)
-
-```csharp
-using Kable.SharedMemory.Memory;
-
-// 초고속 서브밀리초 MMF IPC 링버퍼 (동일 머신 프로세스 간 통신)
-using var serverBuffer = SharedMemoryRingBuffer.Create("wafer_aligner_channel", 65536);
-using var clientBuffer = SharedMemoryRingBuffer.Open("wafer_aligner_channel");
-
-byte[] payload = System.Text.Encoding.UTF8.GetBytes("HIGH_SPEED_STREAM_DATA");
-serverBuffer.Write(payload);
-```
-
----
-
-## 📄 라이선스 및 상업적 배포
-
-- **프레임워크 라이선스**: [Apache License 2.0](LICENSE)
-- **오픈소스 고지서**: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)
-- **Zero-Copyleft 보장**: 고객사의 고유한 장비 제어 시퀀스나 레시피 알고리즘을 공개할 의무가 일절 없으며, 100% 클로즈드 소스 상업용 장비 제어 소프트웨어에 완전히 자유롭게 번들링하여 배포할 수 있습니다.
+- [English getting started](README.md)
+- [GitHub Pages 문서](https://johnny-hw.github.io/Kable/)
+- [컴파일되는 QuickStart 예제](https://github.com/Johnny-HW/Kable/tree/main/samples/Kable.QuickStart)
+- [저장소](https://github.com/Johnny-HW/Kable) · [Apache-2.0 라이선스](LICENSE)
