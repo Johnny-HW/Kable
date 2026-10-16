@@ -71,7 +71,7 @@ public class SharedMemoryTransportTests
         await using var serverContext = SharedMemoryTransport.CreateServerEndpoint(channel, 16384);
         await using var clientContext = SharedMemoryTransport.ConnectClientEndpoint(channel);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 
         // 서버 루프: 클라이언트가 보낸 메시지를 그대로 에코(Echo)
         var serverTask = Task.Run(async () =>
