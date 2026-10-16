@@ -2,6 +2,7 @@ namespace Kable.Engine;
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -221,7 +222,9 @@ public sealed partial class KableSession<TMessage>
             }
             finally
             {
-                _pendingRequests.TryRemove(cid!, out _);
+                // Atomically remove only our reservation; the CID may already belong to a new request.
+                ((ICollection<KeyValuePair<string, TaskCompletionSource<TMessage>>>)_pendingRequests)
+                    .Remove(new KeyValuePair<string, TaskCompletionSource<TMessage>>(cid!, tcs));
             }
         }
     }
