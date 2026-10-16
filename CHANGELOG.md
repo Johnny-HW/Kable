@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.2] - 2026-10-16
+
+### Added
+- **Modbus Protocol Expansion (`Kable.Modbus`)**:
+  - Implemented Read Discrete Inputs (FC02), Read Input Registers (FC04), and Write Single Coil (FC05) in `IModbusMaster`, `ModbusTcpMaster`, and `ModbusTcpMessage`.
+- **Wire-Level Observability & Raw Byte Tracing (`Kable.Core`, `Kable`)**:
+  - Introduced `IRawByteProvider` interface for protocol messages to expose wire-level byte buffers.
+  - Added `CommTrafficContext` and integrated `PacketTraceRecord` event logging within `KableSession` inbound and outbound message pipelines for zero-alloc wire tracing.
+
+### Fixed
+- **Modbus Response Validation (`Kable.Modbus`)**:
+  - Added strict payload size, byte count, and register count validation on Modbus read responses to prevent processing truncated or malformed frames.
+- **Session Concurrency & Cancellation Reliability (`Kable`)**:
+  - Validated timeout bounds before reserving correlation IDs in `KableSession` to eliminate orphaned tracking slots under immediate caller cancellation.
+  - Preserved correlation ID ownership during request cleanup and cancellation races.
+  - Reused outbound queue wait tasks and respected shutdown token cancellation without leaking or hanging waiters.
+  - Honored cancellation tokens for concurrent `StartAsync` callers cleanly.
+
+### Refactoring & Testing
+- **Session Modularization**:
+  - Decomposed `KableSession` into domain-specific partials (`KableSession.Loops.cs`, `KableSession.Messaging.cs`, etc.) adhering to the modular limit.
+- **Test Suite Separation**:
+  - Reorganized and partitioned reliability tests into domain fixtures (`SessionStreamReliabilityTests`, `SessionStreamResilienceTests`, etc.).
+  - Separated localization catalogs by language and verified 100% test pass rate across all 12 test suites (296 tests).
+
+---
+
 ## [1.8.0] - 2026-10-12
 
 ### Added
