@@ -40,6 +40,10 @@ jobs:
       - name: Run Unit Tests
         run: dotnet test Kable.sln --configuration Release --no-restore -m:1 --verbosity normal
 
+      - name: Verify Concurrent Start Failure Propagation
+        shell: pwsh
+        run: ./tests/Kable.Tests/Cases/Engine/Lifecycle/VerifyConcurrentStart.ps1
+
       - name: Pack NuGet Packages
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         run: dotnet pack Kable.sln --configuration Release --output ./nupkgs

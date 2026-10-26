@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.9.1] - 2026-10-26
+
+[Release notes](docs/releases/1.9.1.md) / [한국어](docs/releases/1.9.1.ko.md).
 
 ### Fixed
 - Preserve the original connection failure for uncanceled concurrent `StartAsync` callers when session cleanup cancels their linked wait token. Caller cancellation and shutdown interruption remain unchanged.
+
+### Changed
+- Run automatic library CI on Windows only; remove the Linux test job. Framework targets and public APIs are unchanged.
+- Require the controlled startup-race regression before publishing.
 
 ---
 
