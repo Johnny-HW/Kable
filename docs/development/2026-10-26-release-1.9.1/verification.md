@@ -31,3 +31,15 @@ dotnet pack Kable.sln -c Release --no-build --no-restore -warnaserror:NU5128
 릴리즈 요약을 함께 확인한다. 기존 NuGet 1.9.0과 v1.9.0 태그는 수정하지 않는다.
 최종 게시 결과는 [v1.9.1 릴리즈](https://github.com/Johnny-HW/Kable/releases/tag/v1.9.1)와
 [NuGet](https://www.nuget.org/packages/Kable/1.9.1), 게시 워크플로 실행 기록에서 확인한다.
+
+## 게시 완료 확인
+
+- 릴리즈 소스: `fb7aede031ce20e79ba5e026f726c453b4134a4f` (`v1.9.1`).
+- [게시 실행](https://github.com/Johnny-HW/Kable/actions/runs/40275508423): 성공.
+  NuGet.org 및 GitHub Packages 게시 단계가 모두 통과했다.
+- [라이브러리 CI](https://github.com/Johnny-HW/Kable/actions/runs/40275508500): 성공.
+  실제 실행 작업은 Windows 전체 솔루션 빌드·테스트 하나이며 Linux 작업은 없다.
+- NuGet.org에서 13개 패키지의 1.9.1 공개 배포를 확인했다. 공개 nuspec 또는 실제
+  nupkg 다운로드로 버전, 위 소스 커밋, 내부 Kable 의존성 버전 1.9.1을 검증했다.
+- GitHub 릴리즈는 2026-10-26 14:44:47 KST에 정식 공개되었다.
+- 기존 1.9.0 릴리즈와 미커밋 Protocol Pack 작업은 보존했다.
