@@ -110,11 +110,25 @@ public sealed class PcapObserverLifecycleTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void InvalidCapacity_IsRejected(int capacity)
+    [InlineData(0, 0)]
+    [InlineData(0, -1)]
+    [InlineData(1, 0)]
+    [InlineData(1, -1)]
+    [InlineData(2, 0)]
+    [InlineData(2, -1)]
+    [InlineData(3, 0)]
+    [InlineData(3, -1)]
+    public void InvalidCapacity_IsRejected(int option, int capacity)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new PcapStreamObserver(
-            new MemoryStream(), new() { RecordingCapacity = capacity }));
+        var options = new PcapStreamObserverOptions();
+        switch (option)
+        {
+            case 0: options.RecordingCapacity = capacity; break;
+            case 1: options.CommandCapacity = capacity; break;
+            case 2: options.PeriodicCapacity = capacity; break;
+            case 3: options.AlarmCapacity = capacity; break;
+        }
+        using var stream = new MemoryStream();
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PcapStreamObserver(stream, options));
     }
 }

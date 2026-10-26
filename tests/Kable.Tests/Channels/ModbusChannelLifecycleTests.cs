@@ -63,6 +63,20 @@ public sealed class ModbusChannelLifecycleTests
     }
 
     [Fact]
+    public async Task ConcurrentOpen_SharesOneConnectionAttempt()
+    {
+        var factory = new ControlledFactory();
+        await using var channel = new KableModbusDeviceChannel(factory);
+        var first = channel.OpenAsync();
+        await factory.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var second = channel.OpenAsync();
+        Assert.False(second.IsCompleted);
+        factory.Release.TrySetResult(true);
+        await Task.WhenAll(first, second);
+        Assert.Equal(1, factory.ConnectCount);
+    }
+
+    [Fact]
     public async Task ConcurrentCloseAndDispose_DisposeConnectionOnce()
     {
         var factory = new MockTestConnectionFactory();
@@ -91,6 +105,20 @@ public sealed class ModbusChannelLifecycleTests
             Entered.TrySetResult(true);
             await Task.Delay(Timeout.Infinite, ct);
             throw new InvalidOperationException("Unreachable.");
+        }
+    }
+
+    private sealed class ControlledFactory : IConnectionFactory
+    {
+        public int ConnectCount { get; private set; }
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
+        {
+            ConnectCount++;
+            Entered.TrySetResult(true);
+            await Release.Task.WaitAsync(ct);
+            return new MockTestConnectionContext();
         }
     }
 }
