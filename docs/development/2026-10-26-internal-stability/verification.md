@@ -38,6 +38,8 @@
 패키징에는 `Kable.Generators`의 NU5128 프레임워크 그룹 경고와 패키지 README
 미포함 안내가 남아 있다. 이번 수정에서 패키지 구성이나 버전은 변경하지 않았다.
 
+NU5128은 이후 [Generator 패키징 정리](../2026-10-26-generator-packaging/verification.md)에서 해결했다.
+
 로그는 `%TEMP%`의 `kable-stability-build-final.log`,
 `kable-stability-tests-final.log`, `kable-stability-pack.log`에 저장했다.
 TRX는 `%TEMP%/kable-stability-final-results/`, 로컬 패키지는

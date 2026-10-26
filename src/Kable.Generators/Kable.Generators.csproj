@@ -10,6 +10,8 @@
     
     <!-- NuGet 패키징 시 Analyzer로 작동하도록 설정 -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- Compiler dependencies are bundled under analyzers, not application dependencies. -->
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageId>Kable.Generators</PackageId>
     <Description>Roslyn Source Generator for Kable declarative commands and RPC contracts.</Description>
