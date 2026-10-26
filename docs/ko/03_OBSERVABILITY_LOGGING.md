@@ -6,6 +6,7 @@
 <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(129, 140, 248, 0.18); border: 1px solid rgba(129, 140, 248, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px; color: #a5b4fc; margin-bottom: 14px;">
 <span>📊 3채널 링버퍼 관측성 (TRI-STREAM RINGBUFFER OBSERVABILITY)</span>
 </div>
+
 <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: #ffffff; border-bottom: none; padding-bottom: 0;">
 03. 관측성 및 로깅 명세서 (Observability & Logging)
 </h1>
@@ -113,3 +114,7 @@ WPF 또는 WinForms에서 고주기 패킷을 표시할 때는 조회 버퍼와 
 </div>
 
 </div>
+
+요청·응답의 원시 바이트 스냅샷은 세션에 옵저버를 등록했을 때만 생성합니다.
+FIFO와 CID 요청 모두 옵저버가 없으면 관측용 `ToRawBytes()` 호출을 생략합니다.
+옵저버를 등록한 경우 기존 송수신 trace의 태그, 방향과 바이트 내용을 유지합니다.
