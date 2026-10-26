@@ -38,7 +38,7 @@ jobs:
         run: dotnet restore Kable.sln
 
       - name: Run Unit Tests
-        run: dotnet test Kable.sln --configuration Release --verbosity normal
+        run: dotnet test Kable.sln --configuration Release --no-restore -m:1 --verbosity normal
 
       - name: Pack NuGet Packages
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
@@ -56,6 +56,7 @@ jobs:
         run: |
           Get-ChildItem -Path ./nupkgs -Filter *.nupkg | ForEach-Object {
             dotnet nuget push $_.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
       - name: Publish to GitHub Packages
@@ -63,6 +64,7 @@ jobs:
         run: |
           Get-ChildItem -Path ./nupkgs -Filter *.nupkg | ForEach-Object {
             dotnet nuget push $_.FullName --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
 

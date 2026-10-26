@@ -43,7 +43,7 @@ jobs:
         run: dotnet build Kable.sln --configuration Release --no-restore
 
       - name: Run All Tests (Release)
-        run: dotnet test Kable.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test Kable.sln --configuration Release --no-build -m:1 --verbosity normal
 
       - name: Validate NuGet Packaging
         run: dotnet pack Kable.sln --configuration Release --output ./nupkgs --no-build

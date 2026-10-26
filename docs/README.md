@@ -3,7 +3,7 @@
 Connect a device, send a query, then add polling and recovery when needed.
 일반 통신을 위해 별도 Thread나 Task.Run을 만들 필요 없습니다.
 
-**1.9.0 is being prepared; it has not been published.**
+**Kable 1.9.0 — 2026-10-26.**
 [Release notes](releases/1.9.0.md) · [한국어 릴리즈 노트](releases/1.9.0.ko.md)
 
 | Language | Start here | Configuration | Failures and shutdown |
