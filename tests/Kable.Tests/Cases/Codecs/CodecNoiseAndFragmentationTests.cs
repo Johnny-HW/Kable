@@ -32,11 +32,14 @@ public class CodecNoiseAndFragmentationTests
 
         while (seq.Length > 0)
         {
+            long previousLength = seq.Length;
             if (codec.TryDecode(ref seq, out decodedMessage))
             {
                 decoded = true;
                 break;
             }
+            seq.Length.Should().BeLessThan(previousLength,
+                "noise recovery must consume bytes or decode a frame instead of retrying unchanged input");
         }
 
         decoded.Should().BeTrue();

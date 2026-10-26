@@ -8,7 +8,7 @@ using Kable.Core.Checksums;
 /// System.IO.Pipelines 기반 초고속 0-GC Modbus-RTU 프레이밍 및 자동 CRC 코덱
 /// 요청 시 CRC 자동 부착(Encode), 수신 시 CRC 자동 검증 및 완성 프레임 추출(TryDecode)
 /// </summary>
-public sealed class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>>
+public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>>
 {
     private readonly int _maxFrameSize;
 
@@ -45,6 +45,11 @@ public sealed class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>>
         Span<byte> header = stackalloc byte[3];
         buffer.Slice(0, 3).CopyTo(header);
         byte fc = header[1];
+
+        if (fc >= 0x01 && fc <= 0x04 && buffer.Length < 8)
+        {
+            return TryDecodeShortRead(ref buffer, header[2], out message);
+        }
 
         int expectedLength;
 
