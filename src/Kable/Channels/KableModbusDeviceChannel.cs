@@ -1,40 +1,43 @@
 namespace Kable.Channels;
 
 using System;
-using System.Buffers;
+using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
 using Kable.Codecs;
 using Kable.Core;
+using Kable.Exceptions;
 using Kable.Transports;
 
-/// <summary>
-/// Kable System.IO.Pipelines 및 ModbusRtuCodec 기반 초고속 0-GC 하드웨어 통신 채널
-/// DIO, FFU 등 Modbus-RTU 하드웨어 장비의 원시 통신 파이프라인 단일화 구현체
-/// </summary>
+/// <summary>Serialized Modbus RTU channel with safe-close after an in-flight failure.</summary>
 public sealed class KableModbusDeviceChannel : IKableModbusChannel
 {
     private readonly IConnectionFactory _factory;
     private readonly ModbusRtuCodec _codec = new();
-    private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly object _stateSync = new();
     private readonly string _unitId;
-
     private IConnectionContext? _context;
+    private CancellationTokenSource? _active;
+    private Task? _disposeTask;
+    private bool _disposed;
+    private int _closing;
 
-    public bool IsOpen => _context != null;
+    public bool IsOpen
+    {
+        get
+        {
+            lock (_stateSync)
+                return _context is { } context && !context.ConnectionClosed.IsCancellationRequested;
+        }
+    }
     public string UnitId => _unitId;
 
-    public KableModbusDeviceChannel(
-        string portName,
-        int baudRate = 19200,
-        Parity parity = Parity.None,
-        int dataBits = 8,
-        StopBits stopBits = StopBits.One,
+    public KableModbusDeviceChannel(string portName, int baudRate = 19200,
+        Parity parity = Parity.None, int dataBits = 8, StopBits stopBits = StopBits.One,
         string unitId = "ModbusDevice")
-        : this(new SerialPortConnectionFactory(portName, baudRate, parity, dataBits, stopBits), unitId)
-    {
-    }
+        : this(new SerialPortConnectionFactory(portName, baudRate, parity, dataBits, stopBits), unitId) { }
 
     public KableModbusDeviceChannel(IConnectionFactory factory, string unitId = "ModbusDevice")
     {
@@ -42,99 +45,151 @@ public sealed class KableModbusDeviceChannel : IKableModbusChannel
         _unitId = unitId;
     }
 
-    public async Task OpenAsync(CancellationToken ct = default)
+    private CancellationTokenSource BeginOperation(CancellationToken ct)
     {
-        if (_context == null)
+        lock (_stateSync)
         {
-            _context = await _factory.ConnectAsync(ct).ConfigureAwait(false);
+            if (_disposed) throw new ObjectDisposedException(nameof(KableModbusDeviceChannel));
+            if (_closing != 0) throw new DeviceDisconnectedException("Channel is closing.");
+            return _active = CancellationTokenSource.CreateLinkedTokenSource(ct);
         }
     }
 
-    public async Task CloseAsync(CancellationToken ct = default)
+    private void EndOperation()
     {
-        if (_context != null)
+        lock (_stateSync)
         {
-            await _context.DisposeAsync().ConfigureAwait(false);
-            _context = null;
+            _active?.Dispose();
+            _active = null;
+        }
+    }
+
+    public async Task OpenAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var operation = BeginOperation(ct);
+            if (_context != null && !_context.ConnectionClosed.IsCancellationRequested) return;
+            await ReleaseContextAsync(false).ConfigureAwait(false);
+            var context = await _factory.ConnectAsync(operation.Token).ConfigureAwait(false);
+            lock (_stateSync) _context = context;
+            if (operation.IsCancellationRequested)
+            {
+                await ReleaseContextAsync(true).ConfigureAwait(false);
+                operation.Token.ThrowIfCancellationRequested();
+            }
+        }
+        finally { EndOperation(); _gate.Release(); }
+    }
+
+    public Task CloseAsync(CancellationToken ct = default) => CloseCoreAsync(ct, false);
+
+    private async Task CloseCoreAsync(CancellationToken ct, bool disposing)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_stateSync)
+        {
+            if (disposing) _disposed = true;
+            _closing++;
+            _active?.Cancel();
+        }
+        bool entered = false;
+        try
+        {
+            await _gate.WaitAsync(ct).ConfigureAwait(false);
+            entered = true;
+            await ReleaseContextAsync(false).ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_stateSync) _closing--;
+            if (entered) _gate.Release();
         }
     }
 
     [Obsolete("Use OpenAsync instead to avoid UI deadlocks.")]
-    public void Open()
-    {
-        _context ??= _factory.ConnectAsync().GetAwaiter().GetResult();
-    }
+    public void Open() => OpenAsync().GetAwaiter().GetResult();
 
     [Obsolete("Use CloseAsync instead to avoid UI deadlocks.")]
-    public void Close()
+    public void Close() => CloseAsync().GetAwaiter().GetResult();
+
+    public async ValueTask<byte[]> SendAndReceiveFrameAsync(byte[] requestPdu, TimeSpan timeout,
+        CancellationToken ct = default)
     {
-        if (_context != null)
-        {
-            _context.DisposeAsync().GetAwaiter().GetResult();
-            _context = null;
-        }
-    }
-
-    public async ValueTask<byte[]> SendAndReceiveFrameAsync(byte[] requestPdu, TimeSpan timeout, CancellationToken ct = default)
-    {
-        if (requestPdu == null)
-        {
-            throw new ArgumentNullException(nameof(requestPdu));
-        }
-
-        if (_context == null)
-        {
-            throw new InvalidOperationException($"Channel is not open for unit '{_unitId}'. Call Open() first.");
-        }
-
-        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        if (requestPdu == null) throw new ArgumentNullException(nameof(requestPdu));
+        ct.ThrowIfCancellationRequested();
+        using var deadline = new CancellationTokenSource(timeout);
+        using var wait = CancellationTokenSource.CreateLinkedTokenSource(ct, deadline.Token);
+        bool entered = false;
+        bool started = false;
         try
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(timeout);
-
-            // 1. Kable 파이프라인으로 Modbus PDU 인코딩 및 전송 (CRC 자동 부착)
-            _codec.Encode(requestPdu, _context.Output);
-            var flushResult = await _context.Output.FlushAsync(cts.Token).ConfigureAwait(false);
-            if (flushResult.IsCanceled || flushResult.IsCompleted)
+            await _gate.WaitAsync(wait.Token).ConfigureAwait(false);
+            entered = true;
+            var operation = BeginOperation(wait.Token);
+            var context = _context ?? throw new InvalidOperationException(
+                $"Channel is not open for unit '{_unitId}'. Call OpenAsync() first.");
+            using var io = CancellationTokenSource.CreateLinkedTokenSource(operation.Token, context.ConnectionClosed);
+            io.Token.ThrowIfCancellationRequested();
+            started = true;
+            _codec.Encode(requestPdu, context.Output);
+            var flush = await context.Output.FlushAsync(io.Token).ConfigureAwait(false);
+            if (flush.IsCanceled) throw new OperationCanceledException(io.Token);
+            if (flush.IsCompleted) throw new DeviceDisconnectedException("Modbus output completed.");
+            while (true)
             {
-                throw new TimeoutException($"Flush failed or was canceled for unit '{_unitId}'.");
-            }
-
-            // 2. Kable PipeReader에서 완성된 Modbus 프레임 수신 및 CRC 자동 검증
-            while (!cts.IsCancellationRequested)
-            {
-                var readResult = await _context.Input.ReadAsync(cts.Token).ConfigureAwait(false);
-                var buffer = readResult.Buffer;
-
-                if (_codec.TryDecode(ref buffer, out var responseMessage))
+                var result = await context.Input.ReadAsync(io.Token).ConfigureAwait(false);
+                var buffer = result.Buffer;
+                try
                 {
-                    _context.Input.AdvanceTo(buffer.Start, buffer.End);
-                    return responseMessage.ToArray();
+                    if (result.IsCanceled) throw new OperationCanceledException(io.Token);
+                    if (_codec.TryDecode(ref buffer, out var response)) return response.ToArray();
+                    if (result.IsCompleted) throw new DeviceDisconnectedException("Modbus input completed.");
                 }
-
-                _context.Input.AdvanceTo(buffer.Start, buffer.End);
-                if (readResult.IsCompleted || readResult.IsCanceled)
-                {
-                    break;
-                }
+                finally { context.Input.AdvanceTo(buffer.Start, buffer.End); }
             }
-
-            throw new TimeoutException($"Communication timeout waiting for Modbus response from unit '{_unitId}'.");
+        }
+        catch (OperationCanceledException ex)
+        {
+            if (started) await ReleaseContextAsync(true).ConfigureAwait(false);
+            if (ct.IsCancellationRequested) throw new OperationCanceledException(ex.Message, ex, ct);
+            if (deadline.IsCancellationRequested) throw new TimeoutException("Modbus request timed out.", ex);
+            throw new DeviceDisconnectedException("Modbus connection was closed.", ex);
+        }
+        catch (Exception ex)
+        {
+            if (started) await ReleaseContextAsync(true).ConfigureAwait(false);
+            if (started && (ex is IOException || ex is ObjectDisposedException))
+                throw new DeviceDisconnectedException("Modbus connection failed.", ex);
+            throw;
         }
         finally
         {
-            _lock.Release();
+            if (entered) { EndOperation(); _gate.Release(); }
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task ReleaseContextAsync(bool preserveFailure)
     {
-        if (_context != null)
+        IConnectionContext? context;
+        lock (_stateSync)
         {
-            await _context.DisposeAsync().ConfigureAwait(false);
+            context = _context;
             _context = null;
         }
-        _lock.Dispose();
+        if (context == null) return;
+        Exception? abortError = null;
+        try { context.Abort("Modbus channel closed."); }
+        catch (Exception ex) { abortError = ex; }
+        try { await context.DisposeAsync().ConfigureAwait(false); }
+        catch (Exception) when (preserveFailure) { return; }
+        if (abortError != null && !preserveFailure) throw abortError;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_stateSync)
+            return new ValueTask(_disposeTask ??= CloseCoreAsync(CancellationToken.None, true));
     }
 }
