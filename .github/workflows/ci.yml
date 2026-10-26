@@ -45,6 +45,10 @@ jobs:
       - name: Run All Tests (Release)
         run: dotnet test Kable.sln --configuration Release --no-build -m:1 --verbosity normal
 
+      - name: Verify Concurrent Start Failure Propagation
+        shell: pwsh
+        run: ./tests/Kable.Tests/Cases/Engine/Lifecycle/VerifyConcurrentStart.ps1
+
       - name: Validate NuGet Packaging
         run: dotnet pack Kable.sln --configuration Release --output ./nupkgs --no-build
 

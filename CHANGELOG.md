@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- Preserve the original connection failure for uncanceled concurrent `StartAsync` callers when session cleanup cancels their linked wait token. Caller cancellation and shutdown interruption remain unchanged.
+
+---
+
 ## [1.9.0] - 2026-10-26
 
 See [release notes and upgrade guidance](docs/releases/1.9.0.md) / [한국어](docs/releases/1.9.0.ko.md).

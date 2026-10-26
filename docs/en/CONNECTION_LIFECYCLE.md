@@ -31,6 +31,8 @@ same CID; they cannot identify the generation of an identical CID sent by the eq
 - Concurrent StartAsync calls share one connection attempt.
 - Canceling a subsequent start caller cancels that caller's wait, not the shared attempt.
 - The initial caller's token still applies to the actual connection attempt.
+- Once a shared start failure is recorded, uncanceled callers receive the original exception.
+  Session cleanup cancellation does not hide that outcome; explicitly canceled callers remain canceled.
 - Stop/Dispose end the session lifetime. StartAsync is not a reconnect operation.
 - Prefer `await using`/`DisposeAsync`; stop and await application-owned workers first.
 

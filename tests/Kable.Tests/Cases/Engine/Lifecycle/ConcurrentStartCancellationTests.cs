@@ -89,12 +89,88 @@ public sealed class ConcurrentStartCancellationTests
         }
     }
 
+    [Fact]
+    public async Task CanceledWaiter_RemainsCanceledWhenOtherCallersReceiveConnectionFailure()
+    {
+        var expected = new InvalidOperationException("Injected connect failure");
+        var factory = new GatedFactory { Failure = expected };
+        var session = new KableSession<string>(factory, new AsciiLineCodec());
+        using var cancellation = new CancellationTokenSource();
+        var starter = session.StartAsync().AsTask();
+        await factory.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var canceled = session.StartAsync(cancellation.Token).AsTask();
+        var other = session.StartAsync().AsTask();
+        try
+        {
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceled);
+            factory.Gate.TrySetResult(true);
+            Assert.Same(expected, await Assert.ThrowsAsync<InvalidOperationException>(() => starter));
+            Assert.Same(expected, await Assert.ThrowsAsync<InvalidOperationException>(() => other));
+        }
+        finally
+        {
+            factory.Gate.TrySetResult(true);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => session.DisposeAsync().AsTask());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ShutdownWhileConnecting_CancelsWaitersAndCompletes(bool dispose)
+    {
+        var factory = new GatedFactory();
+        var session = new KableSession<string>(factory, new AsciiLineCodec());
+        var starter = session.StartAsync().AsTask();
+        await factory.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var waiter = session.StartAsync().AsTask();
+        try
+        {
+            var shutdown = dispose ? session.DisposeAsync().AsTask() : session.StopAsync().AsTask();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => starter.WaitAsync(TimeSpan.FromSeconds(5)));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter.WaitAsync(TimeSpan.FromSeconds(5)));
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(session.IsConnected);
+            Assert.Equal(dispose ? SessionLifecycleState.Disposed : SessionLifecycleState.Stopped, session.State);
+        }
+        finally { await session.DisposeAsync(); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ShutdownWithUncooperativeFactory_InterruptsWaiterBeforeConnectCompletes(bool dispose)
+    {
+        var factory = new GatedFactory { IgnoreCancellation = true };
+        var session = new KableSession<string>(factory, new AsciiLineCodec());
+        var starter = session.StartAsync().AsTask();
+        await factory.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var waiter = session.StartAsync().AsTask();
+        try
+        {
+            var shutdown = dispose ? session.DisposeAsync().AsTask() : session.StopAsync().AsTask();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.False(starter.IsCompleted);
+            factory.Gate.TrySetResult(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => starter.WaitAsync(TimeSpan.FromSeconds(5)));
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(session.IsConnected);
+        }
+        finally
+        {
+            factory.Gate.TrySetResult(true);
+            await session.DisposeAsync();
+        }
+    }
+
     private sealed class GatedFactory : IConnectionFactory
     {
         public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public CancellationToken ConnectionToken { get; private set; }
         public Exception? Failure { get; init; }
+        public bool IgnoreCancellation { get; init; }
         public int Calls { get; private set; }
 
         public async ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
@@ -102,7 +178,8 @@ public sealed class ConcurrentStartCancellationTests
             Calls++;
             ConnectionToken = ct;
             Entered.TrySetResult(true);
-            await Gate.Task.WaitAsync(ct);
+            if (IgnoreCancellation) await Gate.Task;
+            else await Gate.Task.WaitAsync(ct);
             if (Failure != null) throw Failure;
             return new TestMemoryConnectionContext();
         }
