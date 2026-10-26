@@ -2,56 +2,83 @@ namespace Kable.Observability;
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Kable.Core;
 
-/// <summary>
-/// 통신 세션에서 오가는 모든 패킷을 실시간 Wireshark .pcap 파일로 덤프하는 옵저버.
-/// </summary>
-public sealed class PcapStreamObserver : ICommObserver, IAsyncDisposable
+/// <summary>Nonblocking, bounded PCAP recording with a single ordered writer.</summary>
+public sealed partial class PcapStreamObserver : ICommObserver, IAsyncDisposable
 {
+    private readonly object _sync = new();
     private readonly PcapWriter _writer;
-    private readonly Channel<PacketTraceRecord> _commandChannel;
-    private readonly Channel<PacketTraceRecord> _periodicChannel;
-    private readonly Channel<PacketTraceRecord> _alarmChannel;
+    private readonly Channel<PcapQueuedRecord> _recording;
+    private readonly Channel<PacketTraceRecord> _commands;
+    private readonly Channel<PacketTraceRecord> _periodic;
+    private readonly Channel<PacketTraceRecord> _alarms;
+    private readonly Task _worker;
+    private Exception? _lastError;
+    private bool _stopping;
+    private Task? _disposeTask;
+    private long _droppedCommands, _droppedPeriodic, _droppedAlarms;
 
-    public ChannelReader<PacketTraceRecord> CommandStream => _commandChannel.Reader;
-    public ChannelReader<PacketTraceRecord> PeriodicStream => _periodicChannel.Reader;
-    public ChannelReader<PacketTraceRecord> AlarmStream => _alarmChannel.Reader;
+    public ChannelReader<PacketTraceRecord> CommandStream => _commands.Reader;
+    public ChannelReader<PacketTraceRecord> PeriodicStream => _periodic.Reader;
+    public ChannelReader<PacketTraceRecord> AlarmStream => _alarms.Reader;
+    public Task Completion => _worker;
+    public Exception? LastError => Volatile.Read(ref _lastError);
+    public long DroppedCommandCount => Interlocked.Read(ref _droppedCommands);
+    public long DroppedPeriodicCount => Interlocked.Read(ref _droppedPeriodic);
+    public long DroppedAlarmCount => Interlocked.Read(ref _droppedAlarms);
 
-    public PcapStreamObserver(string filePath)
+    public PcapStreamObserver(string filePath) : this(filePath, new PcapStreamObserverOptions()) { }
+    public PcapStreamObserver(string filePath, PcapStreamObserverOptions options)
+        : this(OpenFile(filePath, options), options) { }
+    internal PcapStreamObserver(Stream stream, PcapStreamObserverOptions options)
     {
-        var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
-        _writer = new PcapWriter(fileStream);
-
-        _commandChannel = Channel.CreateUnbounded<PacketTraceRecord>(new UnboundedChannelOptions { SingleWriter = false });
-        _periodicChannel = Channel.CreateUnbounded<PacketTraceRecord>(new UnboundedChannelOptions { SingleWriter = false });
-        _alarmChannel = Channel.CreateUnbounded<PacketTraceRecord>(new UnboundedChannelOptions { SingleWriter = false });
+        if (options == null) throw new ArgumentNullException(nameof(options));
+        options.Validate();
+        _writer = new PcapWriter(stream);
+        _recording = Channel.CreateBounded<PcapQueuedRecord>(new BoundedChannelOptions(options.RecordingCapacity)
+        {
+            FullMode = BoundedChannelFullMode.Wait, SingleReader = true, AllowSynchronousContinuations = false
+        });
+        _commands = View(options.CommandCapacity, () => Interlocked.Increment(ref _droppedCommands));
+        _periodic = View(options.PeriodicCapacity, () => Interlocked.Increment(ref _droppedPeriodic));
+        _alarms = View(options.AlarmCapacity, () => Interlocked.Increment(ref _droppedAlarms));
+        _worker = Task.Run(RecordAsync);
     }
+    private static Stream OpenFile(string path, PcapStreamObserverOptions options)
+    {
+        if (options == null) throw new ArgumentNullException(nameof(options));
+        options.Validate();
+        return new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
+    }
+    private static Channel<PacketTraceRecord> View(int capacity, Action dropped) =>
+        Channel.CreateBounded<PacketTraceRecord>(new BoundedChannelOptions(capacity)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest, AllowSynchronousContinuations = false
+        }, _ => dropped());
 
     public void OnPacketTrace(in PacketTraceRecord trace)
     {
-        // PCAP 파일 비동기 스트리밍 기록
-        _ = _writer.WritePacketAsync(trace.RawBytes, trace.TimestampUtc);
-
-        // 스트림 분배
-        switch (trace.Kind)
+        lock (_sync)
         {
-            case TrafficKind.AperiodicCommand:
-                _commandChannel.Writer.TryWrite(trace);
-                break;
-            case TrafficKind.PeriodicTelemetry:
-                _periodicChannel.Writer.TryWrite(trace);
-                break;
-            case TrafficKind.SpontaneousAlarm:
-                _alarmChannel.Writer.TryWrite(trace);
-                break;
+            if (_stopping) return;
+            var payload = trace.RawBytes.Slice(0, Math.Min(trace.RawBytes.Length, 65535)).ToArray();
+            var owned = new PacketTraceRecord(trace.TimestampUtc, trace.Direction, trace.Kind, trace.Tag,
+                payload, trace.ParsedText, trace.Latency, trace.Level, trace.DeviceId, trace.SequenceNo);
+            if (!_recording.Writer.TryWrite(new PcapQueuedRecord(payload, trace.RawBytes.Length, trace.TimestampUtc)))
+            {
+                FailLocked(new IOException("PCAP recording queue capacity exceeded; recording stopped."));
+                return;
+            }
+            switch (trace.Kind)
+            {
+                case TrafficKind.PeriodicTelemetry: _periodic.Writer.TryWrite(owned); break;
+                case TrafficKind.SpontaneousAlarm: _alarms.Writer.TryWrite(owned); break;
+                default: _commands.Writer.TryWrite(owned); break;
+            }
         }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _writer.DisposeAsync();
     }
 }

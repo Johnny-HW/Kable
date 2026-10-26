@@ -64,7 +64,14 @@ public sealed class PcapWriter : IAsyncDisposable
     /// <summary>
     /// 패킷 1건을 PCAP 패킷 레코드 헤더(16 bytes)와 함께 스트림에 씁니다.
     /// </summary>
-    public async ValueTask WritePacketAsync(ReadOnlyMemory<byte> payload, DateTime timestampUtc, CancellationToken ct = default)
+    public ValueTask WritePacketAsync(ReadOnlyMemory<byte> payload, DateTime timestampUtc, CancellationToken ct = default)
+    {
+        var captured = payload.Slice(0, Math.Min(payload.Length, (int)SNAPLEN)).ToArray();
+        return WriteCapturedPacketAsync(captured, payload.Length, timestampUtc, ct);
+    }
+
+    internal async ValueTask WriteCapturedPacketAsync(byte[] payload, int originalLength,
+        DateTime timestampUtc, CancellationToken ct = default)
     {
         if (!_headerWritten)
         {
@@ -75,7 +82,7 @@ public sealed class PcapWriter : IAsyncDisposable
         uint tsSec = (uint)(unixMicro / 1_000_000);
         uint tsUsec = (uint)(unixMicro % 1_000_000);
         uint capLen = (uint)Math.Min(payload.Length, (int)SNAPLEN);
-        uint origLen = (uint)payload.Length;
+        uint origLen = (uint)originalLength;
 
         byte[] pktHeader = new byte[16];
         BitConverter.GetBytes(tsSec).CopyTo(pktHeader, 0);
@@ -89,8 +96,7 @@ public sealed class PcapWriter : IAsyncDisposable
             await _stream.WriteAsync(pktHeader, 0, pktHeader.Length, ct);
             if (capLen > 0)
             {
-                byte[] buffer = payload.Slice(0, (int)capLen).ToArray();
-                await _stream.WriteAsync(buffer, 0, buffer.Length, ct);
+                await _stream.WriteAsync(payload, 0, (int)capLen, ct);
             }
             await _stream.FlushAsync(ct);
         }
@@ -102,8 +108,11 @@ public sealed class PcapWriter : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _stream.FlushAsync();
-        _stream.Dispose();
-        _lock.Dispose();
+        try { await _stream.FlushAsync().ConfigureAwait(false); }
+        finally
+        {
+            try { _stream.Dispose(); }
+            finally { _lock.Dispose(); }
+        }
     }
 }

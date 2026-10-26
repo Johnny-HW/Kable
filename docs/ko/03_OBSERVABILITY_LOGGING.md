@@ -108,7 +108,7 @@ public interface ICommObserver
 <div style="background: #f0f9ff; border-left: 4px solid #0284c7; border-radius: 0 8px 8px 0; padding: 14px 18px; margin-top: 24px;">
 <div style="font-weight: 700; color: #0369a1; font-size: 13px; margin-bottom: 4px;">💡 실전 아키텍처 가이드</div>
 <div style="font-size: 12.5px; color: #334155; line-height: 1.6;">
-WPF 또는 WinForms와 같은 단일 UI 스레드 환경에서 초고주기 텔레메트리를 콘솔 UI로 직접 파이핑하면 디스패처 루프가 즉각 동결됩니다. Kable의 <code>ICommObserver</code>는 <strong>PeriodicStream (DropOldest)</strong>과 <strong>CommandStream (무손실 보관)</strong>을 물리적으로 분리하여, 설비의 고속 통신 중에도 화면이 멈추지 않는 60 FPS 렌더링을 영구 보장합니다.
+WPF 또는 WinForms에서 고주기 패킷을 표시할 때는 조회 버퍼와 UI 갱신 주기를 분리합니다. <code>CommObserver</code>와 <code>PcapStreamObserver</code>의 조회 스트림은 유한 DropOldest 버퍼이므로 느린 소비자에게 무손실 전달을 보장하지 않습니다. PCAP 파일 기록의 수락·실패·종료 계약은 <a href="#/ko/PCAP_RECORDING">PCAP 기록 가이드</a>를 참고합니다.
 </div>
 </div>
 
