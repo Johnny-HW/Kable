@@ -3,6 +3,9 @@
 .NET 8, .NET 10, netstandard2.0용 비동기 장비 통신 라이브러리.
 장비에 맞는 API를 선택해 연결·질의·주기 조회·연결 복구를 구성한다.
 
+다음 버전은 **1.9.0 — 배포 전**이다. [릴리즈 노트와 업그레이드 안내](docs/releases/1.9.0.ko.md),
+[변경 이력](CHANGELOG.md)을 참고한다. 아래 설치 명령은 NuGet에 게시된 버전을 설치한다.
+
 ## 한 번의 질의부터 시작하기
 
 기존 .NET 앱의 프로젝트 폴더에서 패키지를 추가한다. 새 앱이라면 먼저 `dotnet new console -n KableDemo`와 `cd KableDemo`를 실행한다.

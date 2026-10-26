@@ -3,6 +3,9 @@
 Asynchronous device communication for .NET 8, .NET 10 and netstandard2.0.
 Connect, query, poll and recover connections using the API that matches your equipment.
 
+Next version: **1.9.0 — unreleased**. Read the [release notes and upgrade guidance](docs/releases/1.9.0.md)
+or the [changelog](CHANGELOG.md). The installation command below selects the version available on NuGet.
+
 ## Start with one query
 
 Add the package from your .NET application project directory. For a new app, first run `dotnet new console -n KableDemo` and `cd KableDemo`.

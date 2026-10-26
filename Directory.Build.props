@@ -3,8 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.8.2</Version>
-    <PackageVersion>1.8.2</PackageVersion>
+    <Version>1.9.0</Version>
+    <PackageVersion>$(Version)</PackageVersion>
+    <PackageReleaseNotes>$(Version): Safe-close Modbus requests after in-flight failures; bounded PCAP recording with observable errors and graceful drain; skip packet snapshots without observers; recover Modbus noise safely; correct generator-only NuGet dependency metadata.</PackageReleaseNotes>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

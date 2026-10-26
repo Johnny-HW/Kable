@@ -1,6 +1,7 @@
 <!-- docs/en/_sidebar.md -->
 
 * **Getting Started**
+  * [1.9.0 release notes — unreleased](releases/1.9.0.md)
   * [Overview & Quickstart](en/README.md)
   * [First connection and API choice](en/GETTING_STARTED.md)
   * [Configuration and events](en/DEVELOPER_USAGE.md)

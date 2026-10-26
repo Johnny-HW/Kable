@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.0] - Unreleased
+
+Release preparation; no NuGet publication or Git tag has been created for this version.
+See [release notes and upgrade guidance](docs/releases/1.9.0.md) / [한국어](docs/releases/1.9.0.ko.md).
+
+### Added
+- `PcapStreamObserverOptions`, configurable recording/view capacities, `Completion`, `LastError`, and per-stream drop counters.
+- Isolated NuGet consumer validation for generator packages in Windows CI.
+
+### Changed
+- Modbus channel deadlines cover queue waiting; Close/Dispose interrupt active I/O and serialize cleanup.
+- PCAP recording uses a bounded queue and one writer; disposal drains accepted records on success.
+- PCAP live-view streams drop oldest records at capacity. Recording overflow stops recording and exposes an error.
+
+### Fixed
+- Close Modbus connections after transmitted requests time out, are canceled, or fail, preventing late-response reuse.
+- Recover noise before short Modbus responses without discarding valid partial read requests; fail stalled noise tests promptly.
+- Skip FIFO/CID raw-byte snapshots when no observer is configured.
+- Remove generator-only runtime dependency metadata that caused NU5128 without suppressing the warning.
+
+---
+
 ## [1.8.2] - 2026-10-16
 
 ### Added

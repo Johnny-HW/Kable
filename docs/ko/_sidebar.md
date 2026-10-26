@@ -1,6 +1,7 @@
 <!-- docs/ko/_sidebar.md -->
 
 * **시작하기 (Getting Started)**
+  * [1.9.0 릴리즈 노트 — 배포 전](releases/1.9.0.ko.md)
   * [개요 및 퀵스타트 (Overview)](ko/README.md)
   * [처음 연결하기와 API 선택](ko/GETTING_STARTED.md)
   * [설정과 이벤트 계약](ko/DEVELOPER_USAGE.md)
