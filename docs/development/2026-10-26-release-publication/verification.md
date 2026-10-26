@@ -36,3 +36,16 @@ Generator의 NU5128 없이 패키징이 완료됐다. 패키지 README 미포함
 NuGet.org 및 GitHub Packages 게시를 수행한다. 실제 실행 결과는 워크플로 기록에서 확인한다.
 [GitHub 릴리즈](https://github.com/Johnny-HW/Kable/releases/tag/v1.9.0)와
 [NuGet 패키지](https://www.nuget.org/packages/Kable/1.9.0)에 최종 배포 정보를 연결한다.
+
+## 게시 완료 확인
+
+- 릴리즈 소스 커밋: `667abb8be84e7e9f5133cf12d7446de95b8ebcd4`.
+- [v1.9.0 게시 실행](https://github.com/Johnny-HW/Kable/actions/runs/40264945947)이 성공했다.
+- NuGet.org와 GitHub Packages에 13개 패키지 업로드가 완료됐다.
+- NuGet 공개 API에서 13개 전부의 1.9.0 nuspec을 조회하고 버전, 소스 커밋,
+  내부 Kable 의존성 버전을 확인했다. Generator의 실행용 의존성도 비어 있음을 확인했다.
+- [GitHub Release](https://github.com/Johnny-HW/Kable/releases/tag/v1.9.0)는 정식 릴리즈로 게시했다.
+- [전체 CI](https://github.com/Johnny-HW/Kable/actions/runs/40264946001)는 Windows와 Linux 모두 성공했다.
+  Linux의 기존 시작·취소 경합 테스트가 최초 실행에서 실패해 실패 작업만 한 번 재실행했다.
+  테스트나 임계값을 변경하지 않았으며 v1.9.0 태그와 게시된 패키지도 변경하지 않았다.
+- 개발 작업본의 기존 미커밋 파일은 그대로 보존했다.
