@@ -110,10 +110,10 @@ public class ManagedConnectionTests
     internal static async Task<(SharedMemoryConnectionContext Server, SharedMemoryConnectionContext Client)> ConnectAsync(
         SharedMemoryServerListener listener, string name)
     {
-        Task accepted = listener.AcceptAsync().AsTask();
+        var accepted = listener.AcceptAsync().AsTask();
         var client = (SharedMemoryConnectionContext)await new SharedMemoryClientFactory(name).ConnectAsync();
         await accepted.WaitAsync(TimeSpan.FromSeconds(5));
-        var server = (SharedMemoryConnectionContext)await (Task<Kable.Core.IConnectionContext>)accepted;
+        var server = (SharedMemoryConnectionContext)await accepted;
         return (server, client);
     }
 
