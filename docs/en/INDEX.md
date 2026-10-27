@@ -80,3 +80,5 @@
 </div>
 
 </div>
+
+[Protocol Pack — current source schema, generator and limitations (Korean)](../PROTOCOL_PACK.md)

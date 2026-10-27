@@ -120,3 +120,28 @@ The examples use modern .NET syntax. PeriodicTimer examples require .NET 8/10 in
 The core library also targets netstandard2.0; legacy applications need compatible async
 disposal/language support and their own platform-appropriate application timer.
 Compiled repository examples are in [Kable.QuickStart](https://github.com/Johnny-HW/Kable/tree/main/samples/Kable.QuickStart).
+
+
+## Protocol Pack
+
+This feature exists in the current working tree; availability in published 1.9.1 is not established. Put the parent YAML and command/map files under `Protocol/` and add:
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="Protocol\**\*.kable.yaml" />
+</ItemGroup>
+```
+
+Reference `Kable` and a build of `Kable.Generators` containing Protocol Pack support. With the MassHunter-7700 generator fixture:
+
+```csharp
+using Icpms.MassHunter.Protocol;
+
+var options = MassHunter7700Protocol.CreateDeviceOptions();
+var command = new IgnitePlasmaCommand();
+string wire = command.FormatWireMessage(); // oPON
+```
+
+Creating options does not open a connection. Reply enums do not parse responses; the application must interpret incoming strings. Modbus/MELSEC emit map constants, not read/write helpers. Loading/saving uses synchronous file I/O and belongs outside communication loops.
+
+RTU distinguishes supported request/response FCs by length and CRC. SLMP 3E supports both directions; check `IsResponse && IsSuccess` for successful responses. Both codecs retain FIFO contracts without correlation IDs. See the [schema, diagnostics and limitations (Korean)](../PROTOCOL_PACK.md).

@@ -77,3 +77,19 @@ Kable/                                         # [저장소 루트]
 </div>
 
 </div>
+
+
+## Protocol Pack 구성 (현재 소스)
+
+기존 트리는 주요 계층의 개요다. Protocol Pack은 다음 별도 프로젝트로 구성된다.
+
+| Path | Responsibility |
+| :--- | :--- |
+| `src/Kable.ProtocolPack/Models/` | YAML models (netstandard2.0) |
+| `src/Kable.ProtocolPack/Loading/` | Loader, validator, YAML persistence; YamlDotNet |
+| `src/Kable.Generators/ProtocolPack/` | AdditionalFiles binding and C# emitters |
+| `tests/Kable.ProtocolPack.Tests/Loading/` | Loading, validation and roundtrip tests |
+| `tests/Kable.ProtocolPack.Tests/Fixtures/` | MassHunter-7700, ABB-TALYS, Line-PLC |
+| `tests/Kable.Generators.Tests/ProtocolPack/` | Generated compilation and behavior checks |
+
+파서는 설정·빌드 단계에 속하며 Transport → Codec → Engine 경계를 변경하지 않는다. 생성기 패키지는 `Kable.ProtocolPack.dll`, `YamlDotNet.dll`을 analyzer 경로에 포함하도록 구성되어 있다. 배포 확인과 별개로 소스 구성을 설명한다. [계약과 제약](../PROTOCOL_PACK.md)을 참고한다.

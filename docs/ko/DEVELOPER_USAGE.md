@@ -95,3 +95,28 @@ client.LineReceived -= onLine;
 [연결 수명과 복구](ko/CONNECTION_LIFECYCLE.md)를 참고한다. 자동 재연결은 명시적으로 `ReconnectingKableClient`를 사용하는 경우에만 동작한다. 기존 Simple 클라이언트의 수명 계약은 유지된다.
 
 진행 중 이동·쓰기 명령은 실패로 호출자에게 반환된다. 재연결이 완료돼도 같은 명령을 자동 실행하지 않는다. 실제 장비 상태를 조회한 뒤 상위 시퀀스가 후속 동작을 결정해야 한다.
+
+
+## Protocol Pack
+
+현재 작업 트리의 기능이며 배포된 1.9.1의 제공 기능으로 간주하지 않는다. `Protocol/` 아래에 부모 YAML과 명령/맵 파일을 넣고 다음 항목을 앱 프로젝트에 추가한다.
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="Protocol\**\*.kable.yaml" />
+</ItemGroup>
+```
+
+`Kable`과 Protocol Pack 기능이 포함된 `Kable.Generators` 참조가 필요하다. `MassHunter-7700` 픽스처 기준 사용 예:
+
+```csharp
+using Icpms.MassHunter.Protocol;
+
+var options = MassHunter7700Protocol.CreateDeviceOptions();
+var command = new IgnitePlasmaCommand();
+string wire = command.FormatWireMessage(); // oPON
+```
+
+옵션 생성은 연결을 시작하지 않는다. Reply enum은 응답 파서가 아니며 앱이 수신 문자열을 해석해야 한다. Modbus/MELSEC은 맵 상수만 생성하고 RW 헬퍼는 생성하지 않는다. 로더·저장은 동기 파일 I/O이므로 통신 루프에서 호출하지 않는다.
+
+RTU는 지원 FC의 요청/응답을 길이와 CRC로 구별한다. SLMP 3E는 요청/응답 프레임을 모두 지원하며 `IsResponse && IsSuccess`로 정상 응답을 판정한다. 두 코덱 모두 상관 ID가 없어 FIFO 계약을 유지한다. [전체 스키마·진단·제약](../PROTOCOL_PACK.md)을 참고한다.

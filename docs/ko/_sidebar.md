@@ -17,6 +17,7 @@
   * [구현 및 디렉터리 구조 (Layout)](ko/04_IMPLEMENTATION_LAYOUT.md)
 
 * **신뢰성 및 프로토콜 (Reliability & Protocols)**
+  * [Protocol Pack (현재 소스)](PROTOCOL_PACK.md)
   * [세션 수명 주기 및 장애 복구 (Connection Lifecycle)](ko/CONNECTION_LIFECYCLE.md)
   * [관측성 및 로깅 (Observability)](ko/03_OBSERVABILITY_LOGGING.md)
   * [산업용 체크섬 가이드 (Checksums)](ko/05_INDUSTRIAL_CHECKSUMS.md)

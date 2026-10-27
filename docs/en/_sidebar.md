@@ -16,6 +16,7 @@
   * [Implementation Layout](en/04_IMPLEMENTATION_LAYOUT.md)
 
 * **Reliability & Protocols**
+  * [Protocol Pack (current source, Korean)](PROTOCOL_PACK.md)
   * [Connection lifecycle](en/CONNECTION_LIFECYCLE.md)
   * [Observability & Logging](en/03_OBSERVABILITY_LOGGING.md)
   * [Industrial Checksums](en/05_INDUSTRIAL_CHECKSUMS.md)

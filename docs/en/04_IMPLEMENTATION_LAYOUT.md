@@ -75,3 +75,19 @@ Kable/                                         # [Repository Root]
 </div>
 
 </div>
+
+
+## Protocol Pack layout (current source)
+
+The tree above outlines the main layers. Protocol Pack adds these separate projects.
+
+| Path | Responsibility |
+| :--- | :--- |
+| `src/Kable.ProtocolPack/Models/` | YAML models (netstandard2.0) |
+| `src/Kable.ProtocolPack/Loading/` | Loader, validator, YAML persistence; YamlDotNet |
+| `src/Kable.Generators/ProtocolPack/` | AdditionalFiles binding and C# emitters |
+| `tests/Kable.ProtocolPack.Tests/Loading/` | Loading, validation and roundtrip tests |
+| `tests/Kable.ProtocolPack.Tests/Fixtures/` | MassHunter-7700, ABB-TALYS, Line-PLC |
+| `tests/Kable.Generators.Tests/ProtocolPack/` | Generated compilation and behavior checks |
+
+Parsing belongs to configuration/build time and preserves the Transport → Codec → Engine boundary. The generator project bundles `Kable.ProtocolPack.dll` and `YamlDotNet.dll` under its analyzer package path. This describes source configuration, not a confirmed release. See the [contract and limitations (Korean)](../PROTOCOL_PACK.md).
