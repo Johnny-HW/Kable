@@ -64,13 +64,18 @@ public unsafe sealed partial class SharedMemoryRingBuffer
     }
 
     /// <summary>Closes immediately; the last in-flight operation releases the mapping and handles.</summary>
-    public void Dispose()
+    public void Dispose() => DisposeCore(publishClose: true);
+
+    // Rollback of an endpoint that was never published must not close an existing peer's ring.
+    internal void ReleaseUnconnected() => DisposeCore(publishClose: false);
+
+    private void DisposeCore(bool publishClose)
     {
         if (!TryEnter()) return;
         try
         {
             int previous = Interlocked.Or(ref _lifetimeState, Disposing);
-            if (previous >= 0) CloseCore();
+            if (previous >= 0 && publishClose) CloseCore();
         }
         finally { Exit(); }
     }

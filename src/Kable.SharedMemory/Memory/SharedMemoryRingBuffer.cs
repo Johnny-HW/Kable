@@ -1,8 +1,6 @@
 namespace Kable.SharedMemory.Memory;
 
-using System;
 using System.IO.MemoryMappedFiles;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 /// <summary>Single-producer/single-consumer byte ring in a named Windows memory mapping.</summary>
@@ -20,92 +18,67 @@ public unsafe sealed partial class SharedMemoryRingBuffer : IDisposable
     public int Capacity { get; }
     public int Mask { get; }
 
-    private SharedMemoryRingBuffer(
-        MemoryMappedFile mmf,
-        MemoryMappedViewAccessor accessor,
-        byte* pointer,
-        EventWaitHandle dataAvailableEvent,
-        EventWaitHandle spaceAvailableEvent,
-        bool isCreator,
-        int requestedCapacityPowerOfTwo)
+    private SharedMemoryRingBuffer(RingBufferResources resources, int? newCapacity)
     {
-        _mmf = mmf;
-        _accessor = accessor;
-        _header = (MmfRingBufferHeader*)pointer;
-        _dataArea = pointer + 256; // 256 바이트 헤더 이후 데이터 영역
-        _dataAvailableEvent = dataAvailableEvent;
-        _spaceAvailableEvent = spaceAvailableEvent;
-
-        if (isCreator)
+        _mmf = resources.Mapping!;
+        _accessor = resources.View!;
+        _header = (MmfRingBufferHeader*)resources.Pointer;
+        _dataArea = resources.Pointer + 256;
+        _dataAvailableEvent = resources.Data!;
+        _spaceAvailableEvent = resources.Space!;
+        if (newCapacity is int capacity)
         {
-            Capacity = requestedCapacityPowerOfTwo;
-            Mask = requestedCapacityPowerOfTwo - 1;
-
-            _header->Magic = MmfRingBufferHeader.ExpectedMagic;
+            Capacity = capacity;
+            Mask = capacity - 1;
             _header->Version = MmfRingBufferHeader.CurrentVersion;
             _header->Capacity = Capacity;
             _header->Mask = Mask;
             Volatile.Write(ref _header->Head, 0);
             Volatile.Write(ref _header->Tail, 0);
             Volatile.Write(ref _header->IsClosed, 0);
+            Volatile.Write(ref _header->Magic, MmfRingBufferHeader.ExpectedMagic);
         }
         else
         {
-            if (_header->Magic != MmfRingBufferHeader.ExpectedMagic)
-            {
-                throw new InvalidOperationException("Invalid shared memory segment magic number.");
-            }
+            if (Volatile.Read(ref _header->Magic) != MmfRingBufferHeader.ExpectedMagic ||
+                _header->Version != MmfRingBufferHeader.CurrentVersion)
+                throw new InvalidDataException("Unsupported or incomplete shared memory header.");
             Capacity = _header->Capacity;
             Mask = _header->Mask;
+            if (Capacity <= 0 || (Capacity & (Capacity - 1)) != 0 || Mask != Capacity - 1 ||
+                256L + Capacity > _accessor.Capacity)
+                throw new InvalidDataException("Shared memory capacity or mask is outside the mapped view.");
+            int closed = Volatile.Read(ref _header->IsClosed);
+            if (closed is not (0 or 1)) throw new InvalidDataException("Invalid shared memory closure state.");
+            if (closed == 1) throw new InvalidOperationException("The shared memory channel is closed.");
         }
+        resources.TransferOwnership();
     }
 
-    /// <summary>
-    /// 지정된 이름의 공유 메모리 링 버퍼를 생성(서버/생성자)합니다.
-    /// </summary>
+    /// <summary>Creates a new physical ring. An existing mapping is never overwritten.</summary>
     public static SharedMemoryRingBuffer Create(string bufferName, int capacityPowerOfTwo = 64 * 1024)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bufferName);
         if (capacityPowerOfTwo <= 0 || (capacityPowerOfTwo & (capacityPowerOfTwo - 1)) != 0)
-        {
-            throw new ArgumentException("Capacity must be a power of two.", nameof(capacityPowerOfTwo));
-        }
-
-        long totalSize = 256 + capacityPowerOfTwo;
-        var (mmfName, dataEvtName, spaceEvtName) = GetKernelObjectNames(bufferName);
-
-        var mmf = MemoryMappedFile.CreateOrOpen(mmfName, totalSize, MemoryMappedFileAccess.ReadWrite);
-        var accessor = mmf.CreateViewAccessor(0, totalSize, MemoryMappedFileAccess.ReadWrite);
-
-        byte* ptr = null;
-        accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
-
-        var dataEvt = new EventWaitHandle(false, EventResetMode.AutoReset, dataEvtName);
-        var spaceEvt = new EventWaitHandle(false, EventResetMode.AutoReset, spaceEvtName);
-
-        return new SharedMemoryRingBuffer(mmf, accessor, ptr, dataEvt, spaceEvt, isCreator: true, capacityPowerOfTwo);
+            throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacityPowerOfTwo));
+        using var resources = new RingBufferResources();
+        resources.Mapping = MemoryMappedFile.CreateNew(bufferName + "_mmf", 256L + capacityPowerOfTwo,
+            MemoryMappedFileAccess.ReadWrite);
+        resources.Map();
+        resources.Data = RingBufferResources.CreateEvent(bufferName + "_data_evt");
+        resources.Space = RingBufferResources.CreateEvent(bufferName + "_space_evt");
+        return new SharedMemoryRingBuffer(resources, capacityPowerOfTwo);
     }
 
-    /// <summary>
-    /// 기존에 생성된 공유 메모리 링 버퍼에 연결(클라이언트/소비자)합니다.
-    /// </summary>
+    /// <summary>Opens and validates an existing physical ring without changing its shared state.</summary>
     public static SharedMemoryRingBuffer Open(string bufferName)
     {
-        var (mmfName, dataEvtName, spaceEvtName) = GetKernelObjectNames(bufferName);
-
-        var mmf = MemoryMappedFile.OpenExisting(mmfName, MemoryMappedFileRights.ReadWrite);
-        var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.ReadWrite);
-
-        byte* ptr = null;
-        accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
-
-        var dataEvt = EventWaitHandle.OpenExisting(dataEvtName);
-        var spaceEvt = EventWaitHandle.OpenExisting(spaceEvtName);
-
-        return new SharedMemoryRingBuffer(mmf, accessor, ptr, dataEvt, spaceEvt, isCreator: false, 0);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bufferName);
+        using var resources = new RingBufferResources();
+        resources.Mapping = MemoryMappedFile.OpenExisting(bufferName + "_mmf", MemoryMappedFileRights.ReadWrite);
+        resources.Map();
+        resources.Data = EventWaitHandle.OpenExisting(bufferName + "_data_evt");
+        resources.Space = EventWaitHandle.OpenExisting(bufferName + "_space_evt");
+        return new SharedMemoryRingBuffer(resources, null);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (string MmfName, string DataEvtName, string SpaceEvtName) GetKernelObjectNames(string bufferName)
-        => ($"{bufferName}_mmf", $"{bufferName}_data_evt", $"{bufferName}_space_evt");
-
 }

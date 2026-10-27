@@ -4,6 +4,9 @@
 이번 요청을 상세 설계·테스트·해당 범위 구현 승인으로 적용한다.
 기준은 PROJECT_SPEC, SYSTEM_DESIGN, CONVENTIONS 및 CONNECTION_LIFECYCLE이다.
 
+후속 승인 범위는 [장비 연결 유지·UI 재접속 계획](SHARED_MEMORY_RECONNECTION_PLAN.md)을 따른다.
+아래는 최초 최적화 단계의 설계 기록이며, 후속 재접속 기능의 제외를 뜻하지 않는다.
+
 ## 1. 범위와 불변식
 
 - Transports → Codecs → Engine 경계를 유지한다. IConnectionContext/IProtocolCodec 변경 없음.

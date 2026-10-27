@@ -22,12 +22,18 @@ public static class SharedMemoryTransport
 
         // 서버 관점: s2c는 내가 쓰고(outbound), c2s는 상대방이 써서 내가 읽음(inbound)
         var s2c = SharedMemoryRingBuffer.Create(s2cName, bufferCapacityPowerOfTwo);
-        var c2s = SharedMemoryRingBuffer.Create(c2sName, bufferCapacityPowerOfTwo);
-
-        return new SharedMemoryConnectionContext(
-            inboundBuffer: c2s,
-            outboundBuffer: s2c,
-            endpointDescription: $"SharedMemory:Server:{channelName}");
+        SharedMemoryRingBuffer? c2s = null;
+        try
+        {
+            c2s = SharedMemoryRingBuffer.Create(c2sName, bufferCapacityPowerOfTwo);
+            return new SharedMemoryConnectionContext(c2s, s2c, $"SharedMemory:Server:{channelName}");
+        }
+        catch
+        {
+            c2s?.ReleaseUnconnected();
+            s2c.ReleaseUnconnected();
+            throw;
+        }
     }
 
     /// <summary>
@@ -40,11 +46,17 @@ public static class SharedMemoryTransport
 
         // 클라이언트 관점: c2s는 내가 쓰고(outbound), s2c는 서버가 써서 내가 읽음(inbound)
         var s2c = SharedMemoryRingBuffer.Open(s2cName);
-        var c2s = SharedMemoryRingBuffer.Open(c2sName);
-
-        return new SharedMemoryConnectionContext(
-            inboundBuffer: s2c,
-            outboundBuffer: c2s,
-            endpointDescription: $"SharedMemory:Client:{channelName}");
+        SharedMemoryRingBuffer? c2s = null;
+        try
+        {
+            c2s = SharedMemoryRingBuffer.Open(c2sName);
+            return new SharedMemoryConnectionContext(s2c, c2s, $"SharedMemory:Client:{channelName}");
+        }
+        catch
+        {
+            c2s?.ReleaseUnconnected();
+            s2c.ReleaseUnconnected();
+            throw;
+        }
     }
 }
