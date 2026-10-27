@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RegisteredWaitSource Condition="'$(RegisteredWaitSource)' == ''">../../src/Kable.SharedMemory/Memory/RegisteredEventWait.cs</RegisteredWaitSource>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RegisteredWaitSource)" Link="RegisteredEventWait.cs" />
+  </ItemGroup>
+</Project>
