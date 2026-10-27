@@ -102,6 +102,7 @@ flowchart TD
 | 동기/비동기 조건 대기 | src/Kable.SharedMemory/Memory/SharedMemoryRingBuffer.Waiting.cs |
 | 이벤트 일회성 비동기 어댑터 | src/Kable.SharedMemory/Memory/RegisteredEventWait.cs |
 | 전송 통합 테스트 | tests/Kable.SharedMemory.Tests/Transports/ |
+| 독립 프로세스 IPC 테스트 호스트 | tests/Kable.SharedMemory.TestPeer/ |
 | 대기·종료·경합 테스트 | tests/Kable.SharedMemory.Tests/Memory/ |
 | 독립 Windows 성능 비교 | tests/Kable.SharedMemory.Benchmarks/ |
 
@@ -114,6 +115,7 @@ flowchart TD
 - 양방향 동시 전송, 수신 소비자 지연, Pipe/링 backpressure.
 - 유휴·수신 Flush 대기·송신 링 포화 중 Abort/DisposeAsync 종료.
 - 상대 endpoint 종료가 Input/ConnectionClosed에 전달되는지 확인.
+- 독립 dotnet 프로세스 사이 1바이트/1MiB 왕복과 협력적 종료를 확인.
 - 임의 추가 메시지 축적이 없고 1바이트도 즉시 전달되는지 확인.
 
 ### 대기/수명

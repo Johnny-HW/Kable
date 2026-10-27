@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\src\Kable.Core\Kable.Core.csproj" />
     <ProjectReference Include="..\..\src\Kable\Kable.csproj" />
     <ProjectReference Include="..\..\src\Kable.SharedMemory\Kable.SharedMemory.csproj" />
+    <ProjectReference Include="../Kable.SharedMemory.TestPeer/Kable.SharedMemory.TestPeer.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
