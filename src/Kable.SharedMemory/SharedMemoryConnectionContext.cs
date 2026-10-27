@@ -12,7 +12,7 @@ using Kable.SharedMemory.Memory;
 /// 두 개의 SharedMemoryRingBuffer(Inbound, Outbound)를 기반으로
 /// System.IO.Pipelines(PipeReader, PipeWriter)를 투명하게 제공하는 IConnectionContext 구현체.
 /// </summary>
-public sealed class SharedMemoryConnectionContext : IConnectionContext
+public sealed partial class SharedMemoryConnectionContext : IConnectionContext
 {
     private readonly SharedMemoryRingBuffer _inboundBuffer;   // 상대방이 쓰고 내가 읽음
     private readonly SharedMemoryRingBuffer _outboundBuffer;  // 내가 쓰고 상대방이 읽음
@@ -21,7 +21,6 @@ public sealed class SharedMemoryConnectionContext : IConnectionContext
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _pumpInboundTask;
     private readonly Task _pumpOutboundTask;
-    private int _isDisposed;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
@@ -71,26 +70,21 @@ public sealed class SharedMemoryConnectionContext : IConnectionContext
                         break;
                     }
                 }
-                else
-                {
-                    // 데이터가 아직 없으면 대기
-                    if (!_inboundBuffer.WaitForData(50, ct))
-                    {
-                        if (_inboundBuffer.IsClosed) break;
-                    }
-                }
+                else await _inboundBuffer.WaitForDataAsync(ct: ct).ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // Normal shutdown
         }
         catch (Exception ex)
         {
+            StopPumps();
             writer.Complete(ex);
             return;
         }
 
+        StopPumps();
         writer.Complete();
     }
 
@@ -103,83 +97,50 @@ public sealed class SharedMemoryConnectionContext : IConnectionContext
                 var readResult = await reader.ReadAsync(ct).ConfigureAwait(false);
                 var buffer = readResult.Buffer;
 
-                if (buffer.IsEmpty && readResult.IsCompleted)
+                if (readResult.IsCanceled || (buffer.IsEmpty && readResult.IsCompleted))
                 {
                     break;
                 }
 
-                var seqReader = new SequenceReader<byte>(buffer);
-                while (!seqReader.End)
+                long consumed = 0;
+                foreach (var segment in buffer)
                 {
-                    var unreadSpan = seqReader.UnreadSpan;
-                    int written = _outboundBuffer.Write(unreadSpan);
-
-                    if (written > 0)
+                    var remaining = segment;
+                    while (!remaining.IsEmpty && !ct.IsCancellationRequested && !_outboundBuffer.IsClosed)
                     {
-                        seqReader.Advance(written);
-                    }
-                    else
-                    {
-                        // 버퍼가 꽉 차있으면 공간 대기
-                        if (!_outboundBuffer.WaitForSpace(50, ct))
+                        int written = _outboundBuffer.Write(remaining.Span);
+                        if (written > 0)
                         {
-                            if (_outboundBuffer.IsClosed) break;
+                            remaining = remaining.Slice(written);
+                            consumed += written;
                         }
+                        else await _outboundBuffer.WaitForSpaceAsync(ct: ct).ConfigureAwait(false);
                     }
+                    if (!remaining.IsEmpty) break;
                 }
 
-                reader.AdvanceTo(seqReader.Position, buffer.End);
+                // AdvanceTo permits buffer reuse; inspect its length before releasing it.
+                bool finished = readResult.IsCompleted || consumed < buffer.Length;
+                reader.AdvanceTo(buffer.GetPosition(consumed), buffer.End);
 
-                if (readResult.IsCompleted)
+                if (finished)
                 {
                     break;
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // Normal shutdown
         }
         catch (Exception ex)
         {
+            StopPumps();
             reader.Complete(ex);
             return;
         }
 
+        StopPumps();
         reader.Complete();
-    }
-
-    public void Abort(string reason)
-    {
-        _cts.Cancel();
-        _inboundBuffer.Close();
-        _outboundBuffer.Close();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
-
-        try
-        {
-            _cts.Cancel();
-            _inboundPipe.Reader.CancelPendingRead();
-            _outboundPipe.Writer.CancelPendingFlush();
-
-            _inboundBuffer.Close();
-            _outboundBuffer.Close();
-
-            await Task.WhenAll(_pumpInboundTask, _pumpOutboundTask).ConfigureAwait(false);
-        }
-        catch
-        {
-            // Ignore cancellation on shutdown
-        }
-        finally
-        {
-            _inboundBuffer.Dispose();
-            _outboundBuffer.Dispose();
-            _cts.Dispose();
-        }
     }
 }
