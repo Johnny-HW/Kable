@@ -1,6 +1,6 @@
 # Protocol Pack — 생성기 사용법과 구현 제약
 
-갱신일: 2026-10-27. 현재 작업 트리 기준, 배포 미확인. [스키마 계약](PROTOCOL_PACK.md)을 함께 참고한다.
+갱신일: 2026-10-27. 1.9.2 배포 예정 소스 기준, 게시 미완료. [스키마 계약](PROTOCOL_PACK.md)을 함께 참고한다.
 
 ## 1. 생성기가 만드는 것 / 안 만드는 것
 
@@ -67,12 +67,12 @@ public static class MassHunter7700Protocol
   <AdditionalFiles Include="Protocol\**\*.kable.yaml" />
 </ItemGroup>
 <ItemGroup>
-  <PackageReference Include="Kable" Version="$(KableVersion)" />
-  <PackageReference Include="Kable.Generators" Version="$(KableVersion)" PrivateAssets="all" />
+  <PackageReference Include="Kable" Version="1.9.2" />
+  <PackageReference Include="Kable.Generators" Version="1.9.2" PrivateAssets="all" />
 </ItemGroup>
 ```
 
-`KableVersion`에는 Protocol Pack 구현이 포함된 검증된 패키지 버전을 지정한다. 아직 배포 여부는 확인하지 않았다. 생성된 타입의 인터페이스·특성은 기존 생성기가 제공한다.
+위 1.9.2 참조는 게시 후 사용할 설정이다. 게시 전에는 로컬 패키지 또는 프로젝트 참조로 검증한다. 생성된 타입의 인터페이스·특성은 기존 생성기가 제공한다.
 
 SimPort **Export**의 목표 계약은 이 `Protocol/` 트리를 zip 또는 폴더 복사로 내보내는 것이다. SimPort UI·Export 구현 상태는 이 저장소의 검증 범위에 포함하지 않는다.
 

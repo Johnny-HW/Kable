@@ -3,9 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.9.1</Version>
+    <Version>1.9.2</Version>
     <PackageVersion>$(Version)</PackageVersion>
-    <PackageReleaseNotes>$(Version): Preserve the original connection failure for uncanceled concurrent StartAsync callers during cleanup cancellation; retain caller cancellation and shutdown behavior; add controlled startup-race regression checks. Build, test and publish through Windows CI.</PackageReleaseNotes>
+    <PackageReleaseNotes>$(Version): Add YAML Protocol Pack loading, validation and source generation; support Modbus RTU and MELSEC SLMP 3E request/response framing; improve shared-memory UI reconnection. Release preparation; publish after validation.</PackageReleaseNotes>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

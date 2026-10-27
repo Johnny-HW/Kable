@@ -1,4 +1,5 @@
 * **Start / 시작하기**
+  * [1.9.2 release notes (planned)](releases/1.9.2.md)
   * [1.9.1 release notes](releases/1.9.1.md)
   * [1.9.0 release notes](releases/1.9.0.md)
   * [한국어 첫 연결](ko/GETTING_STARTED.md)

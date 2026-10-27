@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.2] - Unreleased
+
+[Release notes](docs/releases/1.9.2.md) / [한국어](docs/releases/1.9.2.ko.md).
+
+### Added
+- YAML Protocol Pack loading, validation, persistence and AdditionalFiles source generation.
+- AsciiLine command/reply types, endpoint option factories and Modbus/MELSEC map constants.
+- Shared-memory UI session reconnection without restarting devices.
+
+### Changed
+- Support request/response framing in Modbus RTU and MELSEC SLMP 3E codecs.
+- Set the shared package version to 1.9.2; publication remains pending.
+
+---
+
 ## [1.9.1] - 2026-10-26
 
 [Release notes](docs/releases/1.9.1.md) / [한국어](docs/releases/1.9.1.ko.md).

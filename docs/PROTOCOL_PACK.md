@@ -2,7 +2,7 @@
 
 작성일: 2026-10-23. 갱신일: 2026-10-27. 상태: **작업 트리에 로더·검증기·생성기 구현 존재, 배포 미확인**.
 
-이 문서는 현재 소스 기준이다. 배포된 1.9.1에서 아래 기능이 제공된다고 가정하지 않는다. 검증 결과는 [verification.md](development/2026-10-23-protocol-pack/verification.md)를 본다.
+이 문서는 1.9.2 배포 예정 소스 기준이다. Protocol Pack은 1.9.2에 포함할 기능이며 실제 게시 완료를 뜻하지 않는다. 검증 결과는 [verification.md](development/2026-10-23-protocol-pack/verification.md)를 본다.
 
 이 문서는 프로토콜 폴더의 **필드와 생성기 출력**의 단일 기준이다. SimPort 화면·Listen·Export는 [SimPort `docs/PROTOCOL_PACK.md`](../../../100.Utility/00.SimulationCommunication/docs/PROTOCOL_PACK.md)를 본다. 구현 검증은 [verification.md](development/2026-10-23-protocol-pack/verification.md)를 본다.
 

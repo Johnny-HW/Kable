@@ -1,6 +1,7 @@
 <!-- docs/ko/_sidebar.md -->
 
 * **시작하기 (Getting Started)**
+  * [1.9.2 릴리즈 노트 (배포 예정)](releases/1.9.2.ko.md)
   * [1.9.1 릴리즈 노트](releases/1.9.1.ko.md)
   * [1.9.0 릴리즈 노트](releases/1.9.0.ko.md)
   * [개요 및 퀵스타트 (Overview)](ko/README.md)

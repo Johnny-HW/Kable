@@ -1,6 +1,7 @@
 <!-- docs/en/_sidebar.md -->
 
 * **Getting Started**
+  * [1.9.2 release notes (planned)](releases/1.9.2.md)
   * [1.9.1 release notes](releases/1.9.1.md)
   * [1.9.0 release notes](releases/1.9.0.md)
   * [Overview & Quickstart](en/README.md)

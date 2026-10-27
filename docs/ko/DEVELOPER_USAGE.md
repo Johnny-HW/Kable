@@ -99,7 +99,7 @@ client.LineReceived -= onLine;
 
 ## Protocol Pack
 
-현재 작업 트리의 기능이며 배포된 1.9.1의 제공 기능으로 간주하지 않는다. `Protocol/` 아래에 부모 YAML과 명령/맵 파일을 넣고 다음 항목을 앱 프로젝트에 추가한다.
+1.9.2에 포함할 기능이며 현재는 배포 준비 상태다. `Protocol/` 아래에 부모 YAML과 명령/맵 파일을 넣고 다음 항목을 앱 프로젝트에 추가한다.
 
 ```xml
 <ItemGroup>

@@ -124,7 +124,7 @@ Compiled repository examples are in [Kable.QuickStart](https://github.com/Johnny
 
 ## Protocol Pack
 
-This feature exists in the current working tree; availability in published 1.9.1 is not established. Put the parent YAML and command/map files under `Protocol/` and add:
+This feature is planned for 1.9.2; publication is pending. Put the parent YAML and command/map files under `Protocol/` and add:
 
 ```xml
 <ItemGroup>
