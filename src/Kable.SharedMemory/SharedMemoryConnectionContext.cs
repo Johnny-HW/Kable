@@ -54,17 +54,15 @@ public sealed class SharedMemoryConnectionContext : IConnectionContext
     private async Task PumpInboundAsync(PipeWriter writer, CancellationToken ct)
     {
         const int chunkSize = 4096;
-        var tempBuffer = new byte[chunkSize];
 
         try
         {
             while (!ct.IsCancellationRequested && !_inboundBuffer.IsClosed)
             {
-                int bytesRead = _inboundBuffer.Read(tempBuffer);
+                var memory = writer.GetMemory(chunkSize).Slice(0, chunkSize);
+                int bytesRead = _inboundBuffer.Read(memory.Span);
                 if (bytesRead > 0)
                 {
-                    var mem = writer.GetMemory(bytesRead);
-                    tempBuffer.AsSpan(0, bytesRead).CopyTo(mem.Span);
                     writer.Advance(bytesRead);
 
                     var flushResult = await writer.FlushAsync(ct).ConfigureAwait(false);
