@@ -1,6 +1,12 @@
 using System.Buffers;
 using Kable.SharedMemory;
 
+if (args.Length == 3 && args[0].StartsWith("managed-", StringComparison.Ordinal))
+{
+    await ManagedPeer.RunAsync(args);
+    return;
+}
+
 if (args.Length != 3) throw new ArgumentException("Expected echo|close channel byte-count.");
 await using var context = SharedMemoryTransport.ConnectClientEndpoint(args[1]);
 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));

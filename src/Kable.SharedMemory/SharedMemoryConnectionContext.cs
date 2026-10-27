@@ -26,7 +26,7 @@ public sealed partial class SharedMemoryConnectionContext : IConnectionContext
     public string EndpointDescription { get; }
     public PipeReader Input => _inboundPipe.Reader;
     public PipeWriter Output => _outboundPipe.Writer;
-    public CancellationToken ConnectionClosed => _cts.Token;
+    public CancellationToken ConnectionClosed { get; }
 
     public SharedMemoryConnectionContext(
         SharedMemoryRingBuffer inboundBuffer,
@@ -37,6 +37,7 @@ public sealed partial class SharedMemoryConnectionContext : IConnectionContext
         _outboundBuffer = outboundBuffer ?? throw new ArgumentNullException(nameof(outboundBuffer));
         EndpointDescription = endpointDescription;
         ConnectionId = Guid.NewGuid().ToString("N");
+        ConnectionClosed = _cts.Token;
 
         var pipeOptions = new PipeOptions(
             pauseWriterThreshold: 64 * 1024,

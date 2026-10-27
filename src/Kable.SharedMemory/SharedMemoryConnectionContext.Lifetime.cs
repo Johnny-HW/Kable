@@ -20,6 +20,7 @@ public sealed partial class SharedMemoryConnectionContext
             {
                 _inboundBuffer.Close();
                 _outboundBuffer.Close();
+                _controlPipe?.Dispose();
             }
         }
     }
@@ -50,7 +51,7 @@ public sealed partial class SharedMemoryConnectionContext
                 StopPumps();
                 _inboundPipe.Reader.CancelPendingRead();
                 _outboundPipe.Writer.CancelPendingFlush();
-                await Task.WhenAll(_pumpInboundTask, _pumpOutboundTask).ConfigureAwait(false);
+                await Task.WhenAll(_pumpInboundTask, _pumpOutboundTask, _controlTask).ConfigureAwait(false);
             }
             finally
             {
