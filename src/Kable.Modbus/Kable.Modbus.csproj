@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <PackageId>Kable.Modbus</PackageId>
     <Authors>Kable Authors</Authors>
-    <Description>High-performance zero-allocation Modbus-TCP and Modbus-RTU protocol codecs and master client for Kable.</Description>
+    <Description>Asynchronous Modbus TCP/RTU master clients with response validation, named devices and PLC register conversion.</Description>
   </PropertyGroup>
 
   <ItemGroup>

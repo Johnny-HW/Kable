@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src')) and '$(IsPackable)' != 'false'">
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>$(PackageReleaseNotes) Includes documented Modbus/PLC enhancements, TLS, bounded MQTT/OPC UA subscriptions, secure OPC UA options and .NET 8 support for Modbus/MQTT/OPC UA.</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src')) and '$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)docs/PACKAGE_README.md" Pack="true" PackagePath="/README.md" />

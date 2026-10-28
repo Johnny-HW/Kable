@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <PackageId>Kable.OpcUa</PackageId>
     <Authors>Kable Authors</Authors>
-    <Description>High-performance OPC UA client bridge and node subscription adapter over OPCFoundation.NetStandard.Opc.Ua for Kable.</Description>
+    <Description>OPC UA client bridge with secure endpoint selection, user authentication, batch access and monitored subscriptions.</Description>
   </PropertyGroup>
 
   <ItemGroup>

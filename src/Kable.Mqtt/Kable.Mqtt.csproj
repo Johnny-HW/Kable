@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <PackageId>Kable.Mqtt</PackageId>
     <Authors>Kable Authors</Authors>
-    <Description>High-performance MQTT telemetry publisher and connection context over MQTTnet for Kable.</Description>
+    <Description>MQTT telemetry publishing and bounded subscriptions with automatic connection and subscription recovery for Kable.</Description>
   </PropertyGroup>
 
   <ItemGroup>
