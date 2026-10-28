@@ -12,7 +12,7 @@ using Opc.Ua.Client;
 /// <summary>
 /// 공식 OPCFoundation 스택 기반의 경량 OPC UA 클라이언트 브리지.
 /// </summary>
-public sealed class OpcUaClientBridge : IOpcUaClientBridge
+public sealed partial class OpcUaClientBridge : IOpcUaClientBridge
 {
     private readonly string _endpointUrl;
     private readonly bool _autoAcceptUntrustedCertificates;
@@ -22,7 +22,7 @@ public sealed class OpcUaClientBridge : IOpcUaClientBridge
     private ApplicationConfiguration? _configuration;
     private int _isDisposed;
 
-    public bool IsConnected => _session != null && _session.Connected;
+    public bool IsConnected => Volatile.Read(ref _isDisposed) == 0 && Volatile.Read(ref _needsReconnect) == 0 && _session != null && _session.Connected;
     public string EndpointUrl => _endpointUrl;
 
     public OpcUaClientBridge(
@@ -86,96 +86,31 @@ public sealed class OpcUaClientBridge : IOpcUaClientBridge
     /// </summary>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        if (IsConnected) return;
-
-        _configuration ??= await CreateDefaultConfigurationAsync(_autoAcceptUntrustedCertificates).ConfigureAwait(false);
-
-#pragma warning disable CS0618
-        var endpoint = CoreClientUtils.SelectEndpoint(_configuration, _endpointUrl, useSecurity: false);
-        var endpointConfiguration = EndpointConfiguration.Create(_configuration);
-        var configuredEndpoint = new ConfiguredEndpoint(null, endpoint, endpointConfiguration);
-
-        _session = await Session.Create(
-            configuration: _configuration,
-            endpoint: configuredEndpoint,
-            updateBeforeConnect: false,
-            sessionName: "KableClientSession",
-            sessionTimeout: 60000,
-            identity: new UserIdentity(new AnonymousIdentityToken()),
-            preferredLocales: null).ConfigureAwait(false);
-#pragma warning restore CS0618
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
+        await _sessionGate.WaitAsync(linked.Token).ConfigureAwait(false);
+        try { await ConnectAndRestoreAsync(linked.Token).ConfigureAwait(false); }
+        finally { _sessionGate.Release(); }
     }
 
     /// <summary>
     /// 특정 NodeId의 값을 비동기로 읽어옵니다.
     /// </summary>
-    public async Task<OpcUaDataValue> ReadNodeValueAsync(string nodeIdString, CancellationToken ct = default)
-    {
-        if (_session == null || !_session.Connected)
-        {
-            throw new InvalidOperationException("OPC UA session is not connected. Call ConnectAsync() first.");
-        }
-
-        var nodeId = new NodeId(nodeIdString);
-        var dataValue = await _session.ReadValueAsync(nodeId, ct).ConfigureAwait(false);
-
-        return new OpcUaDataValue(
-            nodeId: nodeIdString,
-            value: dataValue.Value,
-            statusCode: dataValue.StatusCode.Code,
-            sourceTimestamp: dataValue.SourceTimestamp);
-    }
+    public async Task<OpcUaDataValue> ReadNodeValueAsync(string nodeIdString, CancellationToken ct = default) =>
+        (await ReadNodesAsync(new[] { nodeIdString }, ct).ConfigureAwait(false))[0];
 
     /// <summary>
     /// 특정 NodeId에 값을 비동기로 기록합니다.
     /// </summary>
     public async Task WriteNodeValueAsync(string nodeIdString, object value, CancellationToken ct = default)
     {
-        if (_session == null || !_session.Connected)
-        {
-            throw new InvalidOperationException("OPC UA session is not connected. Call ConnectAsync() first.");
-        }
-
-        var nodeId = new NodeId(nodeIdString);
-        var writeValue = new WriteValue
-        {
-            NodeId = nodeId,
-            AttributeId = Attributes.Value,
-            Value = new DataValue(new Variant(value))
-        };
-
-        var writeCollection = new WriteValueCollection { writeValue };
-
-        var response = await _session.WriteAsync(
-            null,
-            writeCollection,
-            ct).ConfigureAwait(false);
-
-        var results = response.Results;
-        if (results.Count > 0 && StatusCode.IsBad(results[0]))
-        {
-            throw new InvalidOperationException($"OPC UA Write Failed for Node '{nodeIdString}': StatusCode 0x{results[0].Code:X8}");
-        }
+        var status = (await WriteNodesAsync(new[] { new System.Collections.Generic.KeyValuePair<string, object>(nodeIdString, value) }, ct).ConfigureAwait(false))[0];
+        if (StatusCode.IsBad(status))
+            throw new InvalidOperationException($"OPC UA Write Failed for Node '{nodeIdString}': StatusCode 0x{status:X8}");
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
-
-        if (_session != null)
-        {
-            try
-            {
-                await _session.CloseAsync().ConfigureAwait(false);
-            }
-            catch
-            {
-                // Ignore disconnect error on shutdown
-            }
-            finally
-            {
-                _session.Dispose();
-            }
-        }
+        lock (_lifetime) return new ValueTask(_disposal ??= DisposeCoreAsync());
     }
 }
