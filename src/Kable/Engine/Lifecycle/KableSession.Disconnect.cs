@@ -23,12 +23,7 @@ public sealed partial class KableSession<TMessage>
             _disconnectReason = ex;
             _healthTracker.SetState(specificReason != null ? DeviceConnectionState.Faulted : DeviceConnectionState.Disconnected);
 
-            _currentFifoTcs?.TrySetException(ex);
-            foreach (var kvp in _pendingRequests)
-            {
-                kvp.Value.TrySetException(ex);
-            }
-            _pendingRequests.Clear();
+            _responses.FailAll(ex);
             _alarmStream.Writer.TryComplete(ex);
             _delivery.Complete(ex);
             _outboundNormalQueue.Writer.TryComplete(ex);

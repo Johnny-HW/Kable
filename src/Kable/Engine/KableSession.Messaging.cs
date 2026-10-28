@@ -12,11 +12,7 @@ using Kable.Observability;
 
 public sealed partial class KableSession<TMessage>
 {
-    private readonly SemaphoreSlim _fifoLock = new(1, 1);
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<TMessage>> _pendingRequests = new();
-    private TaskCompletionSource<TMessage>? _currentFifoTcs;
-    private long _fifoSequence;
-    private long _activeFifoSeq;
+    private readonly Messaging.ResponseRouter<TMessage> _responses;
 
     private readonly Channel<OutboundCommand> _outboundUrgentQueue = Channel.CreateUnbounded<OutboundCommand>(new UnboundedChannelOptions { SingleReader = true });
     private readonly Channel<OutboundCommand> _outboundNormalQueue = Channel.CreateBounded<OutboundCommand>(new BoundedChannelOptions(5000)
@@ -64,14 +60,13 @@ public sealed partial class KableSession<TMessage>
         if (string.IsNullOrEmpty(cid))
         {
             // Strict FIFO Mode
-            long currentSeq = Interlocked.Increment(ref _fifoSequence);
             using var timeoutCts = new CancellationTokenSource(timeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             var effectiveToken = linkedCts.Token;
 
             try
             {
-                await _fifoLock.WaitAsync(effectiveToken).ConfigureAwait(false);
+                await _responses.WaitForFifoAsync(effectiveToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -86,10 +81,7 @@ public sealed partial class KableSession<TMessage>
             try
             {
                 EnsureConnected();
-                Volatile.Write(ref _activeFifoSeq, currentSeq);
-
-                var tcs = new TaskCompletionSource<TMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-                _currentFifoTcs = tcs;
+                var tcs = _responses.BeginFifo();
 
                 var cmd = new OutboundCommand(request, isUrgent: false, effectiveToken);
                 try
@@ -145,9 +137,7 @@ public sealed partial class KableSession<TMessage>
             }
             finally
             {
-                Volatile.Write(ref _activeFifoSeq, 0);
-                _currentFifoTcs = null;
-                _fifoLock.Release();
+                _responses.EndFifo();
             }
         }
         else
@@ -158,11 +148,7 @@ public sealed partial class KableSession<TMessage>
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             var effectiveToken = linkedCts.Token;
 
-            var tcs = new TaskCompletionSource<TMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-            if (!_pendingRequests.TryAdd(cid!, tcs))
-            {
-                throw new InvalidOperationException($"Duplicate in-flight Correlation ID '{cid}' detected.");
-            }
+            var tcs = _responses.Reserve(cid!);
 
             var cmd = new OutboundCommand(request, isUrgent: false, effectiveToken);
             try
@@ -210,9 +196,7 @@ public sealed partial class KableSession<TMessage>
             }
             finally
             {
-                // Atomically remove only our reservation; the CID may already belong to a new request.
-                ((ICollection<KeyValuePair<string, TaskCompletionSource<TMessage>>>)_pendingRequests)
-                    .Remove(new KeyValuePair<string, TaskCompletionSource<TMessage>>(cid!, tcs));
+                _responses.Release(cid!, tcs);
             }
         }
     }

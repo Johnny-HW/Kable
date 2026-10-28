@@ -118,10 +118,7 @@ public sealed partial class KableSession<TMessage>
                 _deliveryTask = _delivery.RunAsync(_sessionCts.Token);
                 _readLoopTask = Task.Run(ReadLoopAsync);
 
-                if (_alarmSpoolQueue != null)
-                {
-                    _alarmSpoolWorkerTask = Task.Run(AlarmSpoolWorkerLoopAsync);
-                }
+                _alarmSpool.Start(_sessionCts.Token);
 
                 if (_heartbeatOptions != null)
                 {

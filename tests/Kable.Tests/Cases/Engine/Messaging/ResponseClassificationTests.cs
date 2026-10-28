@@ -28,8 +28,9 @@ public sealed class ResponseClassificationTests
     public async Task ExplicitClassifierKeepsAlarmOutOfPendingResponse()
     {
         var link = new DesignLink();
+        var classified = 0;
         await using var session = new KableSession<string>(link, new AsciiLineCodec(isAutonomousPredicate: _ => false),
-            new KableSessionOptions<string> { IsAlarmMessage = text => text.StartsWith("EVENT:") });
+            new KableSessionOptions<string> { IsAlarmMessage = text => { Interlocked.Increment(ref classified); return text.StartsWith("EVENT:"); } });
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         await session.StartAsync(deadline.Token);
         var pending = session.RequestAsync<string>("STATUS?", TimeSpan.FromSeconds(1), deadline.Token).AsTask();
@@ -38,5 +39,6 @@ public sealed class ResponseClassificationTests
         Assert.Equal("READY", await pending);
         await using var alarms = session.GetAlarmsAsync(deadline.Token).GetAsyncEnumerator();
         Assert.True(await alarms.MoveNextAsync()); Assert.Equal("EVENT:STOP", alarms.Current);
+        Assert.Equal(2, classified);
     }
 }

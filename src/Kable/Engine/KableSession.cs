@@ -21,20 +21,16 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
 
     private readonly Streaming.InboundDelivery<TMessage> _delivery;
 
-    private readonly Channel<TMessage>? _alarmSpoolQueue;
+    private readonly Alarms.AlarmSpoolWorker<TMessage> _alarmSpool;
 
     private IConnectionContext? _context;
     private Task? _readLoopTask;
     private Task? _deliveryTask;
     private Task? _outboundPumpTask;
-    private Task? _alarmSpoolWorkerTask;
     private Task? _heartbeatTask;
     private readonly CancellationTokenSource _sessionCts = new();
     private int _isConnected;
     private long _lastInboundTicks;
-    private long _spoolStoredCount;
-    private long _spoolInDoubtCount;
-    private long _spoolUnprocessedCount;
     private readonly CommHealthTracker _healthTracker = new();
 
     public string DeviceId { get; }
@@ -45,10 +41,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
     /// <summary>
     /// 세션 종료 후 또는 실시간 알람 스풀 워커 처리 결과 집계 리포트 (저장 완료, 저장 여부 불명, 미처리)
     /// </summary>
-    public AlarmSpoolSummary SpoolSummary => new(
-        Volatile.Read(ref _spoolStoredCount),
-        Volatile.Read(ref _spoolInDoubtCount),
-        Volatile.Read(ref _spoolUnprocessedCount));
+    public AlarmSpoolSummary SpoolSummary => _alarmSpool.Summary;
 
     public KableSession(
         IConnectionFactory connectionFactory,
@@ -68,6 +61,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
     {
         _connectionFactory = connectionFactory;
         _codec = codec;
+        _responses = new Messaging.ResponseRouter<TMessage>(codec);
         _decoder = new Decoding.FrameDecoder<TMessage>(codec);
         _observer = observer;
         _heartbeatOptions = heartbeatOptions;
@@ -84,23 +78,8 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
         };
         _alarmStream = Channel.CreateBounded<TMessage>(alarmOptions);
 
-        // 알람 스풀 큐: SpoolToStorage 모드일 때 외부 저장소 비동기 저장 워커용 유한 큐
-        if (_sessionOptions.AlarmOverflowMode == AlarmOverflowMode.SpoolToStorage)
-        {
-            if (_sessionOptions.OnAlarmOverflowAsync == null)
-            {
-                throw new InvalidOperationException(
-                    "KableSession configuration error: AlarmOverflowMode is set to SpoolToStorage, but OnAlarmOverflowAsync callback is not provided.");
-            }
-
-            var spoolOptions = new BoundedChannelOptions(_sessionOptions.AlarmSpoolQueueCapacity)
-            {
-                FullMode = BoundedChannelFullMode.Wait,
-                SingleWriter = false,
-                SingleReader = true
-            };
-            _alarmSpoolQueue = Channel.CreateBounded<TMessage>(spoolOptions);
-        }
+        _alarmSpool = new Alarms.AlarmSpoolWorker<TMessage>(_sessionOptions, _observer,
+            error => _ = Task.Run(() => PerformCleanupAsync(error)));
 
         _delivery = new Streaming.InboundDelivery<TMessage>(_sessionOptions.InboundQueueCapacity,
             _sessionOptions.InboundDeliveryCapacity, _sessionOptions.TelemetryOverflowMode, message =>

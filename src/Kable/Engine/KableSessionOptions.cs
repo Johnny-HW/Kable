@@ -26,7 +26,8 @@ public sealed class KableSessionOptions<TMessage>
     public Func<TMessage, bool>? IsAlarmMessage { get; set; }
 
     /// <summary>
-    /// 수신 버퍼 가득 참 시 일반 텔레메트리 처리 정책 (기본값: Wait - 백프레셔 적용).
+    /// 수신 버퍼 가득 참 시 일반 텔레메트리 처리 정책 (기본값: Wait - 별도 전달 워커에서 대기).
+    /// Wait의 전달 대기열까지 포화되면 TelemetryBufferOverflowException으로 종료합니다.
     /// 느린 소비자 환경에서 최신 데이터 위주 유지를 원할 경우 DropOldest를 선택할 수 있습니다.
     /// </summary>
     public BoundedChannelFullMode TelemetryOverflowMode { get; set; } = BoundedChannelFullMode.Wait;

@@ -21,12 +21,8 @@ public sealed partial class KableSession<TMessage>
         return _codec is Kable.Codecs.IAlarmMessageClassifier<TMessage> classifier && classifier.IsAlarmMessage(message);
     }
 
-    private async ValueTask EnqueueIncomingMessageAsync(TMessage message)
+    private async ValueTask EnqueueIncomingMessageAsync(TMessage message, bool isAlarm)
     {
-        bool isAlarm = _sessionOptions.IsAlarmMessage != null
-            ? _sessionOptions.IsAlarmMessage(message)
-            : DefaultIsAlarm(message);
-
         if (isAlarm)
         {
             // 알람 메시지: 텔레메트리 큐와 물리적으로 완전 격리된 알람 전용 채널에 기록
@@ -54,9 +50,9 @@ public sealed partial class KableSession<TMessage>
         switch (_sessionOptions.AlarmOverflowMode)
         {
             case AlarmOverflowMode.SpoolToStorage:
-                if (_alarmSpoolQueue != null)
+                if (_sessionOptions.AlarmOverflowMode == AlarmOverflowMode.SpoolToStorage)
                 {
-                    if (_alarmSpoolQueue.Writer.TryWrite(message))
+                    if (_alarmSpool.TryEnqueue(message))
                     {
                         _observer?.OnPacketTrace(new PacketTraceRecord(
                             DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,

@@ -77,31 +77,14 @@ public sealed partial class KableSession<TMessage>
 
         if (isAutonomous || isAlarm)
         {
-            await EnqueueIncomingMessageAsync(message).ConfigureAwait(false);
+            await EnqueueIncomingMessageAsync(message, isAlarm).ConfigureAwait(false);
             return;
         }
 
-        // Correlation Matching First
-        if (_codec.SupportsCorrelationId)
-        {
-            var cid = _codec.ExtractCorrelationId(message);
-            if (cid != null && _pendingRequests.TryRemove(cid, out var tcs))
-            {
-                tcs.TrySetResult(message);
-                return;
-            }
-        }
-        else
-        {
-            if (_currentFifoTcs != null && !_currentFifoTcs.Task.IsCompleted)
-            {
-                _currentFifoTcs.TrySetResult(message);
-                return;
-            }
-        }
+        if (_responses.TryRoute(message)) return;
 
         // Fallback to incoming stream
-        await EnqueueIncomingMessageAsync(message).ConfigureAwait(false);
+        await EnqueueIncomingMessageAsync(message, isAlarm).ConfigureAwait(false);
     }
 
     private async Task HeartbeatLoopAsync()

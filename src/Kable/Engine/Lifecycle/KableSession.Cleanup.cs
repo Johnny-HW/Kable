@@ -75,7 +75,7 @@ public sealed partial class KableSession<TMessage>
             OnConnectionClosed(reason);
 
             // 1. 신규 스풀 등록 차단
-            _alarmSpoolQueue?.Writer.TryComplete();
+            _alarmSpool.Complete();
 
             // 2. 일반 송수신 루프는 기존 종료 정책(고정 2초 타임아웃)으로 정리
             var tasksToWait = new List<Task>();
@@ -91,19 +91,10 @@ public sealed partial class KableSession<TMessage>
                 await Task.WhenAny(joinAllTask, timeoutTask).ConfigureAwait(false);
             }
 
-            // 3. _alarmSpoolWorkerTask는 고정 2초에 묶지 않고 직접 await (배출 제한시간은 워커가 관리)
+            // 3. _alarmSpool.Completion는 고정 2초에 묶지 않고 직접 await (배출 제한시간은 워커가 관리)
             Exception? workerException = null;
-            if (_alarmSpoolWorkerTask != null)
-            {
-                try
-                {
-                    await _alarmSpoolWorkerTask.ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    workerException = ex;
-                }
-            }
+            try { await _alarmSpool.Completion.ConfigureAwait(false); }
+            catch (Exception ex) { workerException = ex; }
 
             // 4. 워커 종료(SpoolSummary 확정) 후 연결 리소스 폐기 (정확히 1회 폐기 보장)
             Exception? contextException = null;
@@ -163,7 +154,7 @@ public sealed partial class KableSession<TMessage>
             {
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Disposed);
 
-                try { _fifoLock.Dispose(); } catch { }
+                try { _responses.Dispose(); } catch { }
                 try { _lifecycleLock.Dispose(); } catch { }
                 try { _sessionCts.Dispose(); } catch { }
             }

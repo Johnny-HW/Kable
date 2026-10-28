@@ -1,28 +1,49 @@
-namespace Kable.Engine;
+namespace Kable.Engine.Alarms;
 
 using System;
 using System.Collections.Generic;
-using System.IO.Pipelines;
+using System.Threading.Channels;
 using System.Threading;
 using System.Threading.Tasks;
 using Kable.Core;
 using Kable.Exceptions;
 using Kable.Observability;
 
-public sealed partial class KableSession<TMessage>
+internal sealed class AlarmSpoolWorker<TMessage>
 {
+    private readonly KableSessionOptions<TMessage> _sessionOptions;
+    private readonly ICommObserver? _observer;
+    private readonly Action<Exception> _onFailure;
+    private readonly Channel<TMessage>? _queue;
+    private long _spoolStoredCount, _spoolInDoubtCount, _spoolUnprocessedCount;
+    internal Task Completion { get; private set; } = Task.CompletedTask;
+    internal AlarmSpoolSummary Summary => new(Volatile.Read(ref _spoolStoredCount),
+        Volatile.Read(ref _spoolInDoubtCount), Volatile.Read(ref _spoolUnprocessedCount));
+
+    internal AlarmSpoolWorker(KableSessionOptions<TMessage> options, ICommObserver? observer, Action<Exception> onFailure)
+    {
+        _sessionOptions = options; _observer = observer; _onFailure = onFailure;
+        if (options.AlarmOverflowMode != AlarmOverflowMode.SpoolToStorage) return;
+        if (options.OnAlarmOverflowAsync == null)
+            throw new InvalidOperationException("SpoolToStorage requires OnAlarmOverflowAsync.");
+        _queue = Channel.CreateBounded<TMessage>(new BoundedChannelOptions(options.AlarmSpoolQueueCapacity)
+        { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, AllowSynchronousContinuations = false });
+    }
+    internal bool TryEnqueue(TMessage message) => _queue?.Writer.TryWrite(message) == true;
+    internal void Complete() => _queue?.Writer.TryComplete();
+    internal void Start(CancellationToken token) => Completion = Task.Run(() => RunAsync(token));
+
     /// <summary>
     /// Background worker loop for persisting overflowed alarms to external storage.
     /// Decouples persistence I/O from the inbound dispatch loop to prevent blocking normal request-response routing.
     /// Passes a CancellationToken with AlarmSpoolTimeout to the callback.
     /// Uses a single overall drain timeout on shutdown and tracks Stored, InDoubt, and Unprocessed alarm counts.
     /// </summary>
-    private async Task AlarmSpoolWorkerLoopAsync()
+    private async Task RunAsync(CancellationToken token)
     {
-        if (_alarmSpoolQueue == null || _sessionOptions.OnAlarmOverflowAsync == null) return;
+        if (_queue == null || _sessionOptions.OnAlarmOverflowAsync == null) return;
 
-        var token = _sessionCts.Token;
-        var reader = _alarmSpoolQueue.Reader;
+        var reader = _queue.Reader;
 
         try
         {
@@ -69,7 +90,7 @@ public sealed partial class KableSession<TMessage>
 
                         var timeoutEx = new AlarmBufferOverflowException(
                             $"Alarm storage persistence timed out after {_sessionOptions.AlarmSpoolTimeout.TotalMilliseconds:F0}ms for alarm ({msg}). Aborting session.");
-                        _ = Task.Run(() => PerformCleanupAsync(timeoutEx));
+                        _onFailure(timeoutEx);
                         return;
                     }
                     catch (Exception ex)
@@ -83,7 +104,7 @@ public sealed partial class KableSession<TMessage>
 
                         var abortEx = new AlarmBufferOverflowException(
                             $"Alarm storage persistence threw exception for alarm ({msg}). Aborting session to prevent silent loss.", ex);
-                        _ = Task.Run(() => PerformCleanupAsync(abortEx));
+                        _onFailure(abortEx);
                         return;
                     }
 
@@ -97,7 +118,7 @@ public sealed partial class KableSession<TMessage>
                             "ALARM_SPOOL_SAVE_FAILED", ReadOnlyMemory<byte>.Empty, abortEx.Message,
                             TimeSpan.Zero, LogLevel.Critical));
 
-                        _ = Task.Run(() => PerformCleanupAsync(abortEx));
+                        _onFailure(abortEx);
                         return;
                     }
 
@@ -116,7 +137,7 @@ public sealed partial class KableSession<TMessage>
         }
         catch (Exception ex)
         {
-            _ = Task.Run(() => PerformCleanupAsync(ex));
+            _onFailure(ex);
         }
         finally
         {
@@ -168,7 +189,7 @@ public sealed partial class KableSession<TMessage>
             }
 
             // 최종 배출 결과 리포트 트레이스 기록
-            var summary = SpoolSummary;
+            var summary = Summary;
             _observer?.OnPacketTrace(new PacketTraceRecord(
                 DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                 "ALARM_SPOOL_DRAIN_SUMMARY", ReadOnlyMemory<byte>.Empty,
