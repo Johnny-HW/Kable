@@ -20,12 +20,12 @@ using Xunit;
 public sealed class SerialFaultInjectionTests
 {
     [Fact]
-    public void TC_TRN_06_SerialPort_NonExistentPortName_ThrowsIOExceptionOrUnauthorized()
+    public async Task TC_TRN_06_SerialPort_NonExistentPortName_ThrowsIOExceptionOrUnauthorized()
     {
         var factory = new SerialPortConnectionFactory("COM9999");
 
-        Action act = () => factory.ConnectAsync();
-        act.Should().Throw<Exception>()
+        Func<Task> act = () => factory.ConnectAsync().AsTask();
+        (await act.Should().ThrowAsync<Exception>())
            .Where(e => e is System.IO.IOException || e is UnauthorizedAccessException || e is PlatformNotSupportedException);
     }
 

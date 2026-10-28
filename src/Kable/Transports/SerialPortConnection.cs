@@ -11,7 +11,11 @@ public sealed class SerialPortConnectionContext : IConnectionContext
 {
     private readonly SerialPort _port;
     private readonly CancellationTokenSource _cts = new();
-    private int _isDisposed;
+    private int _aborted;
+    private Task? _disposeTask;
+    private readonly object _lifetime = new();
+    private readonly System.IO.Stream _stream;
+    private readonly bool _ownsStream;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
@@ -20,74 +24,52 @@ public sealed class SerialPortConnectionContext : IConnectionContext
     public CancellationToken ConnectionClosed { get; }
 
     public SerialPortConnectionContext(SerialPort port)
-        : this(port, port.BaseStream)
+        : this(port, port.BaseStream, false)
     {
     }
 
-    internal SerialPortConnectionContext(SerialPort port, System.IO.Stream stream)
+    internal SerialPortConnectionContext(SerialPort port, System.IO.Stream stream, bool ownsStream = true)
     {
         _port = port;
+        _stream = stream;
+        _ownsStream = ownsStream;
         ConnectionId = Guid.NewGuid().ToString("N");
         EndpointDescription = $"Serial {port.PortName} ({port.BaudRate},{port.DataBits},{port.Parity},{port.StopBits})";
         ConnectionClosed = _cts.Token;
 
-        Input = PipeReader.Create(stream);
-        Output = PipeWriter.Create(stream);
+        Input = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
+        Output = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
     }
 
     public void Abort(string reason)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        if (Interlocked.Exchange(ref _aborted, 1) == 0)
         {
             _cts.Cancel();
             try { _port.Close(); } catch (Exception) { /* Serial port already closed or physical cable unplugged */ }
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        lock (_lifetime) return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        Abort("Disposed");
+        try
         {
-            _cts.Cancel();
-            try { await Input.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* Pipeline reader already completed */ }
-            try { await Output.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* Pipeline writer already completed */ }
-            _port.Dispose();
-            _cts.Dispose();
+            await Input.CompleteAsync().ConfigureAwait(false);
         }
-    }
-}
-
-public sealed class SerialPortConnectionFactory : IConnectionFactory
-{
-    private readonly string _portName;
-    private readonly int _baudRate;
-    private readonly Parity _parity;
-    private readonly int _dataBits;
-    private readonly StopBits _stopBits;
-
-    public SerialPortConnectionFactory(
-        string portName,
-        int baudRate = 9600,
-        Parity parity = Parity.None,
-        int dataBits = 8,
-        StopBits stopBits = StopBits.One)
-    {
-        _portName = portName;
-        _baudRate = baudRate;
-        _parity = parity;
-        _dataBits = dataBits;
-        _stopBits = stopBits;
-    }
-
-    public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
-    {
-        var port = new SerialPort(_portName, _baudRate, _parity, _dataBits, _stopBits)
+        finally
         {
-            DtrEnable = true,
-            RtsEnable = true
-        };
-
-        port.Open();
-        return new ValueTask<IConnectionContext>(new SerialPortConnectionContext(port));
+            try { await Output.CompleteAsync().ConfigureAwait(false); }
+            finally
+            {
+                try { if (_ownsStream) _stream.Dispose(); }
+                finally { _port.Dispose(); _cts.Dispose(); }
+            }
+        }
     }
 }
