@@ -37,8 +37,11 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore Kable.sln
 
+      - name: Build Solution (Release)
+        run: dotnet build Kable.sln --configuration Release --no-restore
+
       - name: Run Unit Tests
-        run: dotnet test Kable.sln --configuration Release --no-restore -m:1 --verbosity normal
+        run: dotnet test Kable.sln --configuration Release --no-build -m:1 --verbosity normal
 
       - name: Verify Concurrent Start Failure Propagation
         shell: pwsh
