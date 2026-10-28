@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Kable" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Modbus" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Mqtt" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.OpcUa" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.ProtocolPack" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Generators" Version="$(KableVersion)" PrivateAssets="all" />
+    <PackageReference Include="Kable.Grpc" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Transport.Ipc" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Engine.Disruptor" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Observability.OpenTelemetry" Version="$(KableVersion)" />
+    <PackageReference Include="Kable.Melsec" Version="$(KableVersion)" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <AdditionalFiles Include="**/*.kable.yaml" />
+  </ItemGroup>
+</Project>

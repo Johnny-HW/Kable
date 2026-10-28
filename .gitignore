@@ -25,6 +25,7 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!/tools/release/
 # Authored release notes are source; other release output remains ignored.
 !/docs/releases/
 /docs/releases/*

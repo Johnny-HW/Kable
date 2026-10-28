@@ -1,0 +1,5 @@
+name: Ping
+match: PING
+ok:
+  replies:
+    - PONG

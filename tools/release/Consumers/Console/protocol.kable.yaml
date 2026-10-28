@@ -1,0 +1,5 @@
+protocolPackVersion: 1
+name: ReleaseProbe
+codec: AsciiLine
+csharp:
+  namespace: ReleaseProbe
