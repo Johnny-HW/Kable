@@ -75,6 +75,8 @@ Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 
 | `Kable.UI.Wpf` | WPF 통신 터미널·진단 컨트롤 |
 | `Kable.Observability.OpenTelemetry` | OpenTelemetry 연동 |
 
+[Modbus TCP·RTU 및 PLC 값 변환 사용법](docs/ko/MODBUS_USAGE.md)에서 지원 기능과 예제를 확인한다.
+
 파이프라인 버퍼는 재사용하지만 문자열 수신과 비동기 질의는 메모리를 할당한다.
 [성능 측정 범위](docs/ko/PERFORMANCE_BASELINE.md)를 기준으로 판단한다.
 
