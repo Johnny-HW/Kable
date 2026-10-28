@@ -31,6 +31,7 @@ public readonly struct PacketTraceRecord
     private static long _globalSequence;
 
     public long SequenceNo { get; }
+    public string? ConnectionId { get; }
     public string DeviceId { get; }
     public DateTime TimestampUtc { get; }
     public PacketDirection Direction { get; }
@@ -53,6 +54,33 @@ public readonly struct PacketTraceRecord
         string deviceId = "DEFAULT",
         long? sequenceNo = null)
     {
+        ConnectionId = null;
+        SequenceNo = sequenceNo ?? System.Threading.Interlocked.Increment(ref _globalSequence);
+        DeviceId = deviceId ?? "DEFAULT";
+        TimestampUtc = timestampUtc;
+        Direction = direction;
+        Kind = kind;
+        Level = level;
+        Tag = tag;
+        RawBytes = rawBytes;
+        ParsedText = parsedText;
+        Latency = latency;
+    }
+
+    public PacketTraceRecord(
+        string connectionId,
+        DateTime timestampUtc,
+        PacketDirection direction,
+        TrafficKind kind,
+        string tag,
+        ReadOnlyMemory<byte> rawBytes,
+        string? parsedText,
+        TimeSpan latency,
+        LogLevel level = LogLevel.Information,
+        string deviceId = "DEFAULT",
+        long? sequenceNo = null)
+    {
+        ConnectionId = connectionId;
         SequenceNo = sequenceNo ?? System.Threading.Interlocked.Increment(ref _globalSequence);
         DeviceId = deviceId ?? "DEFAULT";
         TimestampUtc = timestampUtc;
