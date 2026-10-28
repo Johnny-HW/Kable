@@ -1,0 +1,86 @@
+[
+  {
+    "id": "kable",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "C4F0D0BB190F83F34F2699209DB5327FA1485A1A6A3CE2B7D965633725E8B7BF"
+  },
+  {
+    "id": "kable.core",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "B275A9FA695E4A52B233E21B46D36969DC55474712184A54D52EFCE343FB8565"
+  },
+  {
+    "id": "kable.engine.disruptor",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "C47E63872145385FDA2767E78AB5D39D5FC896C6E5D472018E194B084AECD219"
+  },
+  {
+    "id": "kable.generators",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "913B1214CB2F404A14086A38E9C61FD972F14E9713FF644A431B1748F66A29D9"
+  },
+  {
+    "id": "kable.grpc",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "B4D6533D87EB9725F5DC15119EB02E4EB383B66A29191467CF5F0824754E6856"
+  },
+  {
+    "id": "kable.melsec",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "62748A3CF97C1D540F44AB3A6F4424D6099B52A0E5E78ADFF58468EA63E23C0A"
+  },
+  {
+    "id": "kable.modbus",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "BFBA5AD7AF220D16CA31560DEA70BB47BA904C1676A18E14F23D2C13D974BC08"
+  },
+  {
+    "id": "kable.mqtt",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "64E973E186280F63FE835FB6EE2F9FC4216ACE8EA035984050020B2F18355E6C"
+  },
+  {
+    "id": "kable.observability.opentelemetry",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "81511652CD8F829C93F640EA20BE34B1F0A852102E8B76A2F6DEAD15388103FC"
+  },
+  {
+    "id": "kable.opcua",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "A901818A3EF477D02BA07A7F8DD3C2505081E50CCD1D43F6280BE8D11E217B79"
+  },
+  {
+    "id": "kable.protocolpack",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "B213074E1E4292A9DCF78E26A9B0E2B4D2A3C9D9715B5C50D549B839E42AE460"
+  },
+  {
+    "id": "kable.sharedmemory",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "1D436C45EF4661E1B3C25E373E645EE3DA47BF82A41A2167C1AA926852E8D493"
+  },
+  {
+    "id": "kable.transport.ipc",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "E4F03CEBCC0117FAFCCB0910161C401903476E5B1B3C6676500D7FED6FCE5174"
+  },
+  {
+    "id": "kable.ui.wpf",
+    "version": "1.9.2",
+    "source": "https://api.nuget.org/v3/index.json",
+    "sha256": "1CFB729986404C6F9BFC29FCE771348050639B6BF9A8F8C29E7FD108D18F0124"
+  }
+]
