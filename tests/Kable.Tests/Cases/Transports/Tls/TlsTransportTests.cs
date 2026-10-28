@@ -78,6 +78,39 @@ public sealed class TlsTransportTests
     }
 
     [Fact]
+    public async Task MutualTlsRejectsMissingClientCertificate()
+    {
+        using var certificate = Certificate("localhost");
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var server = Task.Run(async () =>
+        {
+            var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
+            return await Record.ExceptionAsync(async () =>
+            {
+                await using var connection = await TlsConnectionContext.AcceptAsync(tcp, new TlsServerOptions(certificate)
+                {
+                    RequireClientCertificate = true, Protocols = SslProtocols.Tls12,
+                    RemoteCertificateValidation = (_, cert, _, _) => cert != null
+                }, timeout.Token);
+            });
+        });
+        var options = new TlsClientOptions("localhost")
+        {
+            Protocols = SslProtocols.Tls12,
+            RemoteCertificateValidation = (_, cert, _, _) => cert?.GetCertHashString() == certificate.GetCertHashString()
+        };
+        var clientError = await Record.ExceptionAsync(async () =>
+        {
+            await using var client = await new TlsTcpConnectionFactory("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, options).ConnectAsync(timeout.Token);
+            await client.Input.ReadAsync(timeout.Token);
+        });
+        Assert.True((await server) is AuthenticationException or IOException);
+        Assert.True(clientError is AuthenticationException or IOException);
+    }
+
+    [Fact]
     public async Task HandshakeCancellationClosesSocket()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);

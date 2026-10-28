@@ -9,6 +9,7 @@ public sealed class ModbusDeviceRegistry : IAsyncDisposable
     private readonly Dictionary<string, IModbusCoilMaster> _masters = new(StringComparer.Ordinal);
     private readonly object _sync = new();
     private Task? _disposal;
+    private bool _disposed;
 
     public ModbusDeviceRegistry(IEnumerable<ModbusDeviceRegistration> registrations)
     {
@@ -24,7 +25,7 @@ public sealed class ModbusDeviceRegistry : IAsyncDisposable
     {
         lock (_sync)
         {
-            ObjectDisposedException.ThrowIf(_disposal != null, this);
+            ObjectDisposedException.ThrowIf(_disposed, this);
             if (_masters.TryGetValue(name, out var master)) return master;
             if (!_registrations.TryGetValue(name, out var registration)) throw new KeyNotFoundException($"Unknown device: {name}");
             master = registration.Create() ?? throw new InvalidOperationException("Device factory returned null.");
@@ -45,7 +46,11 @@ public sealed class ModbusDeviceRegistry : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        lock (_sync) return new(_disposal ??= DisposeAllAsync(_masters.Values.ToArray()));
+        lock (_sync)
+        {
+            _disposed = true;
+            return new(_disposal ??= DisposeAllAsync(_masters.Values.ToArray()));
+        }
     }
     private static async Task DisposeAllAsync(IModbusCoilMaster[] masters)
     {
