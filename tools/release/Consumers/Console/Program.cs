@@ -29,6 +29,7 @@ var server = Task.Run(async () =>
 await using (var device = await KableSimple.OpenTcpAsync("127.0.0.1", port, ct: timeout.Token))
     if (await device.QueryAsync("STATUS?", ct: timeout.Token) != "READY") throw new Exception("Packaged TCP query failed.");
 await server;
+await ServerProbe.RunAsync(timeout.Token);
 await MqttProbe.RunAsync(timeout.Token);
 await OpcUaProbe.RunAsync(timeout.Token);
 Console.WriteLine($"Package consumer OK: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}");
