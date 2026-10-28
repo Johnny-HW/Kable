@@ -10,14 +10,13 @@ using Kable.Core;
 public sealed class NamedPipeConnectionContext : IConnectionContext
 {
     private readonly NamedPipeClientStream _pipeStream;
-    private readonly CancellationTokenSource _cts = new();
-    private int _isDisposed;
+    private readonly Lifecycle.StreamConnectionLifetime _lifetime;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
     public PipeReader Input { get; }
     public PipeWriter Output { get; }
-    public CancellationToken ConnectionClosed => _cts.Token;
+    public CancellationToken ConnectionClosed => _lifetime.Closed;
 
     public NamedPipeConnectionContext(NamedPipeClientStream pipeStream, string pipeName)
     {
@@ -25,34 +24,14 @@ public sealed class NamedPipeConnectionContext : IConnectionContext
         ConnectionId = Guid.NewGuid().ToString("N");
         EndpointDescription = $"NamedPipe://localhost/{pipeName}";
 
-        Input = PipeReader.Create(pipeStream);
-        Output = PipeWriter.Create(pipeStream);
+        Input = PipeReader.Create(pipeStream, new StreamPipeReaderOptions(leaveOpen: true));
+        Output = PipeWriter.Create(pipeStream, new StreamPipeWriterOptions(leaveOpen: true));
+        _lifetime = new Lifecycle.StreamConnectionLifetime(_pipeStream, Input, Output, _pipeStream.Close);
     }
 
-    public void Abort(string reason)
-    {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
-        {
-            _cts.Cancel();
-            try { _pipeStream.Close(); } catch (Exception) { /* Pipe stream already broken or disconnected */ }
-        }
-    }
+    public void Abort(string reason) => _lifetime.Abort();
+    public ValueTask DisposeAsync() => _lifetime.DisposeAsync();
 
-    public async ValueTask DisposeAsync()
-    {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
-        {
-            _cts.Cancel();
-            try { await Input.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* Pipeline reader already completed */ }
-            try { await Output.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* Pipeline writer already completed */ }
-#if NETSTANDARD2_0
-            _pipeStream.Dispose();
-#else
-            await _pipeStream.DisposeAsync().ConfigureAwait(false);
-#endif
-            _cts.Dispose();
-        }
-    }
 }
 
 public sealed class NamedPipeConnectionFactory : IConnectionFactory

@@ -11,14 +11,13 @@ public sealed class TcpConnectionContext : IConnectionContext
 {
     private readonly Socket _socket;
     private readonly NetworkStream _stream;
-    private readonly CancellationTokenSource _cts = new();
-    private int _isDisposed;
+    private readonly Lifecycle.StreamConnectionLifetime _lifetime;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
     public PipeReader Input { get; }
     public PipeWriter Output { get; }
-    public CancellationToken ConnectionClosed => _cts.Token;
+    public CancellationToken ConnectionClosed => _lifetime.Closed;
 
     public TcpConnectionContext(Socket socket)
     {
@@ -27,36 +26,14 @@ public sealed class TcpConnectionContext : IConnectionContext
         EndpointDescription = socket.RemoteEndPoint?.ToString() ?? "TCP Unknown";
 
         _stream = new NetworkStream(socket, ownsSocket: false);
-        Input = PipeReader.Create(_stream);
-        Output = PipeWriter.Create(_stream);
+        Input = PipeReader.Create(_stream, new StreamPipeReaderOptions(leaveOpen: true));
+        Output = PipeWriter.Create(_stream, new StreamPipeWriterOptions(leaveOpen: true));
+        _lifetime = new Lifecycle.StreamConnectionLifetime(_stream, Input, Output, _socket.Dispose);
     }
 
-    public void Abort(string reason)
-    {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
-        {
-            _cts.Cancel();
-            try { _socket.Shutdown(SocketShutdown.Both); } catch (Exception) { /* Socket already aborted or forcibly disconnected by remote host */ }
-            _socket.Close();
-        }
-    }
+    public void Abort(string reason) => _lifetime.Abort();
+    public ValueTask DisposeAsync() => _lifetime.DisposeAsync();
 
-    public async ValueTask DisposeAsync()
-    {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
-        {
-            _cts.Cancel();
-            try { await Input.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* Pipeline reader already completed */ }
-            try { await Output.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* Pipeline writer already completed */ }
-#if NETSTANDARD2_0
-            _stream.Dispose();
-#else
-            await _stream.DisposeAsync().ConfigureAwait(false);
-#endif
-            _socket.Dispose();
-            _cts.Dispose();
-        }
-    }
 }
 
 public sealed class TcpConnectionFactory : IConnectionFactory
