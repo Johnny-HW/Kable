@@ -45,8 +45,22 @@ jobs:
         run: ./tests/Kable.Tests/Cases/Engine/Lifecycle/VerifyConcurrentStart.ps1
 
       - name: Pack NuGet Packages
+        id: candidate
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        run: dotnet pack Kable.sln --configuration Release --output ./nupkgs
+        shell: pwsh
+        run: ./tools/release/VerifyPackages.ps1
+
+      - name: Verify documented samples before publication
+        shell: pwsh
+        run: |
+          dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project src/Kable.Host/Kable.Host.csproj -c Release --no-build -- --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project samples/Kable.ConfigStudio/Kable.ConfigStudio.csproj -c Release --no-build -- --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tools/release/SharedMemorySmoke/SharedMemorySmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: NuGet Login (OIDC Trusted Publisher)
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
@@ -58,7 +72,7 @@ jobs:
       - name: Publish to NuGet.org
         if: (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && steps.login.outputs.NUGET_API_KEY != ''
         run: |
-          Get-ChildItem -Path ./nupkgs -Filter *.nupkg | ForEach-Object {
+          Get-ChildItem -LiteralPath '${{ steps.candidate.outputs.feed }}' -Filter *.nupkg | ForEach-Object {
             dotnet nuget push $_.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
@@ -66,7 +80,7 @@ jobs:
       - name: Publish to GitHub Packages
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         run: |
-          Get-ChildItem -Path ./nupkgs -Filter *.nupkg | ForEach-Object {
+          Get-ChildItem -LiteralPath '${{ steps.candidate.outputs.feed }}' -Filter *.nupkg | ForEach-Object {
             dotnet nuget push $_.FullName --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

@@ -50,7 +50,8 @@ jobs:
         run: ./tests/Kable.Tests/Cases/Engine/Lifecycle/VerifyConcurrentStart.ps1
 
       - name: Validate NuGet Packaging
-        run: dotnet pack Kable.sln --configuration Release --output ./nupkgs --no-build
+        shell: pwsh
+        run: ./tools/release/VerifyPackages.ps1
 
       - name: Validate Generator Package in Isolated Consumer
         shell: pwsh
@@ -58,3 +59,13 @@ jobs:
 
       - name: Run documented QuickStart and advanced configuration
         run: dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj --configuration Release --no-build
+
+      - name: Verify Host, ConfigStudio and shared-memory sample lifecycles
+        shell: pwsh
+        run: |
+          dotnet run --project src/Kable.Host/Kable.Host.csproj -c Release --no-build -- --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project samples/Kable.ConfigStudio/Kable.ConfigStudio.csproj -c Release --no-build -- --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tools/release/SharedMemorySmoke/SharedMemorySmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

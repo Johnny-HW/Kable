@@ -9,6 +9,11 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
+        if (Array.IndexOf(args, "--smoke-test") >= 0)
+        {
+            await HostSmoke.RunAsync();
+            return;
+        }
         string pipeName = args.Length > 0 ? args[0] : "Kable_Default_Daemon";
         Console.WriteLine($"[Kable.Host] Starting Out-of-Process Hardware Daemon on pipe: {pipeName}");
 

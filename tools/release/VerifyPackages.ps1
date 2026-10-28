@@ -88,3 +88,4 @@ foreach ($kind in @('Console', 'Windows')) {
     }
 }
 Write-Host "Verified $($manifest.Count) packages on .NET 8/10. Manifest and consumers: $work"
+if ($env:GITHUB_OUTPUT) { "feed=$feed" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 }
