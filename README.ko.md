@@ -6,6 +6,8 @@
 최신 배포 버전은 **[1.9.2](https://www.nuget.org/packages/Kable/1.9.2)**이다 (2026-10-28). [릴리즈 노트와 업그레이드 안내](docs/releases/1.9.2.ko.md),
 [변경 이력](CHANGELOG.md)을 참고한다. 아래 설치 명령은 NuGet에 게시된 버전을 설치한다.
 
+1.10.0 서버 호스팅: [배포 후보 릴리즈 노트](docs/releases/1.10.0.ko.md).
+
 ## 한 번의 질의부터 시작하기
 
 기존 .NET 앱의 프로젝트 폴더에서 패키지를 추가한다. 새 앱이라면 먼저 `dotnet new console -n KableDemo`와 `cd KableDemo`를 실행한다.
@@ -41,7 +43,7 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | 바이너리/장비 전용 프로토콜 | `KableClientBuilder<T>`와 코덱 |
 | Modbus / MELSEC 장비 | `Kable.Modbus` / `Kable.Melsec` 클라이언트 |
 | 단절 후 선택적 연결 복구 | `ReconnectingKableClient` |
-| 1:N 서버 리스너 및 다중 세션 데몬 호스팅 | `IConnectionListener` / `Kable.Host` (`TcpConnectionListener`, `IpcNamedPipeServerListener`) |
+| 다중 클라이언트 서버 | `KableServerBuilder<T>` / `IKableServer<T>` |
 
 Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 시작된 클라이언트를 반환한다.
 서버/리스너는 `IConnectionListener.AcceptAsync()`를 통해 복수 클라이언트 연결(1:N)을 수락하고 세션을 병렬 구동한다.
@@ -93,3 +95,5 @@ Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 
 - [GitHub Pages 문서](https://johnny-hw.github.io/Kable/)
 - [컴파일되는 QuickStart 예제](https://github.com/Johnny-HW/Kable/tree/main/samples/Kable.QuickStart)
 - [저장소](https://github.com/Johnny-HW/Kable) · [Apache-2.0 라이선스](LICENSE)
+
+서버 설정과 종료: [다중 클라이언트 서버 가이드](docs/ko/SERVER_HOSTING.md).

@@ -3,9 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.9.2</Version>
+    <Version>1.10.0</Version>
     <PackageVersion>$(Version)</PackageVersion>
-    <PackageReleaseNotes>$(Version): Add YAML Protocol Packs and source generation, Modbus TCP/RTU and PLC tags, MELSEC framing, TLS/mTLS, secure OPC UA and MQTT subscriptions. Harden alarm classification, bounded telemetry delivery, decoder progress and connection cleanup. Support .NET 8/10 across industrial integrations.</PackageReleaseNotes>
+    <PackageReleaseNotes>$(Version): Add multi-client server hosting with per-connection codecs, targeted sends, bounded broadcasts, connection limits and graceful shutdown. Preserve existing client APIs and packet trace constructors. Include English/Korean server guides and .NET 8/10 package verification.</PackageReleaseNotes>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

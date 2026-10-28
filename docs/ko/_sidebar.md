@@ -28,3 +28,7 @@
 * **규약 및 거버넌스 (Governance & Standards)**
   * [코딩 컨벤션 (Conventions)](ko/CONVENTIONS.md)
   * [오픈소스 라이선스 및 컴플라이언스](ko/07_OPENSOURCE_LICENSING_AND_COMPLIANCE.md)
+
+* **서버 호스팅**
+  * [다중 클라이언트 서버](ko/SERVER_HOSTING.md)
+  * [1.10.0 릴리즈 노트](releases/1.10.0.ko.md)

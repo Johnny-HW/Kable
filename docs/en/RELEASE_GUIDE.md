@@ -68,3 +68,7 @@ Always await DisposeAsync after Abort. TCP/NamedPipe cleanup completes the pipel
 and concurrent disposers share completion. MQTT/OPC UA cleanup releases channels, sessions and identities
 when a recovery worker fails. Cleanup errors can surface as AggregateException after resource release.
 FIFO cancellation/timeout and existing alarm spool accounting/drain contracts are preserved.
+
+## Server hosting (1.10.0)
+
+See [the server guide](SERVER_HOSTING.md) and [release notes](../releases/1.10.0.md).

@@ -83,3 +83,7 @@
 
 
 [Protocol Pack — 현재 소스의 스키마·생성기·제약](../PROTOCOL_PACK.md)
+
+## 서버 호스팅
+
+[다중 클라이언트 서버 설정·큐·종료](SERVER_HOSTING.md).

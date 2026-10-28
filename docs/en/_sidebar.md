@@ -26,3 +26,7 @@
 * **Governance & Standards**
   * [Coding Conventions](en/CONVENTIONS.md)
   * [Open-Source Licensing & Compliance](en/07_OPENSOURCE_LICENSING_AND_COMPLIANCE.md)
+
+* **Server hosting**
+  * [Multi-client server](en/SERVER_HOSTING.md)
+  * [1.10.0 release notes](releases/1.10.0.md)

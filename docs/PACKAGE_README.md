@@ -37,3 +37,10 @@ See the repository's `docs/ko/RELEASE_GUIDE.md` or `docs/en/RELEASE_GUIDE.md` fo
 upgrade, security and release procedures, and `docs/ko/SOFTWARE_HARDENING_USAGE.md` for examples.
 Documentation: [Kable](https://johnny-hw.github.io/Kable/).
 Apache-2.0. A copy of LICENSE is included in this package.
+
+## Multi-client server (1.10.0)
+
+Use KableServerBuilder<TMessage> with a per-connection codec factory, then StartAsync.
+SendAsync and BroadcastAsync acknowledge bounded queue acceptance. StopAsync drains outgoing
+queues and aborts at its drain deadline; DisposeAsync awaits cleanup. Create a new server after
+stopping. See [server hosting](https://github.com/Johnny-HW/Kable/blob/main/docs/en/SERVER_HOSTING.md).

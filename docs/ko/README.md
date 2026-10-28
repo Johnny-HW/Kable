@@ -38,6 +38,7 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | 바이너리/장비 전용 프로토콜 | `KableClientBuilder<T>`와 코덱 |
 | Modbus / MELSEC 장비 | `Kable.Modbus` / `Kable.Melsec` 클라이언트 |
 | 단절 후 선택적 연결 복구 | `ReconnectingKableClient` |
+| 다중 클라이언트 서버 | `KableServerBuilder<T>` / `IKableServer<T>` |
 
 Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 시작된 클라이언트를 반환한다.
 내부 비동기 루프가 송신·수신·응답 매칭을 담당하며 각 루프가 전용 OS 스레드를 점유하지 않는다.
@@ -84,3 +85,5 @@ Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 
 - [GitHub Pages 문서](https://johnny-hw.github.io/Kable/)
 - [컴파일되는 QuickStart 예제](https://github.com/Johnny-HW/Kable/tree/main/samples/Kable.QuickStart)
 - [저장소](https://github.com/Johnny-HW/Kable) · [Apache-2.0 라이선스](https://github.com/Johnny-HW/Kable/blob/main/LICENSE)
+
+서버 설정과 종료: [다중 클라이언트 서버 가이드](SERVER_HOSTING.md).

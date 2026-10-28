@@ -8,6 +8,8 @@ or the [changelog](CHANGELOG.md). The installation command below selects the ver
 
 Read the [installation, security and release guide](docs/en/RELEASE_GUIDE.md) before upgrading or publishing.
 
+1.10.0 server hosting: [release candidate notes](docs/releases/1.10.0.md).
+
 ## Start with one query
 
 Add the package from your .NET application project directory. For a new app, first run `dotnet new console -n KableDemo` and `cd KableDemo`.
@@ -43,7 +45,7 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | Binary/custom protocol and framing | `KableClientBuilder<T>` with a codec |
 | Modbus or MELSEC | `Kable.Modbus` or `Kable.Melsec` client |
 | Optional recovery after disconnection | `ReconnectingKableClient` |
-| 1:N Server Listener & Multi-session Daemon | `IConnectionListener` / `Kable.Host` (`TcpConnectionListener`, `IpcNamedPipeServerListener`) |
+| Incoming multi-client server | `KableServerBuilder<T>` / `IKableServer<T>` |
 
 Builder sessions need StartAsync after Build. Simple Open and Profile Connect return started clients.
 Server listeners accept incoming 1:N connections via `IConnectionListener.AcceptAsync()` and run session loops concurrently.
@@ -56,6 +58,8 @@ a dedicated OS thread. Keep and cancel a Task only for application-owned repeate
 2. [Configuration and events](docs/en/DEVELOPER_USAGE.md): connection/query deadlines, event routing and UI dispatch.
 3. [Failures and shutdown](docs/en/ERROR_HANDLING.md): timeout handling, optional recovery and cleanup.
 4. [Connection lifecycle](docs/en/CONNECTION_LIFECYCLE.md): FIFO/CID contracts and session reuse.
+
+Server setup and shutdown: [multi-client server hosting](docs/en/SERVER_HOSTING.md).
 
 ## Configuration and failure rules
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.0] - 2026-10-28
+
+[Release notes](docs/releases/1.10.0.md) / [한국어](docs/releases/1.10.0.ko.md).
+
+### Added
+- Multi-client server contracts, builder and host with independent per-connection codecs and lifecycle/message events.
+- Targeted sends, bounded broadcast queues, connection limits, deadlines and graceful outgoing drain with abort fallback.
+- Optional PacketTraceRecord.ConnectionId with the original constructor preserved.
+- English/Korean server guides and packaged server verification on .NET 8/10.
+
+---
+
 ## [1.9.2] - 2026-10-28
 
 [Release notes](docs/releases/1.9.2.md) / [한국어](docs/releases/1.9.2.ko.md).
@@ -24,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use explicit alarm classification and a bounded telemetry delivery worker; saturated Wait backlogs now terminate with TelemetryBufferOverflowException.
 - Separate response reservations, telemetry delivery and alarm spool ownership behind the existing session API.
 - Support request/response framing in Modbus RTU and MELSEC SLMP 3E codecs.
-- Set the shared package version to 1.9.2; publication remains pending.
+- Set the shared package version to 1.9.2; publication and public-feed validation completed.
 - Support .NET 8 and .NET 10 in Modbus, MQTT and OPC UA modules.
 - Use secure defaults for OPC UA Options/DI; retain the legacy string constructor for unsecured compatibility.
 

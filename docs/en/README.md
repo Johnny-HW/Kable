@@ -38,6 +38,7 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | Binary/custom protocol and framing | `KableClientBuilder<T>` with a codec |
 | Modbus or MELSEC | `Kable.Modbus` or `Kable.Melsec` client |
 | Optional recovery after disconnection | `ReconnectingKableClient` |
+| Incoming multi-client server | `KableServerBuilder<T>` / `IKableServer<T>` |
 
 Builder sessions need StartAsync after Build. Simple Open and Profile Connect return started clients.
 Internal asynchronous loops handle sending, receiving and reply routing; they do not each reserve
@@ -49,6 +50,8 @@ a dedicated OS thread. Keep and cancel a Task only for application-owned repeate
 2. [Configuration and events](en/DEVELOPER_USAGE.md): connection/query deadlines, event routing and UI dispatch.
 3. [Failures and shutdown](en/ERROR_HANDLING.md): timeout handling, optional recovery and cleanup.
 4. [Connection lifecycle](en/CONNECTION_LIFECYCLE.md): FIFO/CID contracts and session reuse.
+
+Server setup and shutdown: [multi-client server hosting](SERVER_HOSTING.md).
 
 ## Configuration and failure rules
 

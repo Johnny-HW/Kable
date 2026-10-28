@@ -113,3 +113,7 @@ AutoAcceptUntrustedCertificates는 개발용이다. 켜더라도 만료·호스�
 SHA-256이 포함된 packages.json을 남긴다. 제품 패키지는 이 feed만 사용하고,
 외부 종속성은 읽기 전용 기존 캐시 feed 또는 nuget.org에서 복원한다.
 전체 테스트 TRX는 artifacts/release-readiness/solution-tests/에 저장한다.
+
+## 서버 호스팅 (1.10.0)
+
+[서버 가이드](SERVER_HOSTING.md)와 [릴리즈 노트](../releases/1.10.0.ko.md)를 참고한다.

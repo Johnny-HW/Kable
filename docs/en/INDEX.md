@@ -82,3 +82,7 @@
 </div>
 
 [Protocol Pack — current source schema, generator and limitations (Korean)](../PROTOCOL_PACK.md)
+
+## Server hosting
+
+[Multi-client server setup, queues and shutdown](SERVER_HOSTING.md).

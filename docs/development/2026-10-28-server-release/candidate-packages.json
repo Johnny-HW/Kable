@@ -1,0 +1,140 @@
+[
+  {
+    "id": "Kable",
+    "version": "1.10.0",
+    "file": "Kable.1.10.0.nupkg",
+    "sha256": "C72BE26217E1B7FE49E78D90CF5F868603781C54A71445384DC6238B3FBB6331",
+    "frameworks": [
+      "net10.0",
+      "net8.0",
+      "netstandard2.0"
+    ]
+  },
+  {
+    "id": "Kable.Core",
+    "version": "1.10.0",
+    "file": "Kable.Core.1.10.0.nupkg",
+    "sha256": "05DAD1CEF766E2C7C978AE4BC4401F0C2FF7BE569FAF1926C1A998DA21C4614F",
+    "frameworks": [
+      "net10.0",
+      "net8.0",
+      "netstandard2.0"
+    ]
+  },
+  {
+    "id": "Kable.Engine.Disruptor",
+    "version": "1.10.0",
+    "file": "Kable.Engine.Disruptor.1.10.0.nupkg",
+    "sha256": "BD145E9C3F9A2439B6357B8C8D97F423298A2D7C4B95A81D8CB17C888DC5308C",
+    "frameworks": [
+      "net10.0",
+      "net8.0"
+    ]
+  },
+  {
+    "id": "Kable.Generators",
+    "version": "1.10.0",
+    "file": "Kable.Generators.1.10.0.nupkg",
+    "sha256": "9017FB5AD0709CCE28939308D06A79FAF7928B82E0A548D46CC4E1B20D1A44A0",
+    "frameworks": []
+  },
+  {
+    "id": "Kable.Grpc",
+    "version": "1.10.0",
+    "file": "Kable.Grpc.1.10.0.nupkg",
+    "sha256": "AB3AFE6C3BBC84D57DF831117F7716BF19BE3BC2BC5D8263E13F91CB43BF2D23",
+    "frameworks": [
+      "net10.0",
+      "net8.0",
+      "netstandard2.0"
+    ]
+  },
+  {
+    "id": "Kable.Melsec",
+    "version": "1.10.0",
+    "file": "Kable.Melsec.1.10.0.nupkg",
+    "sha256": "4BF7AF8FF98D4ED5D667C024AE45EF65141691E33D879646D8EECD49977B93DE",
+    "frameworks": [
+      "net10.0"
+    ]
+  },
+  {
+    "id": "Kable.Modbus",
+    "version": "1.10.0",
+    "file": "Kable.Modbus.1.10.0.nupkg",
+    "sha256": "ACE1219A8EE64EDC5B7E97E729844D9E7A8DB00692D5F440ED51047C68D3A248",
+    "frameworks": [
+      "net10.0",
+      "net8.0"
+    ]
+  },
+  {
+    "id": "Kable.Mqtt",
+    "version": "1.10.0",
+    "file": "Kable.Mqtt.1.10.0.nupkg",
+    "sha256": "C5762F642317D6EAA10DC8F9DAA164D67F38F565EB3135F0F9435BCAFC8049BD",
+    "frameworks": [
+      "net10.0",
+      "net8.0"
+    ]
+  },
+  {
+    "id": "Kable.Observability.OpenTelemetry",
+    "version": "1.10.0",
+    "file": "Kable.Observability.OpenTelemetry.1.10.0.nupkg",
+    "sha256": "78C78CE2E7B3CAFE595AA7AC4244FAB052ACF3426963A7E2BA614E7D05E795EE",
+    "frameworks": [
+      "net10.0",
+      "net8.0"
+    ]
+  },
+  {
+    "id": "Kable.OpcUa",
+    "version": "1.10.0",
+    "file": "Kable.OpcUa.1.10.0.nupkg",
+    "sha256": "D49D9F97730665710693D4E3FF8BFB35ABA413D92891792C7D6FAB48EF33FFCD",
+    "frameworks": [
+      "net10.0",
+      "net8.0"
+    ]
+  },
+  {
+    "id": "Kable.ProtocolPack",
+    "version": "1.10.0",
+    "file": "Kable.ProtocolPack.1.10.0.nupkg",
+    "sha256": "B364C1C99000BD12247755F3F8752F225120883F46955C0B84AF16F0F2620471",
+    "frameworks": [
+      "netstandard2.0"
+    ]
+  },
+  {
+    "id": "Kable.SharedMemory",
+    "version": "1.10.0",
+    "file": "Kable.SharedMemory.1.10.0.nupkg",
+    "sha256": "FA239C94106E707195825D3DA3F4ECCD81CD7DE27D68199743E1523D616ADEF1",
+    "frameworks": [
+      "net10.0-windows7.0"
+    ]
+  },
+  {
+    "id": "Kable.Transport.Ipc",
+    "version": "1.10.0",
+    "file": "Kable.Transport.Ipc.1.10.0.nupkg",
+    "sha256": "F84F491398416FA8B7D358898BF9ADF7558420310D92488B8002053603D8C805",
+    "frameworks": [
+      "net10.0",
+      "net8.0",
+      "netstandard2.0"
+    ]
+  },
+  {
+    "id": "Kable.UI.Wpf",
+    "version": "1.10.0",
+    "file": "Kable.UI.Wpf.1.10.0.nupkg",
+    "sha256": "2A9964F616EC381350BCC38B75368952D07C96BB23E5AEA31A51F89156D7F54D",
+    "frameworks": [
+      "net10.0-windows7.0",
+      "net8.0-windows7.0"
+    ]
+  }
+]
