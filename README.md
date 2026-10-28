@@ -6,6 +6,8 @@ Connect, query, poll and recover connections using the API that matches your equ
 Next release: **1.9.2 (planned; not published by this change)**. Read the [release notes and upgrade guidance](docs/releases/1.9.2.md)
 or the [changelog](CHANGELOG.md). The installation command below selects the version available on NuGet.
 
+Read the [installation, security and release guide](docs/en/RELEASE_GUIDE.md) before upgrading or publishing.
+
 ## Start with one query
 
 Add the package from your .NET application project directory. For a new app, first run `dotnet new console -n KableDemo` and `cd KableDemo`.

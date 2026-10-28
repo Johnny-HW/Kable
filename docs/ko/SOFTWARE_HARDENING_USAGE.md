@@ -2,7 +2,7 @@
 
 2026-10-28 저장소 구현 기준. NuGet 게시와 별개다.
 Kable의 Serial/TLS 전송은 netstandard2.0·.NET 8·.NET 10으로 빌드한다.
-Modbus·MQTT·OPC UA 확장 패키지는 현재 .NET 10 대상이다.
+Modbus·MQTT·OPC UA 확장 패키지는 .NET 8과 .NET 10 대상이다.
 
 ## 시리얼 연결과 종료
 
@@ -116,7 +116,11 @@ DisposeAsync는 복구 루프를 취소하고 클라이언트와 수신 채널�
 using Kable.OpcUa;
 using Kable.OpcUa.Subscriptions;
 
-await using var bridge = new OpcUaClientBridge("opc.tcp://localhost:4840");
+await using var bridge = new OpcUaClientBridge(new OpcUaOptions
+{
+    EndpointUrl = "opc.tcp://localhost:4840",
+    PkiRootPath = @"C:\EquipmentApp\pki"
+});
 await bridge.ConnectAsync(cancellationToken);
 var snapshot = await bridge.ReadNodesAsync(new[] { "ns=2;s=Temperature", "ns=2;s=Pressure" }, cancellationToken);
 await using var subscription = await bridge.SubscribeAsync(new[] { "ns=2;s=Temperature" },
@@ -132,7 +136,9 @@ KeepAlive에서 단절이 감지되면 새 세션을 만들고 구독을 복원�
 구독별 수신 큐가 가득 차면 새 값을 버리고 DroppedValues를 증가시킨다.
 구독 DisposeAsync는 해당 구독을 제거하고, Bridge DisposeAsync는 모든 구독과 세션을 종료한다.
 기존 IOpcUaClientBridge는 유지했다. 새 기능은 OpcUaClientBridge의 추가 API다.
-기존 브리지의 보안 설정/익명 엔드포인트 선택은 이번 작업에서 변경하지 않았다.
+Options API는 SignAndEncrypt·Basic256Sha256와 서버 인증서 검증이 기본이다.
+기존 문자열 생성자는 익명·비보안 호환 경로다. 신뢰 저장소와 사용자 인증 설정은
+[설치·보안·업그레이드 안내](RELEASE_GUIDE.md)를 따른다.
 
 ## 자동 검증과 실장비 경계
 

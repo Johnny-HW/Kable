@@ -1,6 +1,6 @@
 # Modbus TCP·RTU 및 PLC 값 변환
 
-현재 저장소 구현 기준이며 NuGet 게시 여부와 별개다. Kable.Modbus는 .NET 10을 대상으로 한다.
+현재 저장소 구현 기준이며 NuGet 게시 여부와 별개다. Kable.Modbus는 .NET 8과 .NET 10을 대상으로 한다.
 
 ## 지원 기능
 

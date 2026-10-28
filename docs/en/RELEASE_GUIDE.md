@@ -6,8 +6,8 @@ Read the [Korean release guide](../ko/RELEASE_GUIDE.md) for the complete procedu
 
 ## Runtime and installation
 
-Kable/Core target netstandard2.0, .NET 8 and .NET 10. Modbus, MQTT and OPC UA are being
-validated for .NET 8 and .NET 10. WPF is Windows-only; inspect each package's manifest
+Kable/Core target netstandard2.0, .NET 8 and .NET 10. Modbus, MQTT and OPC UA target
+.NET 8 and .NET 10. WPF is Windows-only; inspect each package's manifest
 for its exact supported target frameworks. Keep Kable product package versions aligned.
 
 After publication, install with `dotnet add package Kable --version 1.9.2`.
@@ -40,3 +40,8 @@ the final package set and documentation have been reviewed; local validation doe
 
 Physical hardware, driver behavior, other operating systems and multi-day operation are outside
 this validation. Queue overflow may drop data; reconnection does not replay missed data or writes.
+
+Run `./tools/release/VerifySolution.ps1` and `./tools/release/VerifyPackages.ps1` on Windows.
+The latter writes a separate local feed, isolated cache, clean consumers and a SHA-256 package
+manifest under artifacts/release-readiness/. Product packages must come from that local feed;
+third-party dependencies may use the existing cache as a read-only feed or nuget.org.

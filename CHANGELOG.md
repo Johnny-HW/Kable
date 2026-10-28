@@ -15,10 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML Protocol Pack loading, validation, persistence and AdditionalFiles source generation.
 - AsciiLine command/reply types, endpoint option factories and Modbus/MELSEC map constants.
 - Shared-memory UI session reconnection without restarting devices.
+- Modbus TCP Coil operations, a serialized Serial RTU master, named device registration and scaled PLC tags.
+- TCP TLS/mTLS and bounded MQTT/OPC UA subscriptions with connection/subscription recovery.
+- OPC UA security policy selection, certificate trust stores, and username/certificate identities.
+- Release documentation, package README/license inclusion, and isolated .NET 8/10 console/WPF package verification.
 
 ### Changed
 - Support request/response framing in Modbus RTU and MELSEC SLMP 3E codecs.
 - Set the shared package version to 1.9.2; publication remains pending.
+- Support .NET 8 and .NET 10 in Modbus, MQTT and OPC UA modules.
+- Use secure defaults for OPC UA Options/DI; retain the legacy string constructor for unsecured compatibility.
+
+### Fixed
+- Honor Serial connection cancellation and dispose connections that open after cancellation.
+- Complete Serial cleanup after Abort and validate Modbus response headers, quantities and write acknowledgements.
 
 ---
 

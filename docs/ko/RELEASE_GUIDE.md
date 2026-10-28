@@ -13,10 +13,14 @@
 | Kable.Mqtt | .NET 8 / .NET 10, 발행·구독·재구독 |
 | Kable.OpcUa | .NET 8 / .NET 10, 보안 세션·노드 RW·구독·복원 |
 | Kable.Generators, Kable.ProtocolPack | netstandard2.0, 명령 생성·YAML 정의 |
-| Kable.UI.Wpf | Windows 전용. 실제 TFM은 패키지 manifest를 따른다. |
-| 기타 IPC/SharedMemory/Grpc/Host/관측성 | 각 패키지 manifest와 운영체제 요구 조건을 따른다. |
+| Kable.UI.Wpf | net8.0-windows / net10.0-windows, Windows UI |
+| Kable.SharedMemory | net10.0-windows, Windows 공유 메모리 |
+| Kable.Grpc, Kable.Transport.Ipc | netstandard2.0 / .NET 8 / .NET 10 |
+| Kable.Engine.Disruptor, Kable.Observability.OpenTelemetry | .NET 8 / .NET 10 |
+| Kable.Melsec | .NET 10, MELSEC SLMP |
+| Kable.Host | .NET 10 실행 프로그램. NuGet 제품 패키지로 배포하지 않는다. |
 
-지원 목표와 실제 패키지의 lib/ 및 nuspec 일치 여부를 pack 단계에서 검증한다.
+실제 패키지의 lib/ 및 nuspec 일치 여부를 pack 단계에서 검증한다.
 Serial과 공유 메모리의 플랫폼 제약은 사용하는 드라이버와 구현을 따른다.
 
 ## 설치와 시작
@@ -94,3 +98,15 @@ AutoAcceptUntrustedCertificates는 개발용이다. 켜더라도 만료·호스�
 6. 최종 게시 승인 후 NuGet 업로드와 태그/릴리즈를 수행한다. 재게시할 수 없는 버전은 덮어쓰지 않는다.
 
 현재 문서는 게시 자체를 수행하지 않는다. 릴리즈 결과와 패키지가 준비된 후 게시 여부를 결정한다.
+
+재현 도구:
+
+```powershell
+./tools/release/VerifySolution.ps1
+./tools/release/VerifyPackages.ps1
+```
+
+패키지 검증은 실행별 artifacts/release-readiness/ 아래에 feed, 격리 cache, 소비자 코드와
+SHA-256이 포함된 packages.json을 남긴다. 제품 패키지는 이 feed만 사용하고,
+외부 종속성은 읽기 전용 기존 캐시 feed 또는 nuget.org에서 복원한다.
+전체 테스트 TRX는 artifacts/release-readiness/solution-tests/에 저장한다.

@@ -6,6 +6,8 @@ Connect a device, send a query, then add polling and recovery when needed.
 **Kable 1.9.2 — planned / 배포 예정.**
 [Release notes](releases/1.9.2.md) · [한국어 릴리즈 노트](releases/1.9.2.ko.md)
 
+[Installation, security and release guide](en/RELEASE_GUIDE.md) · [설치·보안·업그레이드·배포 안내](ko/RELEASE_GUIDE.md)
+
 | Language | Start here | Configuration | Failures and shutdown |
 | --- | --- | --- | --- |
 | 한국어 | [처음 연결하기](ko/GETTING_STARTED.md) | [설정과 이벤트](ko/DEVELOPER_USAGE.md) | [실패 처리와 종료](ko/ERROR_HANDLING.md) |

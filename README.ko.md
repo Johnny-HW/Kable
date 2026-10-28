@@ -77,6 +77,7 @@ Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 
 
 [Modbus TCP·RTU 및 PLC 값 변환 사용법](docs/ko/MODBUS_USAGE.md)에서 지원 기능과 예제를 확인한다.
 [이름별 장비·PLC 태그·TLS·MQTT/OPC UA 구독](docs/ko/SOFTWARE_HARDENING_USAGE.md)의 사용법과 검증 범위도 참고한다.
+[지원 환경·설치·보안·업그레이드·배포 안내](docs/ko/RELEASE_GUIDE.md)에서 패키지별 지원 환경과 배포 순서를 확인한다.
 
 파이프라인 버퍼는 재사용하지만 문자열 수신과 비동기 질의는 메모리를 할당한다.
 [성능 측정 범위](docs/ko/PERFORMANCE_BASELINE.md)를 기준으로 판단한다.
