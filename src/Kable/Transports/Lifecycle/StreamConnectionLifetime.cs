@@ -28,15 +28,19 @@ internal sealed class StreamConnectionLifetime
 
     internal void Abort()
     {
-        if (Interlocked.Exchange(ref _aborted, 1) != 0) return;
-        try { _closed.Cancel(); }
-        finally
+        lock (_sync)
         {
-            try { _closeTransport(); }
+            if (_aborted != 0) return;
+            _aborted = 1;
+            try { _closed.Cancel(); }
             finally
             {
-                try { _input.CancelPendingRead(); }
-                finally { _output.CancelPendingFlush(); }
+                try { _closeTransport(); }
+                finally
+                {
+                    try { _input.CancelPendingRead(); }
+                    finally { _output.CancelPendingFlush(); }
+                }
             }
         }
     }

@@ -29,4 +29,29 @@ public sealed class StreamConnectionLifetimeTests
         await input.Received(1).CompleteAsync(Arg.Any<Exception?>());
         await output.Received(1).CompleteAsync(Arg.Any<Exception?>());
     }
+    [Fact]
+    public async Task Concurrent_disposal_waits_for_transport_abort_to_finish()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var release = new ManualResetEventSlim();
+        using var stream = new MemoryStream();
+        var lifetime = new StreamConnectionLifetime(stream, Substitute.For<PipeReader>(), Substitute.For<PipeWriter>(), () =>
+        {
+            entered.TrySetResult();
+            // Model a synchronous OS close still in progress on another thread.
+            if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Test close was not released.");
+        });
+        var aborting = Task.Run(lifetime.Abort);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var disposing = Task.Run(async () => await lifetime.DisposeAsync());
+        try
+        {
+            await Task.Delay(100);
+            Assert.False(disposing.IsCompleted);
+        }
+        finally { release.Set(); }
+        await Task.WhenAll(aborting, disposing).WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.False(stream.CanWrite);
+    }
+
 }
