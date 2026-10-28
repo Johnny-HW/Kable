@@ -5,11 +5,19 @@ using System.Buffers;
 using Kable.Core.Checksums;
 
 /// <summary>
-/// System.IO.Pipelines 기반 초고속 0-GC Modbus-RTU 프레이밍 및 자동 CRC 코덱
-/// 요청 시 CRC 자동 부착(Encode), 수신 시 CRC 자동 검증 및 완성 프레임 추출(TryDecode)
+/// System.IO.Pipelines 기반 초고속 0-GC Modbus-RTU 프레이밍 및 자동 CRC 코덱.
+/// Encode는 PDU에 CRC-16을 부착한다. TryDecode는 마스터 응답과 슬레이브 요청을
+/// 후보 길이 + CRC로 구분한다 (FC01-04 8바이트 요청 vs ByteCount 응답, FC15/16 가변 요청 vs 8바이트 ACK).
 /// </summary>
 public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>>
 {
+    private const int StackAllocThreshold = 256;
+    private const int ReadRequestLength = 8;
+    private const int WriteSingleLength = 8;
+    private const int ExceptionLength = 5;
+    private const int WriteMultipleAckLength = 8;
+    private const int WriteMultipleRequestPreamble = 7;
+
     private readonly int _maxFrameSize;
 
     public bool SupportsCorrelationId => false;
@@ -31,17 +39,16 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
     }
 
     /// <summary>
-    /// 수신 파이프라인 버퍼에서 완성된 Modbus 응답 프레임을 추출하고 CRC 무결성을 자동 검증합니다.
+    /// 수신 파이프라인 버퍼에서 완성된 Modbus 프레임을 추출하고 CRC 무결성을 자동 검증합니다.
     /// </summary>
     public bool TryDecode(ref ReadOnlySequence<byte> buffer, out ReadOnlyMemory<byte> message)
     {
-        if (buffer.Length < 4) // 최소 프레임: Slave(1) + FC(1) + Data(1) + CRC(2) = 5 (에러 응답은 4바이트 또는 5바이트)
+        if (buffer.Length < 4)
         {
             message = ReadOnlyMemory<byte>.Empty;
             return false;
         }
 
-        // 바이트 카피 없이 첫 3바이트 판독
         Span<byte> header = stackalloc byte[3];
         buffer.Slice(0, 3).CopyTo(header);
         byte fc = header[1];
@@ -51,41 +58,112 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
             return TryDecodeShortRead(ref buffer, header[2], out message);
         }
 
-        int expectedLength;
-
-        // 예외 응답 (FC high bit set, 0x80 | FC): Slave(1) + FC(1) + ExceptionCode(1) + CRC(2) = 5 bytes
         if ((fc & 0x80) != 0)
         {
-            expectedLength = 5;
-        }
-        // FC05 (Write Single Coil), FC06 (Write Single Register): 고정 8 bytes
-        else if (fc == 0x05 || fc == 0x06)
-        {
-            expectedLength = 8;
-        }
-        // FC01, FC02, FC03, FC04 (Read 계열 응답): Slave(1) + FC(1) + ByteCount(1) + [N bytes] + CRC(2)
-        else if (fc == 0x01 || fc == 0x02 || fc == 0x03 || fc == 0x04)
-        {
-            byte byteCount = header[2];
-            expectedLength = 3 + byteCount + 2;
-        }
-        // FC10 (Write Multiple Registers 응답): 고정 8 bytes
-        else if (fc == 0x10)
-        {
-            expectedLength = 8;
-        }
-        else
-        {
-            // 알 수 없는 기능 코드의 경우 버퍼가 충분할 때까지 대기
-            expectedLength = (int)buffer.Length;
+            return TryFinishFixed(ref buffer, ExceptionLength, out message);
         }
 
-        // 허용 상한선 초과 시 즉시 무효 패킷 처리 (1바이트 슬라이스하여 재동기화)
-        if (expectedLength > _maxFrameSize)
+        if (fc == 0x05 || fc == 0x06)
         {
-            buffer = buffer.Slice(1);
+            return TryFinishFixed(ref buffer, WriteSingleLength, out message);
+        }
+
+        if (fc == 0x01 || fc == 0x02 || fc == 0x03 || fc == 0x04)
+        {
+            return TryDecodeReadFunction(ref buffer, header[2], out message);
+        }
+
+        if (fc == 0x0F || fc == 0x10)
+        {
+            return TryDecodeWriteMultiple(ref buffer, out message);
+        }
+
+        return TryFinishFixed(ref buffer, (int)buffer.Length, out message);
+    }
+
+    public string? ExtractCorrelationId(ReadOnlyMemory<byte> message) => null;
+    public bool IsAutonomousMessage(ReadOnlyMemory<byte> message) => false;
+
+    private bool TryDecodeReadFunction(ref ReadOnlySequence<byte> buffer, byte byteCount, out ReadOnlyMemory<byte> message)
+    {
+        int responseLength = 3 + byteCount + 2;
+        bool responseInRange = responseLength >= 5 && responseLength <= _maxFrameSize;
+
+        if (responseInRange && buffer.Length >= responseLength)
+        {
+            if (TryConsumeValidFrame(ref buffer, responseLength, out message))
+            {
+                return true;
+            }
+        }
+
+        if (buffer.Length >= ReadRequestLength && ReadRequestLength <= _maxFrameSize)
+        {
+            if (TryConsumeValidFrame(ref buffer, ReadRequestLength, out message))
+            {
+                return true;
+            }
+        }
+
+        if (!responseInRange)
+        {
+            return DropByte(ref buffer, out message);
+        }
+
+        int needed = Math.Max(ReadRequestLength, responseLength);
+        if (buffer.Length < needed)
+        {
             message = ReadOnlyMemory<byte>.Empty;
             return false;
+        }
+
+        return DropByte(ref buffer, out message);
+    }
+
+    private bool TryDecodeWriteMultiple(ref ReadOnlySequence<byte> buffer, out ReadOnlyMemory<byte> message)
+    {
+        if (buffer.Length >= WriteMultipleAckLength)
+        {
+            if (TryConsumeValidFrame(ref buffer, WriteMultipleAckLength, out message))
+            {
+                return true;
+            }
+        }
+
+        if (buffer.Length < WriteMultipleRequestPreamble)
+        {
+            message = ReadOnlyMemory<byte>.Empty;
+            return false;
+        }
+
+        Span<byte> preamble = stackalloc byte[WriteMultipleRequestPreamble];
+        buffer.Slice(0, WriteMultipleRequestPreamble).CopyTo(preamble);
+        int requestLength = 9 + preamble[6];
+
+        if (requestLength > _maxFrameSize)
+        {
+            return DropByte(ref buffer, out message);
+        }
+
+        if (buffer.Length < requestLength)
+        {
+            message = ReadOnlyMemory<byte>.Empty;
+            return false;
+        }
+
+        if (TryConsumeValidFrame(ref buffer, requestLength, out message))
+        {
+            return true;
+        }
+
+        return DropByte(ref buffer, out message);
+    }
+
+    private bool TryFinishFixed(ref ReadOnlySequence<byte> buffer, int expectedLength, out ReadOnlyMemory<byte> message)
+    {
+        if (expectedLength > _maxFrameSize)
+        {
+            return DropByte(ref buffer, out message);
         }
 
         if (buffer.Length < expectedLength)
@@ -94,30 +172,39 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
             return false;
         }
 
-        var frameSeq = buffer.Slice(0, expectedLength);
+        if (TryConsumeValidFrame(ref buffer, expectedLength, out message))
+        {
+            return true;
+        }
 
-        // 스택 임계값(256B) 이하는 stackalloc, 초과 시에만 ArrayPool fallback
-        const int StackAllocThreshold = 256;
+        return DropByte(ref buffer, out message);
+    }
+
+    private bool TryConsumeValidFrame(ref ReadOnlySequence<byte> buffer, int length, out ReadOnlyMemory<byte> message)
+    {
+        message = ReadOnlyMemory<byte>.Empty;
+        if (length < 4 || length > _maxFrameSize || buffer.Length < length)
+        {
+            return false;
+        }
+
+        var frameSeq = buffer.Slice(0, length);
         byte[]? rented = null;
-        Span<byte> frameSpan = expectedLength <= StackAllocThreshold
-            ? stackalloc byte[expectedLength]
-            : (rented = ArrayPool<byte>.Shared.Rent(expectedLength)).AsSpan(0, expectedLength);
+        Span<byte> frameSpan = length <= StackAllocThreshold
+            ? stackalloc byte[length]
+            : (rented = ArrayPool<byte>.Shared.Rent(length)).AsSpan(0, length);
 
         try
         {
             frameSeq.CopyTo(frameSpan);
 
-            // CRC 자동 검증
             if (!Crc16Modbus.Validate(frameSpan))
             {
-                // CRC 불일치 시 1바이트 슬라이스하여 동기화 복구 시도
-                buffer = buffer.Slice(1);
-                message = ReadOnlyMemory<byte>.Empty;
                 return false;
             }
 
             message = frameSpan.ToArray();
-            buffer = buffer.Slice(buffer.GetPosition(expectedLength));
+            buffer = buffer.Slice(buffer.GetPosition(length));
             return true;
         }
         finally
@@ -129,6 +216,10 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
         }
     }
 
-    public string? ExtractCorrelationId(ReadOnlyMemory<byte> message) => null;
-    public bool IsAutonomousMessage(ReadOnlyMemory<byte> message) => false;
+    private static bool DropByte(ref ReadOnlySequence<byte> buffer, out ReadOnlyMemory<byte> message)
+    {
+        buffer = buffer.Slice(1);
+        message = ReadOnlyMemory<byte>.Empty;
+        return false;
+    }
 }

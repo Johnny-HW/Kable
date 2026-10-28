@@ -19,8 +19,10 @@ public sealed class Slmp3EFrame
     public ushort Subcommand { get; }     // 0x0000 (Word 단위), 0x0001 (Bit 단위)
     public ReadOnlyMemory<byte> Data { get; }
 
+    public bool IsRequest => Subheader == 0x0050;
+    public bool IsResponse => Subheader == 0x00D0;
     public bool IsSuccess => EndCode == 0;
-    public ushort EndCode => Subheader == 0x00D0 ? MonitoringTimer : (ushort)0;
+    public ushort EndCode => IsResponse ? MonitoringTimer : (ushort)0;
 
     public Slmp3EFrame(
         ushort subheader,
@@ -111,6 +113,30 @@ public sealed class Slmp3EFrame
             monitoringTimerOrEndCode: timer,
             command: 0x1401,
             subcommand: 0x0000, // Word unit
+            data: data);
+    }
+
+    /// <summary>
+    /// 3E 응답 프레임 생성 (Subheader 0x00D0, EndCode + 데이터).
+    /// 슬레이브/시뮬레이터가 읽기 성공 데이터 또는 에러 EndCode를 회신할 때 사용합니다.
+    /// </summary>
+    public static Slmp3EFrame CreateResponse(
+        ushort endCode,
+        ReadOnlyMemory<byte> data,
+        byte networkNo = 0,
+        byte pcNo = 0xFF,
+        ushort destModuleIo = 0x03FF,
+        byte destModuleStation = 0)
+    {
+        return new Slmp3EFrame(
+            subheader: 0x00D0,
+            networkNo: networkNo,
+            pcNo: pcNo,
+            destModuleIo: destModuleIo,
+            destModuleStation: destModuleStation,
+            monitoringTimerOrEndCode: endCode,
+            command: 0,
+            subcommand: 0,
             data: data);
     }
 }

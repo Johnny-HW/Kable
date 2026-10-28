@@ -37,6 +37,19 @@ public sealed class TcpConnectionListener : IConnectionListener
         var socket = await _listenSocket.AcceptAsync(ct).ConfigureAwait(false);
 #endif
         socket.NoDelay = true;
+        try
+        {
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+#if !NETSTANDARD2_0
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 2);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 1);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 3);
+#endif
+        }
+        catch (Exception error)
+        {
+            System.Diagnostics.Trace.TraceWarning("Optional TCP keep-alive settings were not applied: {0}", error.Message);
+        }
         return new TcpConnectionContext(socket);
     }
 
