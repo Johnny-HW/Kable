@@ -108,20 +108,33 @@ public sealed partial class OpcUaClientBridge
     private async Task DisposeCoreAsync()
     {
         Interlocked.Exchange(ref _isDisposed, 1);
-        _shutdown.Cancel();
-        if (_recovery != null) await _recovery.ConfigureAwait(false);
+        var errors = new List<Exception>();
+        try { _shutdown.Cancel(); } catch (Exception error) { errors.Add(error); }
+        try { if (_recovery != null) await _recovery.ConfigureAwait(false); }
+        catch (Exception error) { errors.Add(error); }
         await _sessionGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            foreach (var handle in _subscriptions) handle.Complete();
+            foreach (var handle in _subscriptions)
+            {
+                try { handle.Complete(); } catch (Exception error) { errors.Add(error); }
+            }
             _subscriptions.Clear();
-            if (_session != null)
+            var session = _session;
+            _session = null;
+            if (session != null)
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                try { await _session.CloseAsync(timeout.Token).ConfigureAwait(false); }
-                finally { _session.Dispose(); _session = null; DisposeIdentity(); }
+                try { await session.CloseAsync(timeout.Token).ConfigureAwait(false); }
+                catch (Exception error) { errors.Add(error); }
+                try { session.Dispose(); } catch (Exception error) { errors.Add(error); }
             }
         }
-        finally { _sessionGate.Release(); }
+        finally
+        {
+            try { DisposeIdentity(); }
+            finally { _shutdown.Dispose(); _sessionGate.Release(); }
+        }
+        if (errors.Count > 0) throw new AggregateException("OPC UA shutdown failed after resource cleanup.", errors);
     }
 }

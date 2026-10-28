@@ -73,9 +73,13 @@ public sealed class OpcUaValueSubscription : IAsyncDisposable
             if (_subscription?.Created == true && _subscription.Session?.Connected == true)
                 await _subscription.Session.RemoveSubscriptionAsync(_subscription, ct).ConfigureAwait(false);
         }
-        finally { Detach(); _values.Writer.TryComplete(); }
+        finally { try { Detach(); } finally { _values.Writer.TryComplete(); } }
     }
-    internal void Complete() { Interlocked.Exchange(ref _disposed, 1); Detach(); _values.Writer.TryComplete(); }
+    internal void Complete()
+    {
+        Interlocked.Exchange(ref _disposed, 1);
+        try { Detach(); } finally { _values.Writer.TryComplete(); }
+    }
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0) await _remove(this).ConfigureAwait(false);

@@ -114,8 +114,10 @@ public sealed class MqttSubscriber : IAsyncDisposable
     private async Task DisposeCoreAsync()
     {
         Interlocked.Exchange(ref _disposed, 1);
-        _stop.Cancel();
-        if (_worker != null) await _worker.ConfigureAwait(false);
+        var errors = new List<Exception>();
+        try { _stop.Cancel(); } catch (Exception error) { errors.Add(error); }
+        try { if (_worker != null) await _worker.ConfigureAwait(false); }
+        catch (Exception error) { errors.Add(error); }
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -125,8 +127,15 @@ public sealed class MqttSubscriber : IAsyncDisposable
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 if (_client.IsConnected) await _client.DisconnectAsync(new MqttClientDisconnectOptions(), timeout.Token).ConfigureAwait(false);
             }
-            finally { _client.Dispose(); _messages.Writer.TryComplete(); }
+            catch (Exception error) { errors.Add(error); }
+            try { _client.Dispose(); } catch (Exception error) { errors.Add(error); }
         }
-        finally { _gate.Release(); }
+        finally
+        {
+            _messages.Writer.TryComplete();
+            _stop.Dispose();
+            _gate.Release();
+        }
+        if (errors.Count > 0) throw new AggregateException("MQTT shutdown failed after resource cleanup.", errors);
     }
 }
