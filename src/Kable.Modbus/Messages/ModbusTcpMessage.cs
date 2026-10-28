@@ -8,7 +8,7 @@ using Kable.Observability;
 /// <summary>
 /// Modbus-TCP MBAP 헤더 및 PDU를 캡슐화하는 불변 메시지 레코드.
 /// </summary>
-public sealed class ModbusTcpMessage : IRawByteProvider
+public sealed partial class ModbusTcpMessage : IRawByteProvider
 {
     public ushort TransactionId { get; }
     public ushort ProtocolId { get; }

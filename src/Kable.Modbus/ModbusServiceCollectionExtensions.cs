@@ -18,7 +18,7 @@ public static class ModbusServiceCollectionExtensions
     {
         services.Configure(configure);
 
-        services.AddSingleton<IModbusMaster>(sp =>
+        services.AddSingleton<IModbusCoilMaster>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ModbusTcpOptions>>().Value;
             var logger = sp.GetService<ILogger<ModbusTcpMaster>>();
@@ -29,7 +29,7 @@ public static class ModbusServiceCollectionExtensions
 
             return new ModbusTcpMaster(session, sp.GetRequiredService<IOptions<ModbusTcpOptions>>(), logger);
         });
-
+        services.AddSingleton<IModbusMaster>(sp => sp.GetRequiredService<IModbusCoilMaster>());
 
         return services;
     }
