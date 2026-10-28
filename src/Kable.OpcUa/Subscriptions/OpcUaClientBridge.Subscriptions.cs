@@ -59,15 +59,21 @@ public sealed partial class OpcUaClientBridge
         if (IsConnected) return;
         _session?.Dispose();
         _session = null;
-        _configuration ??= await CreateDefaultConfigurationAsync(_autoAcceptUntrustedCertificates).ConfigureAwait(false);
+        DisposeIdentity();
+        _configuration ??= await CreateSecurityConfigurationAsync(_security).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
 #pragma warning disable CS0618
         var application = new ApplicationInstance { ApplicationConfiguration = _configuration };
         await application.CheckApplicationInstanceCertificatesAsync(true, null, ct).ConfigureAwait(false);
-        var endpoint = await CoreClientUtils.SelectEndpointAsync(_configuration, _endpointUrl, false, 5000, ct).ConfigureAwait(false);
+        var endpoint = await SelectSecureEndpointAsync(_configuration, ct).ConfigureAwait(false);
         var configured = new ConfiguredEndpoint(null, endpoint, EndpointConfiguration.Create(_configuration));
-        _session = await Session.Create(_configuration, configured, false, "KableClientSession", _sessionTimeoutMs,
-            new UserIdentity(new AnonymousIdentityToken()), null, ct).ConfigureAwait(false);
+        _identity = CreateUserIdentity();
+        try
+        {
+            _session = await Session.Create(_configuration, configured, false, true, "KableClientSession", _sessionTimeoutMs,
+                _identity, null, ct).ConfigureAwait(false);
+        }
+        catch { DisposeIdentity(); throw; }
 #pragma warning restore CS0618
         _session.KeepAliveInterval = 500;
         _session.KeepAlive += OnKeepAlive;
@@ -113,7 +119,7 @@ public sealed partial class OpcUaClientBridge
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 try { await _session.CloseAsync(timeout.Token).ConfigureAwait(false); }
-                finally { _session.Dispose(); _session = null; }
+                finally { _session.Dispose(); _session = null; DisposeIdentity(); }
             }
         }
         finally { _sessionGate.Release(); }

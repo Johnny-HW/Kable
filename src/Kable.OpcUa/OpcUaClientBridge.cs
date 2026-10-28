@@ -15,7 +15,7 @@ using Opc.Ua.Client;
 public sealed partial class OpcUaClientBridge : IOpcUaClientBridge
 {
     private readonly string _endpointUrl;
-    private readonly bool _autoAcceptUntrustedCertificates;
+    private readonly OpcUaOptions _security;
     private readonly uint _sessionTimeoutMs;
     private readonly ILogger<OpcUaClientBridge>? _logger;
     private Session? _session;
@@ -25,60 +25,25 @@ public sealed partial class OpcUaClientBridge : IOpcUaClientBridge
     public bool IsConnected => Volatile.Read(ref _isDisposed) == 0 && Volatile.Read(ref _needsReconnect) == 0 && _session != null && _session.Connected;
     public string EndpointUrl => _endpointUrl;
 
-    public OpcUaClientBridge(
-        string endpointUrl,
-        bool autoAcceptUntrustedCertificates = true,
-        uint sessionTimeoutMs = 60000,
-        ILogger<OpcUaClientBridge>? logger = null)
-    {
-        _endpointUrl = endpointUrl ?? throw new ArgumentNullException(nameof(endpointUrl));
-        _autoAcceptUntrustedCertificates = autoAcceptUntrustedCertificates;
-        _sessionTimeoutMs = sessionTimeoutMs;
-        _logger = logger;
-    }
-
-    public OpcUaClientBridge(
-        IOptions<OpcUaOptions> options,
-        ILogger<OpcUaClientBridge>? logger = null)
-    {
-        var opt = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _endpointUrl = opt.EndpointUrl;
-        _autoAcceptUntrustedCertificates = opt.AutoAcceptUntrustedCertificates;
-        _sessionTimeoutMs = opt.SessionTimeoutMs;
-        _logger = logger;
-    }
-
-    private static async Task<ApplicationConfiguration> CreateDefaultConfigurationAsync(bool autoAcceptCertificates)
-    {
-        var config = new ApplicationConfiguration
+    /// <summary>Legacy anonymous/unsecured path. Prefer the Options constructor for secure defaults.</summary>
+    public OpcUaClientBridge(string endpointUrl, bool autoAcceptUntrustedCertificates = true,
+        uint sessionTimeoutMs = 60000, ILogger<OpcUaClientBridge>? logger = null)
+        : this(new OpcUaOptions
         {
-            ApplicationName = "Kable.OpcUa.Client",
-            ApplicationUri = Utils.Format(@"urn:{0}:Kable:OpcUaClient", System.Net.Dns.GetHostName()),
-            ApplicationType = ApplicationType.Client,
-            SecurityConfiguration = new SecurityConfiguration
-            {
-                ApplicationCertificate = new CertificateIdentifier { StoreType = @"Directory", StorePath = @"%LocalApplicationData%/Kable/pki/own", SubjectName = "KableOpcUaClient" },
-                TrustedIssuerCertificates = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%LocalApplicationData%/Kable/pki/issuer" },
-                TrustedPeerCertificates = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%LocalApplicationData%/Kable/pki/trusted" },
-                RejectedCertificateStore = new CertificateTrustList { StoreType = @"Directory", StorePath = @"%LocalApplicationData%/Kable/pki/rejected" },
-                AutoAcceptUntrustedCertificates = autoAcceptCertificates
-            },
-            TransportConfigurations = new TransportConfigurationCollection(),
-            TransportQuotas = new TransportQuotas { OperationTimeout = 15000 },
-            ClientConfiguration = new ClientConfiguration { DefaultSessionTimeout = 60000 }
-        };
+            EndpointUrl = endpointUrl, AutoAcceptUntrustedCertificates = autoAcceptUntrustedCertificates,
+            SessionTimeoutMs = sessionTimeoutMs, SecurityMode = MessageSecurityMode.None, SecurityPolicyUri = SecurityPolicies.None
+        }, logger) { }
 
-        await config.ValidateAsync(ApplicationType.Client).ConfigureAwait(false);
+    public OpcUaClientBridge(IOptions<OpcUaOptions> options, ILogger<OpcUaClientBridge>? logger = null)
+        : this((options ?? throw new ArgumentNullException(nameof(options))).Value, logger) { }
 
-        if (autoAcceptCertificates)
-        {
-            config.CertificateValidator.CertificateValidation += (validator, e) =>
-            {
-                e.Accept = true;
-            };
-        }
-
-        return config;
+    public OpcUaClientBridge(OpcUaOptions options, ILogger<OpcUaClientBridge>? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        _security = options.Snapshot();
+        _endpointUrl = _security.EndpointUrl;
+        _sessionTimeoutMs = _security.SessionTimeoutMs;
+        _logger = logger;
     }
 
     /// <summary>
