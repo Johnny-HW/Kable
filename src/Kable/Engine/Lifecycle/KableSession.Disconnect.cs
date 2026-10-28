@@ -30,7 +30,7 @@ public sealed partial class KableSession<TMessage>
             }
             _pendingRequests.Clear();
             _alarmStream.Writer.TryComplete(ex);
-            _telemetryStream.Writer.TryComplete(ex);
+            _delivery.Complete(ex);
             _outboundNormalQueue.Writer.TryComplete(ex);
             _outboundUrgentQueue.Writer.TryComplete(ex);
 

@@ -27,7 +27,14 @@ public sealed partial class KableSession<TMessage>
                 {
                     Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
                     _healthTracker.RecordRx(1);
-                    await _dispatchQueue.Writer.WriteAsync(message, token).ConfigureAwait(false);
+                    try { await DispatchMessageAsync(message).ConfigureAwait(false); }
+                    catch (KableException) { throw; }
+                    catch (Exception error)
+                    {
+                        _observer?.OnPacketTrace(new PacketTraceRecord(DateTime.UtcNow, PacketDirection.Rx,
+                            TrafficKind.SpontaneousAlarm, "DISPATCH_MESSAGE_FAULT", ReadOnlyMemory<byte>.Empty,
+                            $"{error.GetType().Name}: {error.Message}", TimeSpan.Zero, LogLevel.Error));
+                    }
                 }
 
                 input.AdvanceTo(buffer.Start, buffer.End);
@@ -45,66 +52,11 @@ public sealed partial class KableSession<TMessage>
                 DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                 "READ_LOOP_FAULT", ReadOnlyMemory<byte>.Empty,
                 $"{ex.GetType().Name}: {ex.Message}", TimeSpan.Zero, LogLevel.Error));
-            OnConnectionClosed();
+            OnConnectionClosed(ex is KableException ? ex : new DeviceDisconnectedException("Inbound processing failed.", ex));
         }
         finally
         {
-            _dispatchQueue.Writer.TryComplete();
             OnConnectionClosed();
-        }
-    }
-
-    private async Task DispatchLoopAsync()
-    {
-        var reader = _dispatchQueue.Reader;
-
-        try
-        {
-            while (await reader.WaitToReadAsync(_sessionCts.Token).ConfigureAwait(false))
-            {
-                while (reader.TryRead(out var message))
-                {
-                    try
-                    {
-                        await DispatchMessageAsync(message).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        _observer?.OnPacketTrace(new PacketTraceRecord(
-                            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                            "DISPATCH_MESSAGE_FAULT", ReadOnlyMemory<byte>.Empty,
-                            $"{ex.GetType().Name}: {ex.Message}", TimeSpan.Zero, LogLevel.Error));
-                    }
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Normal cooperative cancellation
-        }
-        catch (Exception ex)
-        {
-            _observer?.OnPacketTrace(new PacketTraceRecord(
-                DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                "DISPATCH_LOOP_FAULT", ReadOnlyMemory<byte>.Empty,
-                $"{ex.GetType().Name}: {ex.Message}", TimeSpan.Zero, LogLevel.Error));
-        }
-        finally
-        {
-            while (reader.TryRead(out var residualMessage))
-            {
-                try
-                {
-                    await DispatchMessageAsync(residualMessage).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _observer?.OnPacketTrace(new PacketTraceRecord(
-                        DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                        "DRAIN_DISPATCH_FAULT", ReadOnlyMemory<byte>.Empty,
-                        $"{ex.GetType().Name}: {ex.Message}", TimeSpan.Zero, LogLevel.Warning));
-                }
-            }
         }
     }
 

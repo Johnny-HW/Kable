@@ -81,7 +81,7 @@ public sealed partial class KableSession<TMessage>
             var tasksToWait = new List<Task>();
             if (_readLoopTask != null) tasksToWait.Add(_readLoopTask);
             if (_outboundPumpTask != null) tasksToWait.Add(_outboundPumpTask);
-            if (_dispatchLoopTask != null) tasksToWait.Add(_dispatchLoopTask);
+            if (_deliveryTask != null) tasksToWait.Add(_deliveryTask);
             if (_heartbeatTask != null) tasksToWait.Add(_heartbeatTask);
 
             if (tasksToWait.Count > 0)

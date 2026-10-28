@@ -12,10 +12,9 @@ using Kable.Observability;
 public sealed partial class KableSession<TMessage>
 {
     private readonly Channel<TMessage> _alarmStream;
-    private readonly Channel<TMessage> _telemetryStream;
-    private long _droppedTelemetryCount;
+    private Channel<TMessage> _telemetryStream => _delivery.Stream;
 
-    public long DroppedTelemetryCount => Volatile.Read(ref _droppedTelemetryCount);
+    public long DroppedTelemetryCount => _delivery.DroppedCount;
 
     private bool DefaultIsAlarm(TMessage message)
     {
@@ -44,46 +43,7 @@ public sealed partial class KableSession<TMessage>
             return;
         }
 
-        // 일반 텔레메트리 메시지: 텔레메트리 전용 버퍼 만료 시 정책에 따라 처리 및 유실 건수 관측
-        if (!_telemetryStream.Writer.TryWrite(message))
-        {
-            if (_sessionOptions.TelemetryOverflowMode == BoundedChannelFullMode.DropOldest)
-            {
-                if (_telemetryStream.Reader.TryRead(out var droppedOld))
-                {
-                    long dropped = Interlocked.Increment(ref _droppedTelemetryCount);
-                    _observer?.OnPacketTrace(new PacketTraceRecord(
-                        DateTime.UtcNow, PacketDirection.Rx, TrafficKind.PeriodicTelemetry,
-                        "TELEMETRY_DROPPED", ReadOnlyMemory<byte>.Empty,
-                        $"Dropped 1 telemetry message ({droppedOld}) due to slow consumer. Total dropped: {dropped}",
-                        TimeSpan.Zero, LogLevel.Warning));
-                }
-                _telemetryStream.Writer.TryWrite(message);
-            }
-            else if (_sessionOptions.TelemetryOverflowMode == BoundedChannelFullMode.DropWrite)
-            {
-                long dropped = Interlocked.Increment(ref _droppedTelemetryCount);
-                _observer?.OnPacketTrace(new PacketTraceRecord(
-                    DateTime.UtcNow, PacketDirection.Rx, TrafficKind.PeriodicTelemetry,
-                    "TELEMETRY_DROPPED_LATEST", ReadOnlyMemory<byte>.Empty,
-                    $"Dropped latest telemetry message due to queue full. Total dropped: {dropped}",
-                    TimeSpan.Zero, LogLevel.Warning));
-                return;
-            }
-            else
-            {
-                // BoundedChannelFullMode.Wait (Backpressure: 소비자가 읽을 때까지 안전하게 대기)
-                try
-                {
-                    await _telemetryStream.Writer.WriteAsync(message, _sessionCts.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-            }
-        }
-
+        _delivery.Publish(message);
         _observer?.OnPacketTrace(new PacketTraceRecord(
             DateTime.UtcNow, PacketDirection.Rx, TrafficKind.PeriodicTelemetry,
             "STREAM", ReadOnlyMemory<byte>.Empty, message?.ToString(), TimeSpan.Zero));

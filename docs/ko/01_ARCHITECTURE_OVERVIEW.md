@@ -97,6 +97,21 @@ classDiagram
     IConnectionContext <|.. SerialPortConnectionContext
     IConnectionContext <|.. NamedPipeConnectionContext
 
+    %% Server / Listener Layer (1:N Hosting)
+    class IConnectionListener {
+        <<interface>>
+        +AcceptAsync(CancellationToken ct) ValueTask~IConnectionContext~
+        +Stop() void
+    }
+    class TcpConnectionListener {
+        -Socket _listenSocket
+    }
+    class IpcNamedPipeServerListener {
+        -string _pipeName
+    }
+    IConnectionListener <|.. TcpConnectionListener
+    IConnectionListener <|.. IpcNamedPipeServerListener
+
     %% Codec Layer
     class IProtocolCodec~T~ {
         <<interface>>

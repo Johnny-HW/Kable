@@ -53,6 +53,19 @@ public interface IConnectionContext : IAsyncDisposable
     
     void Abort(string reason);
 }
+
+// 클라이언트 연결 팩토리
+public interface IConnectionFactory
+{
+    ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default);
+}
+
+// 1:N 서버 리스너 (멀티 세션 수락 및 바인딩)
+public interface IConnectionListener : IAsyncDisposable
+{
+    ValueTask<IConnectionContext> AcceptAsync(CancellationToken ct = default);
+    void Stop();
+}
 ```
 
 </div>

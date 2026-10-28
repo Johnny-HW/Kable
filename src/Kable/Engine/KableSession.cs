@@ -19,19 +19,13 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
     private readonly HeartbeatOptions<TMessage>? _heartbeatOptions;
     private readonly TimeProvider _timeProvider;
 
-    // Inbound Dispatch Queue
-    private readonly Channel<TMessage> _dispatchQueue = Channel.CreateBounded<TMessage>(new BoundedChannelOptions(10000)
-    {
-        FullMode = BoundedChannelFullMode.Wait,
-        SingleWriter = true,
-        SingleReader = true
-    });
+    private readonly Streaming.InboundDelivery<TMessage> _delivery;
 
     private readonly Channel<TMessage>? _alarmSpoolQueue;
 
     private IConnectionContext? _context;
     private Task? _readLoopTask;
-    private Task? _dispatchLoopTask;
+    private Task? _deliveryTask;
     private Task? _outboundPumpTask;
     private Task? _alarmSpoolWorkerTask;
     private Task? _heartbeatTask;
@@ -79,7 +73,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
         _heartbeatOptions = heartbeatOptions;
         _timeProvider = heartbeatOptions?.TimeProvider ?? TimeProvider.System;
         DeviceId = deviceId ?? "DEFAULT";
-        _sessionOptions = sessionOptions ?? new KableSessionOptions<TMessage>();
+        _sessionOptions = (sessionOptions ?? new KableSessionOptions<TMessage>()).Snapshot();
 
         // 알람 채널: 상한(AlarmQueueCapacity) 및 포화 정책 적용 (무제한 메모리 증가 방지)
         var alarmOptions = new BoundedChannelOptions(_sessionOptions.AlarmQueueCapacity)
@@ -108,13 +102,10 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
             _alarmSpoolQueue = Channel.CreateBounded<TMessage>(spoolOptions);
         }
 
-        // 텔레메트리 채널: 상한(InboundQueueCapacity) 및 오버플로우 정책 적용 (알람과 격리)
-        var incomingOptions = new BoundedChannelOptions(_sessionOptions.InboundQueueCapacity)
-        {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleWriter = false,
-            SingleReader = false
-        };
-        _telemetryStream = Channel.CreateBounded<TMessage>(incomingOptions);
+        _delivery = new Streaming.InboundDelivery<TMessage>(_sessionOptions.InboundQueueCapacity,
+            _sessionOptions.InboundDeliveryCapacity, _sessionOptions.TelemetryOverflowMode, message =>
+                _observer?.OnPacketTrace(new PacketTraceRecord(DateTime.UtcNow, PacketDirection.Rx,
+                    TrafficKind.PeriodicTelemetry, "TELEMETRY_DROPPED", ReadOnlyMemory<byte>.Empty,
+                    message?.ToString(), TimeSpan.Zero, LogLevel.Warning)));
     }
 }

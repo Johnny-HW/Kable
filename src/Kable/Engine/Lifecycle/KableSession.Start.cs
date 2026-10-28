@@ -115,7 +115,7 @@ public sealed partial class KableSession<TMessage>
                 _healthTracker.SetState(isSimulated ? DeviceConnectionState.Simulated : DeviceConnectionState.Connected);
 
                 _outboundPumpTask = Task.Run(OutboundPumpLoopAsync);
-                _dispatchLoopTask = Task.Run(DispatchLoopAsync);
+                _deliveryTask = _delivery.RunAsync(_sessionCts.Token);
                 _readLoopTask = Task.Run(ReadLoopAsync);
 
                 if (_alarmSpoolQueue != null)

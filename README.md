@@ -43,8 +43,10 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | Binary/custom protocol and framing | `KableClientBuilder<T>` with a codec |
 | Modbus or MELSEC | `Kable.Modbus` or `Kable.Melsec` client |
 | Optional recovery after disconnection | `ReconnectingKableClient` |
+| 1:N Server Listener & Multi-session Daemon | `IConnectionListener` / `Kable.Host` (`TcpConnectionListener`, `IpcNamedPipeServerListener`) |
 
 Builder sessions need StartAsync after Build. Simple Open and Profile Connect return started clients.
+Server listeners accept incoming 1:N connections via `IConnectionListener.AcceptAsync()` and run session loops concurrently.
 Internal asynchronous loops handle sending, receiving and reply routing; they do not each reserve
 a dedicated OS thread. Keep and cancel a Task only for application-owned repeated work.
 

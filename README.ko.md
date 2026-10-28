@@ -41,8 +41,10 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | 바이너리/장비 전용 프로토콜 | `KableClientBuilder<T>`와 코덱 |
 | Modbus / MELSEC 장비 | `Kable.Modbus` / `Kable.Melsec` 클라이언트 |
 | 단절 후 선택적 연결 복구 | `ReconnectingKableClient` |
+| 1:N 서버 리스너 및 다중 세션 데몬 호스팅 | `IConnectionListener` / `Kable.Host` (`TcpConnectionListener`, `IpcNamedPipeServerListener`) |
 
 Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 시작된 클라이언트를 반환한다.
+서버/리스너는 `IConnectionListener.AcceptAsync()`를 통해 복수 클라이언트 연결(1:N)을 수락하고 세션을 병렬 구동한다.
 내부 비동기 루프가 송신·수신·응답 매칭을 담당하며 각 루프가 전용 OS 스레드를 점유하지 않는다.
 앱 고유의 반복 작업을 만들 때만 해당 Task를 보관하고 종료 시 취소 후 await한다.
 

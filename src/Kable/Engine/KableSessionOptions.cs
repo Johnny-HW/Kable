@@ -14,6 +14,11 @@ public sealed class KableSessionOptions<TMessage>
     /// </summary>
     public int InboundQueueCapacity { get; set; } = 10000;
 
+    /// <summary>Bounded delivery backlog for Wait mode. Saturation aborts without stalling request routing.</summary>
+    public int InboundDeliveryCapacity { get; set; } = 10000;
+
+    internal KableSessionOptions<TMessage> Snapshot() => (KableSessionOptions<TMessage>)MemberwiseClone();
+
     /// <summary>
     /// 메시지가 긴급 알람/이벤트인지 판별하는 델리게이트.
     /// 알람으로 판별된 메시지는 텔레메트리 버퍼가 가득 차더라도 절대로 Drop되지 않으며 최우선 보존됩니다.
