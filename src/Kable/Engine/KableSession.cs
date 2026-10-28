@@ -13,6 +13,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
 {
     private readonly IConnectionFactory _connectionFactory;
     private readonly IProtocolCodec<TMessage> _codec;
+    private readonly Decoding.FrameDecoder<TMessage> _decoder;
     private readonly ICommObserver? _observer;
     private readonly KableSessionOptions<TMessage> _sessionOptions;
     private readonly HeartbeatOptions<TMessage>? _heartbeatOptions;
@@ -73,6 +74,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
     {
         _connectionFactory = connectionFactory;
         _codec = codec;
+        _decoder = new Decoding.FrameDecoder<TMessage>(codec);
         _observer = observer;
         _heartbeatOptions = heartbeatOptions;
         _timeProvider = heartbeatOptions?.TimeProvider ?? TimeProvider.System;

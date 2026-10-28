@@ -23,7 +23,7 @@ public sealed partial class KableSession<TMessage>
                 var result = await input.ReadAsync(token).ConfigureAwait(false);
                 var buffer = result.Buffer;
 
-                while (_codec.TryDecode(ref buffer, out var message))
+                while (_decoder.TryRead(ref buffer, out var message))
                 {
                     Volatile.Write(ref _lastInboundTicks, _timeProvider.GetTimestamp());
                     _healthTracker.RecordRx(1);

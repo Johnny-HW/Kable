@@ -17,14 +17,9 @@ public sealed partial class KableSession<TMessage>
 
     public long DroppedTelemetryCount => Volatile.Read(ref _droppedTelemetryCount);
 
-    private static bool DefaultIsAlarm(TMessage message)
+    private bool DefaultIsAlarm(TMessage message)
     {
-        if (message == null) return false;
-        var text = message.ToString();
-        if (string.IsNullOrEmpty(text)) return false;
-        return text.Contains("ALARM", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("FAULT", StringComparison.OrdinalIgnoreCase) ||
-               text.Contains("EMERGENCY", StringComparison.OrdinalIgnoreCase);
+        return _codec is Kable.Codecs.IAlarmMessageClassifier<TMessage> classifier && classifier.IsAlarmMessage(message);
     }
 
     private async ValueTask EnqueueIncomingMessageAsync(TMessage message)

@@ -8,7 +8,7 @@ using System.Text;
 /// ASCII 또는 커스텀 인코딩 기반 단일/다중 바이트 구분자 라인 코덱
 /// <see cref="DelimitedFrameCodec{TMessage}"/> 베이스 클래스를 상속받아 강력한 가비지 스킵 및 OOM 방어를 공유합니다.
 /// </summary>
-public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
+public sealed class AsciiLineCodec : DelimitedFrameCodec<string>, IAlarmMessageClassifier<string>
 {
     private readonly byte _delimiter;
     private readonly Encoding _encoding;
@@ -86,6 +86,15 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>
 #endif
         span[byteCount] = _delimiter;
         output.Advance(byteCount + 1);
+    }
+
+    /// <summary>Reserved alarm frames use $/#/!/* followed by ALARM and a token boundary.</summary>
+    public bool IsAlarmMessage(string message)
+    {
+        if (string.IsNullOrEmpty(message) || message.Length < 6) return false;
+        if (message[0] != '$' && message[0] != '#' && message[0] != '!' && message[0] != '*') return false;
+        if (string.Compare(message, 1, "ALARM", 0, 5, StringComparison.OrdinalIgnoreCase) != 0) return false;
+        return message.Length == 6 || message[6] == ':' || message[6] == '_' || char.IsWhiteSpace(message[6]);
     }
 
     private string GetStringFromSequence(in ReadOnlySequence<byte> sequence)
