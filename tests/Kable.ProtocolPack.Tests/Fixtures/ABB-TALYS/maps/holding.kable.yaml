@@ -1,0 +1,16 @@
+name: StatusBlock
+table: holding
+addr: 100
+values:
+  - 1
+  - 0
+  - 42
+
+---
+
+name: Spare
+table: holding
+range:
+  start: 200
+  count: 16
+fill: 0

@@ -83,6 +83,9 @@ namespace Kable.Generators
         {
             ExecuteCommandGeneration(spc, source!);
         });
+
+        // 4. Protocol pack AdditionalFiles (complete types). Handwritten [DeviceCommand] stays on this path.
+        ProtocolPack.ProtocolPackSyntaxProvider.Register(context);
     }
 
     private static bool IsCandidateType(SyntaxNode node)

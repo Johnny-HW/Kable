@@ -1,0 +1,17 @@
+protocolPackVersion: 1
+name: MassHunter-7700
+codec: AsciiLine
+
+endpoint:
+  transport: Tcp
+  role: Server
+  host: 127.0.0.1
+  port: 9000
+
+unmatched:
+  replies:
+    - NAK
+
+csharp:
+  namespace: Icpms.MassHunter.Protocol
+  typeKind: readonly partial record struct

@@ -1,0 +1,14 @@
+name: IgnitePlasma
+match: oPON
+
+ok:
+  replies:
+    - ACK
+
+errors:
+  - name: busy
+    replies:
+      - ERR:BUSY
+  - name: fault
+    replies:
+      - ERR:FAULT

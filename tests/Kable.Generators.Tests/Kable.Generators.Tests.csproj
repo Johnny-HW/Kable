@@ -20,6 +20,14 @@
     <ProjectReference Include="..\..\src\Kable.Generators\Kable.Generators.csproj" 
                       OutputItemType="Analyzer" 
                       ReferenceOutputAssembly="true" />
+    <ProjectReference Include="..\..\src\Kable\Kable.csproj" />
+    <ProjectReference Include="..\..\src\Kable.ProtocolPack\Kable.ProtocolPack.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Fixtures\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,7 @@
+name: Digitals
+table: coil
+addr: 0
+values:
+  - true
+  - false
+  - true

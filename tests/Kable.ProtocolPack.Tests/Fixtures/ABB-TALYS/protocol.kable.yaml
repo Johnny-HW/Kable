@@ -1,0 +1,21 @@
+protocolPackVersion: 1
+name: ABB-TALYS
+codec: ModbusTcp
+
+endpoint:
+  transport: Tcp
+  role: Server
+  host: 127.0.0.1
+  port: 502
+
+unitId: 1
+
+unmatched:
+  exception: 1
+
+outOfRange:
+  exception: 2
+
+csharp:
+  namespace: Cm.Abb.Protocol
+  typeKind: readonly partial record struct

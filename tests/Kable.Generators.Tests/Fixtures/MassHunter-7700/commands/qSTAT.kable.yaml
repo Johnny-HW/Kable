@@ -1,0 +1,11 @@
+name: QueryStatus
+match: qSTAT
+
+ok:
+  replies:
+    - STAT:READY
+
+errors:
+  - name: fault
+    replies:
+      - STAT:FAULT

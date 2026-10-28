@@ -1,0 +1,6 @@
+name: Abort
+match: oABORT
+
+ok:
+  replies:
+    - ACK

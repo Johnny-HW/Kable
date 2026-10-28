@@ -1,0 +1,7 @@
+name: DataBlock
+code: D
+addr: 1000
+points: 8
+values:
+  - 0
+  - 0

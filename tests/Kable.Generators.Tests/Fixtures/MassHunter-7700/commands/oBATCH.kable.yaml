@@ -1,0 +1,8 @@
+name: StartBatch
+match: "oBATCH.{BatchPath}"
+params:
+  - name: BatchPath
+    type: string
+ok:
+  replies:
+    - ACK

@@ -1,0 +1,19 @@
+protocolPackVersion: 1
+name: Line-PLC
+codec: MelsecSlmp3E
+
+endpoint:
+  transport: Tcp
+  role: Server
+  host: 127.0.0.1
+  port: 5000
+
+unmatched:
+  endCode: 0xC059
+
+outOfRange:
+  endCode: 0xC056
+
+csharp:
+  namespace: LinePlc.Protocol
+  typeKind: readonly partial record struct
