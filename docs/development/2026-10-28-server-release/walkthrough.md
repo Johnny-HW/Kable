@@ -26,10 +26,10 @@
 
 ## 패키지 및 게시
 
-1.10.0 제품 패키지 14개를 공통 버전으로 만든다. Host는 실행 프로그램으로 게시 대상에서 제외한다.
-로컬 후보 feed 및 격리 캐시로 .NET 8/10 콘솔·WPF를 검증하고, 게시 후 공식 피드에서 재검증한다.
+1.10.0 제품 패키지 14개를 공통 버전으로 만들었다. Host는 실행 프로그램으로 게시 대상에서 제외했다.
+로컬 후보 feed 및 격리 캐시로 .NET 8/10 콘솔·WPF를 검증하고, 게시 후 공식 피드에서 재검증했다.
 콘솔 소비자 ServerProbe는 패키지의 실제 TCP 서버 수신·브로드캐스트·종료를 실행한다.
-게시 결과와 패키지 SHA-256은 완료 후 아래에 기록한다.
+게시 결과와 패키지 SHA-256은 아래에 기록했다.
 
 ## 범위 제한
 
@@ -44,3 +44,24 @@ Windows에서 검증했다. 실장비와 장기 부하 시험은 포함하지 �
 - 격리 WPF .NET 8/10에서 컨트롤 12개씩 로드 성공.
 - [로컬 후보 SHA-256](candidate-packages.json). 게시 바이너리 해시와는 별도 기록이다.
 - 로그: artifacts/server-packages.log.
+
+## 게시 완료
+
+- 태그: v1.10.0, 소스: 860d3a1aec9ad2c0c2fd3d593a828c744b965b34.
+- [배포 작업 성공](https://github.com/Johnny-HW/Kable/actions/runs/40652377974).
+- NuGet.org Created 14건, GitHub Packages pushed 14건 확인.
+- [공식 패키지](https://www.nuget.org/packages/Kable/1.10.0).
+- 배포 로그: artifacts/server-publish-success.log.
+- 이미 게시한 태그와 바이너리는 고정하고, 이후 문서에 게시 결과를 기록한다.
+
+## 공식 피드 설치·실행 검증 완료
+
+- NuGet 다운로드 인덱스 14개 모두 1.10.0 반영 확인.
+- 기존 캐시와 로컬 후보 feed를 제외하고 NuGet.org만 지정한 새 캐시로 복원했다.
+- 콘솔 .NET 8.0.27 / .NET 10.0.9 통과: 실제 TCP 서버 수신·브로드캐스트·종료 포함.
+- WPF .NET 8/10에서 컨트롤 12개씩 로드 성공.
+- 설치된 Kable 패키지 14개의 버전 1.10.0과 source=https://api.nuget.org/v3/index.json 확인.
+- [공식 피드 SHA-256](published-packages.json)은 실제 복원 캐시의 nupkg에서 계산했다.
+- [별도 전체 CI 성공](https://github.com/Johnny-HW/Kable/actions/runs/40652378094).
+- 로그: artifacts/server-public-consumers.log, artifacts/server-ci-success.log.
+- 격리 소비자와 캐시: artifacts/nuget-publication/1.10.0-b14791ec830146e7ad90e4ad6f7037b3/.

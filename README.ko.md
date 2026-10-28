@@ -3,10 +3,8 @@
 .NET 8, .NET 10, netstandard2.0용 비동기 장비 통신 라이브러리.
 장비에 맞는 API를 선택해 연결·질의·주기 조회·연결 복구를 구성한다.
 
-최신 배포 버전은 **[1.9.2](https://www.nuget.org/packages/Kable/1.9.2)**이다 (2026-10-28). [릴리즈 노트와 업그레이드 안내](docs/releases/1.9.2.ko.md),
+최신 배포 버전은 **[1.10.0](https://www.nuget.org/packages/Kable/1.10.0)**이다 (2026-10-28). [릴리즈 노트와 업그레이드 안내](docs/releases/1.10.0.ko.md),
 [변경 이력](CHANGELOG.md)을 참고한다. 아래 설치 명령은 NuGet에 게시된 버전을 설치한다.
-
-1.10.0 서버 호스팅: [배포 후보 릴리즈 노트](docs/releases/1.10.0.ko.md).
 
 ## 한 번의 질의부터 시작하기
 
