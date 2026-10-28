@@ -124,8 +124,9 @@ classDiagram
     class KableSession~T~ {
         -IConnectionContext _context
         -IProtocolCodec~T~ _codec
-        -SemaphoreSlim _fifoLock
-        -ConcurrentDictionary _pendingRequests
+        -ResponseRouter~T~ _responses
+        -InboundDelivery~T~ _delivery
+        -AlarmSpoolWorker~T~ _alarmSpool
     }
     IDeviceSession <|.. KableSession
     KableSession o-- IConnectionContext

@@ -1,0 +1,137 @@
+{
+  "codeRevision": "d7b90dc",
+  "testExecutions": 815,
+  "distinctTests": 689,
+  "testProjects": 13,
+  "packageFeed": "artifacts/release-readiness/742fc22fbacc40bf818f56e5eaad57fa",
+  "testRuns": [
+    {
+      "assembly": "kable.tests.dll",
+      "runtime": "net10.0",
+      "total": 399,
+      "passed": 399,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155210.trx"
+    },
+    {
+      "assembly": "kable.generators.tests.dll",
+      "runtime": "net10.0",
+      "total": 21,
+      "passed": 21,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155214.trx"
+    },
+    {
+      "assembly": "kable.engine.disruptor.tests.dll",
+      "runtime": "net10.0",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155216.trx"
+    },
+    {
+      "assembly": "kable.transport.ipc.tests.dll",
+      "runtime": "net10.0",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155217.trx"
+    },
+    {
+      "assembly": "kable.host.tests.dll",
+      "runtime": "net10.0",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155219.trx"
+    },
+    {
+      "assembly": "kable.observability.opentelemetry.tests.dll",
+      "runtime": "net10.0",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155220.trx"
+    },
+    {
+      "assembly": "kable.grpc.tests.dll",
+      "runtime": "net10.0",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155226.trx"
+    },
+    {
+      "assembly": "kable.sharedmemory.tests.dll",
+      "runtime": "net10.0",
+      "total": 102,
+      "passed": 102,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155227.trx"
+    },
+    {
+      "assembly": "kable.modbus.tests.dll",
+      "runtime": "net8.0",
+      "total": 110,
+      "passed": 110,
+      "failed": 0,
+      "trx": "release-solution_net8.0_20261028155232.trx"
+    },
+    {
+      "assembly": "kable.modbus.tests.dll",
+      "runtime": "net10.0",
+      "total": 110,
+      "passed": 110,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155236.trx"
+    },
+    {
+      "assembly": "kable.melsec.tests.dll",
+      "runtime": "net10.0",
+      "total": 11,
+      "passed": 11,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155237.trx"
+    },
+    {
+      "assembly": "kable.mqtt.tests.dll",
+      "runtime": "net8.0",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "trx": "release-solution_net8.0_20261028155238.trx"
+    },
+    {
+      "assembly": "kable.mqtt.tests.dll",
+      "runtime": "net10.0",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155238.trx"
+    },
+    {
+      "assembly": "kable.opcua.tests.dll",
+      "runtime": "net8.0",
+      "total": 12,
+      "passed": 12,
+      "failed": 0,
+      "trx": "release-solution_net8.0_20261028155253.trx"
+    },
+    {
+      "assembly": "kable.opcua.tests.dll",
+      "runtime": "net10.0",
+      "total": 12,
+      "passed": 12,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155307.trx"
+    },
+    {
+      "assembly": "kable.protocolpack.tests.dll",
+      "runtime": "net10.0",
+      "total": 14,
+      "passed": 14,
+      "failed": 0,
+      "trx": "release-solution_net10.0_20261028155308.trx"
+    }
+  ]
+}

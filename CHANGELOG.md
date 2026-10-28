@@ -21,12 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release documentation, package README/license inclusion, and isolated .NET 8/10 console/WPF package verification.
 
 ### Changed
+- Use explicit alarm classification and a bounded telemetry delivery worker; saturated Wait backlogs now terminate with TelemetryBufferOverflowException.
+- Separate response reservations, telemetry delivery and alarm spool ownership behind the existing session API.
 - Support request/response framing in Modbus RTU and MELSEC SLMP 3E codecs.
 - Set the shared package version to 1.9.2; publication remains pending.
 - Support .NET 8 and .NET 10 in Modbus, MQTT and OPC UA modules.
 - Use secure defaults for OPC UA Options/DI; retain the legacy string constructor for unsecured compatibility.
 
 ### Fixed
+- Route normal NO_FAULT-style replies correctly and retry decoding complete frames after consumed garbage.
+- Complete TCP/NamedPipe cleanup after Abort, serialize concurrent abort/disposal and share disposal completion.
+- Release MQTT/OPC UA subscription resources even when recovery workers fault.
 - Honor Serial connection cancellation and dispose connections that open after cancellation.
 - Complete Serial cleanup after Abort and validate Modbus response headers, quantities and write acknowledgements.
 

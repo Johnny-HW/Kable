@@ -85,6 +85,9 @@ AutoAcceptUntrustedCertificates는 개발용이다. 켜더라도 만료·호스�
 - .NET 8 지원은 빌드뿐 아니라 실제 .NET 8 테스트와 소비자 실행 결과를 확인한다.
 - IModbusMaster·IOpcUaClientBridge 기존 인터페이스는 유지한다. 새 API는 확장 계약/구체 타입으로 사용한다.
 - FIFO 송신 후 실패는 세션을 종료하며 쓰기를 자동 재전송하지 않는다.
+- 알람은 IsAlarmMessage 또는 선택적 코덱 IAlarmMessageClassifier 계약으로 분류한다. 기존 FAULT/EMERGENCY 부분 문자열 의존 코드는 명시적 프로토콜 규칙으로 옮긴다.
+- Wait 텔레메트리는 별도 유한 전달 큐를 사용한다. InboundDeliveryCapacity까지 포화되면 TelemetryBufferOverflowException으로 종료한다. [설정 예제](DEVELOPER_USAGE.md#알람-분류와-느린-스트림-소비자-192)를 확인한다.
+- TCP/NamedPipe와 MQTT/OPC UA는 정리 오류를 AggregateException으로 보고할 수 있다. DisposeAsync도 await하고 오류를 기록한다.
 - 유한 구독 큐의 드롭 정책과 재연결 중 누락 가능성을 앱에서 처리한다.
 - 전체 통신은 무할당이 아니다. 실제 할당/성능 기준은 기존 측정 범위를 따른다.
 

@@ -139,8 +139,9 @@ classDiagram
     class KableSession~T~ {
         -IConnectionContext _context
         -IProtocolCodec~T~ _codec
-        -SemaphoreSlim _fifoLock
-        -ConcurrentDictionary _pendingRequests
+        -ResponseRouter~T~ _responses
+        -InboundDelivery~T~ _delivery
+        -AlarmSpoolWorker~T~ _alarmSpool
     }
     IDeviceSession <|.. KableSession
     KableSession o-- IConnectionContext
@@ -150,3 +151,10 @@ classDiagram
 </div>
 
 </div>
+
+### 세션 내부 책임 소유권
+
+KableSession은 수명과 작업을 조율한다. ResponseRouter는 FIFO/CID 예약과 응답 매칭·실패 전파를,
+InboundDelivery는 유한 텔레메트리 전달과 드롭 집계를, AlarmSpoolWorker는 저장 대기열·워커와
+Stored/InDoubt/Unprocessed 집계를 각각 소유한다. 프레임 소비 계약은 FrameDecoder가 검증한다.
+이 객체들은 내부 구현이며 IDeviceSession/IProtocolCodec 구현자에게 새 필수 멤버를 요구하지 않는다.

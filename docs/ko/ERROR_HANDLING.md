@@ -13,6 +13,8 @@
 | 요청 전 취소/FIFO 락 대기 중 취소 | 취소 예외, 세션 유지 가능 | 취소 원인 처리; 상세 수명 표 확인 |
 | 물리 단절 | 대기 중 요청의 `DeviceDisconnectedException` | 연결 복구와 장비 상태 확인 |
 | CID 요청 timeout | 해당 요청 실패, 세션 유지 가능 | 프로토콜의 CID 재사용·지연 응답 정책에 따라 처리 |
+| Wait 전달 대기열 포화 | `TelemetryBufferOverflowException`, 세션 종료 | 소비 속도·큐 용량 조정 또는 Drop 정책 선택 후 새 세션 생성 |
+| 알람 큐/저장 실패 | `AlarmBufferOverflowException`, 세션 종료 | 저장소·소비자와 `SpoolSummary`의 Stored/InDoubt/Unprocessed 확인 |
 | 재연결 진행 중 요청 | `DeviceDisconnectedException` | 복구 이벤트/상태 확인 후 다음 작업 결정 |
 
 예외만 보고 장비에서 명령이 실행되지 않았다고 판단하지 않는다.
@@ -96,3 +98,14 @@ OpenAsync에 전달한 토큰은 최초 연결에 적용된다. 이후 래퍼 �
 
 진단에는 오류 종류, 장비 ID/주소, 명령, 연결/요청 제한시간과 `ICommObserver`의 최근
 송수신 기록을 함께 남긴다. [관측성 가이드](ko/03_OBSERVABILITY_LOGGING.md)를 참고한다.
+
+## 종료 중 오류
+
+TCP/NamedPipe의 Abort는 즉시 연결을 끊는다. 이후에도 DisposeAsync를 호출해 파이프라인과
+취소 자원을 정리한다. 동시 DisposeAsync 호출은 같은 완료 작업과 실패 결과를 공유한다.
+정리 단계가 실패해도 나머지 단계는 수행하고 AggregateException으로 실패를 보고한다.
+
+MQTT/OPC UA의 복구 작업이 실패해도 DisposeAsync는 채널·클라이언트·구독·세션과
+인증 자원을 정리한 뒤 AggregateException을 반환한다. 이 오류도 종료를 await한 위치에서
+기록한다. 구독 채널에는 이미 받은 값이 남을 수 있으므로 정상 완료를 기다리려면 먼저 비운다.
+알람 저장 콜백은 전달받은 취소 토큰을 준수해야 기존 저장/종료 제한시간이 작동한다.

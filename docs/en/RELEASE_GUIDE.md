@@ -45,3 +45,26 @@ Run `./tools/release/VerifySolution.ps1` and `./tools/release/VerifyPackages.ps1
 The latter writes a separate local feed, isolated cache, clean consumers and a SHA-256 package
 manifest under artifacts/release-readiness/. Product packages must come from that local feed;
 third-party dependencies may use the existing cache as a read-only feed or nuget.org.
+
+## Session hardening migration (1.9.2)
+
+Alarm classification uses `KableSessionOptions.IsAlarmMessage`, or the optional
+`IAlarmMessageClassifier<TMessage>` implemented by a codec. Arbitrary ToString substring matches
+are removed: `NO_FAULT` is a normal reply. AsciiLineCodec reserves $/#/!/* followed by ALARM
+(case insensitive) and end-of-string, colon, underscore or whitespace. Define device-specific
+FAULT/EMERGENCY frames explicitly. The options predicate replaces the codec alarm rule.
+
+Wait telemetry delivery now runs in a separate bounded worker. `InboundQueueCapacity` bounds the
+consumer queue and `InboundDeliveryCapacity` bounds its backlog (both default to 10,000).
+One message can additionally be held by the worker. Saturating the backlog terminates the session
+with `TelemetryBufferOverflowException`; it cannot indefinitely block reply matching or alarm routing.
+DropOldest/DropNewest/DropWrite use the consumer queue directly; inspect `DroppedTelemetryCount`.
+Options are copied at session construction. Keep classification and observer callbacks short.
+
+Custom decoders must consume input on success. False with consumed invalid bytes retries immediately;
+false without progress awaits more input. Success without consumption or input growth is a protocol violation.
+
+Always await DisposeAsync after Abort. TCP/NamedPipe cleanup completes the pipelines even after abort,
+and concurrent disposers share completion. MQTT/OPC UA cleanup releases channels, sessions and identities
+when a recovery worker fails. Cleanup errors can surface as AggregateException after resource release.
+FIFO cancellation/timeout and existing alarm spool accounting/drain contracts are preserved.

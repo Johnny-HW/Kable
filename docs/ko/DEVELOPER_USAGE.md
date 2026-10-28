@@ -120,3 +120,48 @@ string wire = command.FormatWireMessage(); // oPON
 옵션 생성은 연결을 시작하지 않는다. Reply enum은 응답 파서가 아니며 앱이 수신 문자열을 해석해야 한다. Modbus/MELSEC은 맵 상수만 생성하고 RW 헬퍼는 생성하지 않는다. 로더·저장은 동기 파일 I/O이므로 통신 루프에서 호출하지 않는다.
 
 RTU는 지원 FC의 요청/응답을 길이와 CRC로 구별한다. SLMP 3E는 요청/응답 프레임을 모두 지원하며 `IsResponse && IsSuccess`로 정상 응답을 판정한다. 두 코덱 모두 상관 ID가 없어 FIFO 계약을 유지한다. [전체 스키마·진단·제약](../PROTOCOL_PACK.md)을 참고한다.
+
+## 알람 분류와 느린 스트림 소비자 (1.9.2)
+
+엔진은 응답의 `ToString()`에 ALARM/FAULT/EMERGENCY가 포함됐다는 이유로 알람으로 바꾸지 않는다.
+`NO_FAULT` 같은 정상 응답은 FIFO/CID 대기 요청으로 전달한다. 분류 순서는
+`KableSessionOptions.IsAlarmMessage` → 선택적 `IAlarmMessageClassifier<TMessage>` 코덱 계약이다.
+둘 다 없으면 알람으로 분류하지 않는다. 자동 발행 메시지 판정은 기존 `IsAutonomousMessage`를 따른다.
+명시적 알람은 대기 요청이 있어도 알람 채널로 보낸다.
+
+`AsciiLineCodec`은 $/#/!/* 다음에 ALARM(대소문자 무관)이 오고, 이어서 문자열 끝·콜론·밑줄·공백이
+오는 예약 프레임을 알람으로 인식한다. 예: `$ALARM:STOP`, `!ALARM_LEVEL`.
+기존 FAULT/EMERGENCY 등 장비 고유 프레임은 실제 프로토콜에 맞게 명시한다.
+
+```csharp
+using Kable.Codecs;
+using Kable.Engine;
+using Kable.Transports;
+using System.Threading.Channels;
+
+var options = new KableSessionOptions<string>
+{
+    IsAlarmMessage = message => message.StartsWith("EVENT:", StringComparison.Ordinal),
+    InboundQueueCapacity = 1000,
+    InboundDeliveryCapacity = 2000,
+    TelemetryOverflowMode = BoundedChannelFullMode.Wait
+};
+await using var session = new KableSession<string>(
+    new TcpConnectionFactory("192.168.0.100", 9000), new AsciiLineCodec(), options);
+await session.StartAsync();
+```
+
+옵션은 세션 생성 시 복사하므로 이후 원본 옵션 변경은 실행 중 세션에 적용되지 않는다.
+위 분류기는 코덱의 예약 알람 규칙을 대체한다. 두 규칙 모두 필요하면 델리게이트에 포함한다.
+분류기와 관측 콜백은 수신 경로에서 동기 실행되므로 짧게 유지한다.
+
+Wait 모드는 별도 전달 워커에서 소비자를 기다린다. 응답 매칭과 알람 분배는 소비자를 기다리지 않는다.
+스트림 큐 1000개 + 전달 대기열 2000개 + 워커 처리 중 최대 1개까지 보관할 수 있다.
+전달 대기열까지 포화되면 `TelemetryBufferOverflowException`으로 세션을 종료하며 조용히 버리지 않는다.
+최신 텔레메트리 위주로 유지하려면 DropOldest를 선택한다. DropNewest/DropWrite도 지원하며
+`DroppedTelemetryCount`로 유실 건수를 관찰한다. Drop 모드에는 별도 전달 대기열을 만들지 않는다.
+알람은 별도 유한 큐와 기존 저장/중단 정책을 사용한다.
+
+커스텀 코덱은 `TryDecode`가 true일 때 반드시 입력을 소비해야 한다. false로 잘못된 바이트를
+소비한 경우 엔진이 남은 입력을 즉시 재시도한다. 입력을 소비하지 않은 false만 추가 입력을 기다린다.
+성공하면서 소비하지 않거나 입력 길이를 늘리는 구현은 `ProtocolViolationException`으로 거부한다.
