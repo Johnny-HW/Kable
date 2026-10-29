@@ -60,7 +60,7 @@ public sealed partial class KableSession<TMessage>
         if (string.IsNullOrEmpty(cid))
         {
             // Strict FIFO Mode
-            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var timeoutCts = CreateRequestDeadline(timeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             var effectiveToken = linkedCts.Token;
 
@@ -73,7 +73,7 @@ public sealed partial class KableSession<TMessage>
                 if (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
                 {
                     _healthTracker.RecordError(1);
-                    throw new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
+                    throw CreateTimeoutError(request, timeout);
                 }
                 throw;
             }
@@ -127,13 +127,13 @@ public sealed partial class KableSession<TMessage>
                 {
                     _healthTracker.RecordError(1);
                     OnConnectionClosed();
-                    var timeoutError = new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
+                    var timeoutError = CreateTimeoutError(request, timeout);
                     try
                     {
                         _observer?.OnPacketTrace(new PacketTraceRecord(
                             DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                             "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
-                            $"Command '{request}' timed out after {timeout.TotalMilliseconds}ms.",
+                            $"Command '{timeoutError.Command}' timed out after {timeout.TotalMilliseconds}ms.",
                             timeout, LogLevel.Warning));
                     }
                     catch (Exception traceError)
@@ -160,7 +160,7 @@ public sealed partial class KableSession<TMessage>
         {
             // Full-Duplex Multiplexed CID Mode
             // Validate timeout and create cancellation resources before reserving a CID.
-            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var timeoutCts = CreateRequestDeadline(timeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             var effectiveToken = linkedCts.Token;
 
@@ -202,13 +202,14 @@ public sealed partial class KableSession<TMessage>
             catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
             {
                 _healthTracker.RecordError(1);
+                var timeoutError = CreateTimeoutError(request, timeout);
                 _observer?.OnPacketTrace(new PacketTraceRecord(
                     DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                     "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
-                    $"Command '{request}' timed out after {timeout.TotalMilliseconds}ms.",
+                    $"Command '{timeoutError.Command}' timed out after {timeout.TotalMilliseconds}ms.",
                     timeout, LogLevel.Warning));
 
-                throw new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
+                throw timeoutError;
             }
             finally
             {

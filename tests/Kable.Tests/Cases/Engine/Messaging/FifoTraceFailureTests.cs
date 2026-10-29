@@ -2,11 +2,13 @@ namespace Kable.Tests.Cases.Engine.Messaging;
 
 using System.Threading.Channels;
 using Kable.Codecs;
+using Kable.Core;
 using Kable.Engine;
 using Kable.Exceptions;
 using Kable.Observability;
 using Kable.Tests.Fixtures;
 using Xunit;
+using Microsoft.Extensions.Time.Testing;
 
 public sealed class FifoTraceFailureTests
 {
@@ -17,14 +19,17 @@ public sealed class FifoTraceFailureTests
     {
         var factory = new TestMemoryConnectionFactory();
         var observer = new ThrowingObserver(failingTag);
-        await using var session = new KableSession<string>(factory, new AsciiLineCodec(), observer);
+        var clock = new FakeTimeProvider();
+        var heartbeat = new HeartbeatOptions<string>(TimeSpan.FromHours(1), TimeSpan.FromHours(2), () => "PING", timeProvider: clock);
+        await using var session = new KableSession<string>(factory, new AsciiLineCodec(), observer, heartbeat);
         await session.StartAsync();
-        var request = session.RequestAsync<string>("REQUEST", TimeSpan.FromMilliseconds(300)).AsTask();
+        var request = session.RequestAsync<string>("REQUEST", TimeSpan.FromMinutes(1)).AsTask();
         // Observe the send trace, not the pipe that safe-close can already have completed.
         await observer.Sent.Task.WaitAsync(TimeSpan.FromSeconds(5));
         if (failingTag == "DEVICE_TIMEOUT")
         {
-            var error = await Assert.ThrowsAsync<DeviceTimeoutException>(() => request);
+            clock.Advance(TimeSpan.FromMinutes(2));
+            var error = await Assert.ThrowsAsync<DeviceTimeoutException>(() => request.WaitAsync(TimeSpan.FromSeconds(5)));
             Assert.Same(observer.Failure, error.Data["TraceException"]);
         }
         else
