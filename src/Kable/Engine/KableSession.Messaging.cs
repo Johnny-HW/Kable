@@ -78,6 +78,8 @@ public sealed partial class KableSession<TMessage>
                 throw;
             }
 
+            bool sent = false;
+            bool responseReceived = false;
             try
             {
                 EnsureConnected();
@@ -88,6 +90,7 @@ public sealed partial class KableSession<TMessage>
                 {
                     await _outboundNormalQueue.Writer.WriteAsync(cmd, effectiveToken).ConfigureAwait(false);
                     await WaitWithCancellationAsync(cmd.Completion.Task, effectiveToken).ConfigureAwait(false);
+                    sent = true;
 
                     var effectiveKind = CommTrafficContext.CurrentKind;
                     TraceRequestPacket(request, PacketDirection.Tx, effectiveKind, "REQ_TX", TimeSpan.Zero);
@@ -99,6 +102,7 @@ public sealed partial class KableSession<TMessage>
                 }
 
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
+                responseReceived = true;
                 var latency = _timeProvider.GetElapsedTime(startTimestamp);
                 _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
 
@@ -122,17 +126,22 @@ public sealed partial class KableSession<TMessage>
                 if (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
                 {
                     _healthTracker.RecordError(1);
+                    OnConnectionClosed();
                     _observer?.OnPacketTrace(new PacketTraceRecord(
                         DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                         "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
                         $"Command '{request}' timed out after {timeout.TotalMilliseconds}ms.",
                         timeout, LogLevel.Warning));
 
-                    OnConnectionClosed();
                     throw new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
                 }
 
                 OnConnectionClosed();
+                throw;
+            }
+            catch
+            {
+                if (sent && !responseReceived) OnConnectionClosed();
                 throw;
             }
             finally
