@@ -91,6 +91,7 @@ public sealed partial class KableSession<TMessage>
     {
         if (_heartbeatOptions == null) return;
         var checkInterval = TimeSpan.FromMilliseconds(Math.Max(10, _heartbeatOptions.Interval.TotalMilliseconds / 2));
+        Task? pendingPing = null;
 
         try
         {
@@ -109,34 +110,47 @@ public sealed partial class KableSession<TMessage>
 
                 if (elapsed > _heartbeatOptions.Timeout)
                 {
+                    OnConnectionClosed();
                     _observer?.OnPacketTrace(new PacketTraceRecord(
                         DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                         "HEARTBEAT_TIMEOUT", ReadOnlyMemory<byte>.Empty,
                         $"Heartbeat timeout. No inbound traffic for {elapsed.TotalMilliseconds:F0}ms (limit: {_heartbeatOptions.Timeout.TotalMilliseconds:F0}ms).",
                         elapsed, LogLevel.Critical));
 
-                    OnConnectionClosed();
                     break;
                 }
 
                 // Send Ping via Outbound queue
                 try
                 {
+                    if (pendingPing != null)
+                    {
+                        if (!pendingPing.IsCompleted) continue;
+                        await pendingPing.ConfigureAwait(false);
+                        pendingPing = null;
+                    }
                     var pingMsg = _heartbeatOptions.PingFactory();
                     var cmd = new OutboundCommand(pingMsg, isUrgent: false);
                     if (_outboundNormalQueue.Writer.TryWrite(cmd))
                     {
-                        await cmd.Completion.Task.ConfigureAwait(false);
+                        pendingPing = cmd.Completion.Task;
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    OnConnectionClosed(new DeviceDisconnectedException("Heartbeat failed.", ex));
                     break;
                 }
             }
         }
         catch (OperationCanceledException)
         {
+        }
+        finally
+        {
+            if (pendingPing != null)
+                _ = pendingPing.ContinueWith(t => { _ = t.Exception; }, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
     }
 
