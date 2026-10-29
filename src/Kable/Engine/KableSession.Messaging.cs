@@ -127,13 +127,20 @@ public sealed partial class KableSession<TMessage>
                 {
                     _healthTracker.RecordError(1);
                     OnConnectionClosed();
-                    _observer?.OnPacketTrace(new PacketTraceRecord(
-                        DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
-                        "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
-                        $"Command '{request}' timed out after {timeout.TotalMilliseconds}ms.",
-                        timeout, LogLevel.Warning));
-
-                    throw new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
+                    var timeoutError = new DeviceTimeoutException(request?.ToString() ?? "UnknownCommand", timeout);
+                    try
+                    {
+                        _observer?.OnPacketTrace(new PacketTraceRecord(
+                            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+                            "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
+                            $"Command '{request}' timed out after {timeout.TotalMilliseconds}ms.",
+                            timeout, LogLevel.Warning));
+                    }
+                    catch (Exception traceError)
+                    {
+                        timeoutError.Data["TraceException"] = traceError;
+                    }
+                    throw timeoutError;
                 }
 
                 OnConnectionClosed();
