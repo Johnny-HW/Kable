@@ -3,9 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.10.0</Version>
+    <Version>1.10.1</Version>
     <PackageVersion>$(Version)</PackageVersion>
-    <PackageReleaseNotes>$(Version): Add multi-client server hosting with per-connection codecs, targeted sends, bounded broadcasts, connection limits and graceful shutdown. Preserve existing client APIs and packet trace constructors. Include English/Korean server guides and .NET 8/10 package verification.</PackageReleaseNotes>
+    <PackageReleaseNotes>$(Version): Preserve FIFO safe-close and timeout errors when diagnostics fail; keep heartbeat monitoring active during stalled writes; validate binary outbound frame lengths.</PackageReleaseNotes>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

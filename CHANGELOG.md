@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.1] - 2026-10-29
+
+[Release notes](docs/releases/1.10.1.md) / [한국어](docs/releases/1.10.1.ko.md).
+
+### Fixed
+- Preserve FIFO safe-close and timeout exceptions when tracing or message formatting fails.
+- Keep heartbeat monitoring active during stalled Ping writes and close on Ping creation failure.
+- Validate binary outbound payload limits before writing length headers.
+
+### Changed
+- Apply the configured TimeProvider to request deadlines on .NET 8/10.
+- Make timeout regression tests use controlled virtual time.
+
+---
+
 ## [1.10.0] - 2026-10-28
 
 [Release notes](docs/releases/1.10.0.md) / [한국어](docs/releases/1.10.0.ko.md).
