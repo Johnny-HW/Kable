@@ -43,6 +43,9 @@ public sealed class BinaryLengthPrefixedCodec : LengthFieldCodec<ReadOnlyMemory<
 
     public override void Encode(ReadOnlyMemory<byte> message, IBufferWriter<byte> output)
     {
+        if (message.Length > Options.MaxPayloadSize || (_headerLength == 2 && message.Length > ushort.MaxValue))
+            throw new ArgumentOutOfRangeException(nameof(message), "Payload exceeds the configured or representable length.");
+
         var span = output.GetSpan(_headerLength + message.Length);
 
         if (_headerLength == 2)
