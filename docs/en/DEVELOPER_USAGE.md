@@ -145,3 +145,20 @@ string wire = command.FormatWireMessage(); // oPON
 Creating options does not open a connection. Reply enums do not parse responses; the application must interpret incoming strings. Modbus/MELSEC emit map constants, not read/write helpers. Loading/saving uses synchronous file I/O and belongs outside communication loops.
 
 RTU distinguishes supported request/response FCs by length and CRC. SLMP 3E supports both directions; check `IsResponse && IsSuccess` for successful responses. Both codecs retain FIFO contracts without correlation IDs. See the [schema, diagnostics and limitations (Korean)](../PROTOCOL_PACK.md).
+
+## Heartbeat and binary length limits in 1.10.1
+
+Heartbeat monitoring continues checking inbound inactivity while a Ping write is pending.
+Only one Ping send is pending at a time. Inbound inactivity beyond Timeout or a PingFactory
+failure closes the connection; reconnect with a new session.
+
+On .NET 8/10, HeartbeatOptions.TimeProvider also controls request deadlines. The default is
+system time. Tests using virtual time must advance that clock to trigger request timeouts.
+netstandard2.0 request deadlines continue using system timers.
+
+The BinaryLengthPrefixedCodec constructor's maxFrameSize argument limits payload size;
+the header is additional. Encode checks the configured limit and header representable range
+before writing and throws ArgumentOutOfRangeException for oversized payloads. A two-byte
+header supports at most 65,535 payload bytes, even with the default 65,536-byte configuration.
+This describes direct Encode calls. An encoding failure inside a session's send pump can close
+the session, so validate payload sizes before sending.

@@ -109,3 +109,15 @@ MQTT/OPC UA의 복구 작업이 실패해도 DisposeAsync는 채널·클라이�
 인증 자원을 정리한 뒤 AggregateException을 반환한다. 이 오류도 종료를 await한 위치에서
 기록한다. 구독 채널에는 이미 받은 값이 남을 수 있으므로 정상 완료를 기다리려면 먼저 비운다.
 알람 저장 콜백은 전달받은 취소 토큰을 준수해야 기존 저장/종료 제한시간이 작동한다.
+
+## 1.10.1 진단 실패와 FIFO 수명
+
+FIFO 명령 송신 후 응답을 확정하기 전에 송신 추적이 실패하면 세션을 종료한다.
+관찰자 예외를 받은 호출자도 기존 클라이언트를 폐기하고 새 연결을 사용한다.
+명령이 실행되었을 수 있으므로 자동 재전송하지 않는다.
+
+FIFO 타임아웃 로그가 실패해도 호출자에게는 DeviceTimeoutException을 반환한다.
+로그 오류는 ex.Data["TraceException"]에 보존한다. 메시지 ToString()이 실패하면
+Command는 "UnknownCommand"이며 원인은 ex.Data["CommandFormattingException"]에 보존한다.
+이 진단 항목은 오류가 발생한 경우에만 존재한다. CID 타임아웃의 관찰자 예외까지
+동일하게 격리한다는 의미는 아니다.

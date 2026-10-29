@@ -96,3 +96,15 @@ Do not block inside communication events with `.Wait()`, `.Result` or synchronou
 
 For diagnostics, retain the exception, device ID/endpoint, command, connection/query deadlines
 and recent `ICommObserver` traffic. See [observability](en/03_OBSERVABILITY_LOGGING.md).
+
+## Diagnostic failures and FIFO lifetime in 1.10.1
+
+If send tracing fails after a FIFO command is transmitted but before its response is confirmed,
+the session closes. Dispose that client and create a new connection even when the caller sees
+an observer exception. Check equipment state before retrying: transmission may have succeeded.
+
+FIFO timeout logging failures do not replace DeviceTimeoutException. The logging failure is
+retained in ex.Data["TraceException"]. If message ToString() fails, Command is "UnknownCommand"
+and ex.Data["CommandFormattingException"] retains the cause. These entries exist only when
+that diagnostic operation fails. This isolation does not extend to observer exceptions in the
+CID timeout logging path.
