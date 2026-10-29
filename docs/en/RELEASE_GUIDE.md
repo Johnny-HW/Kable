@@ -1,3 +1,5 @@
+> Latest release: **1.10.1** (2026-10-29). [Release notes](../releases/1.10.1.md) · [Publication verification](https://github.com/Johnny-HW/Kable/actions/runs/40816337009).
+
 # Kable releases and installation
 
 1.10.0 was published on NuGet on 2026-10-28. See the [official package](https://www.nuget.org/packages/Kable/1.10.0) and [publication verification](../development/2026-10-28-server-release/walkthrough.md).

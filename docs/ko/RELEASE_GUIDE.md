@@ -1,3 +1,5 @@
+> 최신 버전: **1.10.1** (2026-10-29). [릴리즈 노트](../releases/1.10.1.ko.md) · [게시 검증](https://github.com/Johnny-HW/Kable/actions/runs/40816337009).
+
 # Kable 설치·보안·업그레이드·배포 안내
 
 상태: **1.10.0 NuGet 게시 완료 (2026-10-28)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.10.0)와 [게시·공식 피드 검증 결과](../development/2026-10-28-server-release/walkthrough.md)를 참고한다.
