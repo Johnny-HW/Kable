@@ -3,7 +3,7 @@
 Asynchronous device communication for .NET 8, .NET 10 and netstandard2.0.
 Connect, query, poll and recover connections using the API that matches your equipment.
 
-Latest release: **[1.10.0](https://www.nuget.org/packages/Kable/1.10.0)** (2026-10-28). Read the [release notes and upgrade guidance](docs/releases/1.10.0.md)
+Latest release: **[1.10.1](https://www.nuget.org/packages/Kable/1.10.1)** (2026-10-29). Read the [release notes and upgrade guidance](docs/releases/1.10.1.md)
 or the [changelog](CHANGELOG.md). The installation command below selects the version available on NuGet.
 
 Read the [installation, security and release guide](docs/en/RELEASE_GUIDE.md) before upgrading or publishing.

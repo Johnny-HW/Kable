@@ -2,9 +2,8 @@
 
 # Kable 설치·보안·업그레이드·배포 안내
 
-상태: **1.10.0 NuGet 게시 완료 (2026-10-28)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.10.0)와 [게시·공식 피드 검증 결과](../development/2026-10-28-server-release/walkthrough.md)를 참고한다.
-이 안내는 배포 전에 먼저 작성하며, 아래 검증 항목의 결과는
-[1.10.0 검증 결과](../development/2026-10-28-server-release/walkthrough.md)에 기록한다.
+상태: **1.10.1 NuGet 게시 완료 (2026-10-29)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.10.1)와 [게시 검증 결과](https://github.com/Johnny-HW/Kable/actions/runs/40816337009)를 참고한다.
+1.10.1의 변경 사항과 호환성은 [릴리즈 노트](../releases/1.10.1.ko.md)에 기록한다.
 
 ## 환경과 패키지 선택
 
@@ -32,7 +31,7 @@ Serial과 공유 메모리의 플랫폼 제약은 사용하는 드라이버와 �
 ```powershell
 dotnet new console -n EquipmentApp -f net8.0
 Set-Location EquipmentApp
-dotnet add package Kable --version 1.10.0
+dotnet add package Kable --version 1.10.1
 ```
 
 미게시 후보 버전은 위 명령으로 설치된다고 가정하지 않는다.

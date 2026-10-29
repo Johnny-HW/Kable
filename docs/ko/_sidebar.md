@@ -31,4 +31,5 @@
 
 * **서버 호스팅**
   * [다중 클라이언트 서버](ko/SERVER_HOSTING.md)
+  * [1.10.1 릴리즈 노트](releases/1.10.1.ko.md)
   * [1.10.0 릴리즈 노트](releases/1.10.0.ko.md)

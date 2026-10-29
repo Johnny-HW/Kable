@@ -2,7 +2,7 @@
 
 # Kable releases and installation
 
-1.10.0 was published on NuGet on 2026-10-28. See the [official package](https://www.nuget.org/packages/Kable/1.10.0) and [publication verification](../development/2026-10-28-server-release/walkthrough.md).
+1.10.1 was published on NuGet on 2026-10-29. See the [official package](https://www.nuget.org/packages/Kable/1.10.1) and [publication verification](https://github.com/Johnny-HW/Kable/actions/runs/40816337009).
 Read the [Korean release guide](../ko/RELEASE_GUIDE.md) for the complete procedure and
 [validation report](../development/2026-10-28-server-release/walkthrough.md) for measured results.
 
@@ -12,7 +12,7 @@ Kable/Core target netstandard2.0, .NET 8 and .NET 10. Modbus, MQTT and OPC UA ta
 .NET 8 and .NET 10. WPF is Windows-only; inspect each package's manifest
 for its exact supported target frameworks. Keep Kable product package versions aligned.
 
-Install with `dotnet add package Kable --version 1.10.0`.
+Install with `dotnet add package Kable --version 1.10.1`.
 Before publication, use the isolated local-feed package consumer verification under tools/release/.
 The QuickStart sample uses a local simulated device and needs no hardware.
 

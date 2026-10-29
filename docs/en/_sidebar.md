@@ -29,4 +29,5 @@
 
 * **Server hosting**
   * [Multi-client server](en/SERVER_HOSTING.md)
+  * [1.10.1 release notes](releases/1.10.1.md)
   * [1.10.0 release notes](releases/1.10.0.md)
