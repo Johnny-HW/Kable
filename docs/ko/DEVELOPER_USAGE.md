@@ -3,6 +3,44 @@
 [처음 연결하는 순서](ko/GETTING_STARTED.md)에서 Simple/Profile/Builder를 선택한 뒤 이 문서의
 설정 우선순위와 이벤트 계약을 참고한다. 실패 후 다음 행동은 [실패 처리와 종료](ko/ERROR_HANDLING.md)에 있다.
 
+## API 선택과 요청 흐름
+
+```mermaid
+flowchart TD
+    A[장비 통신 시작] --> B{필요한 기능}
+    B -->|문자열 질의| C[KableSimple]
+    B -->|주기 조회와 최신값| D[KableProfileManager]
+    B -->|바이너리 또는 전용 코덱| E[KableClientBuilder]
+    B -->|여러 클라이언트 수락| F[KableServerBuilder]
+    C --> G[열린 클라이언트 사용]
+    D --> G
+    E --> H[Build 후 StartAsync]
+    F --> I[서버 Build 후 StartAsync]
+```
+
+Modbus·MELSEC는 해당 프로토콜 클라이언트를 사용한다. 아래는 일반 클라이언트 세션의 요청 흐름이다.
+
+```mermaid
+flowchart TD
+    A[RequestAsync 호출] --> B{요청 모드}
+    B -->|FIFO| C[FIFO 락과 응답 예약]
+    B -->|CID| D[고유 CID 응답 예약]
+    C --> E[송신 큐 등록]
+    D --> E
+    E --> F[코덱 인코딩과 Flush]
+    F --> G[응답 수신과 디코딩]
+    G --> H{자율 메시지 또는 알람}
+    H -->|예| I[스트림 또는 알람 경로]
+    I --> G
+    H -->|아니오| J{대기 요청과 매칭}
+    J -->|성공| K[응답 반환과 예약 정리]
+    J -->|실패| L[수신 스트림으로 전달]
+    L --> G
+```
+
+요청 제한시간에는 FIFO 락 대기와 송신 대기도 포함된다. timeout·취소·단절은
+[오류 처리 흐름](ko/ERROR_HANDLING.md)의 정책을 따른다. CID 코덱은 요청에 유효한 CID를 제공해야 한다.
+
 ## 통신 루프와 호출자 Task
 
 Simple과 Profile은 연결과 내부 송수신을 시작한 클라이언트를 반환한다.

@@ -4,6 +4,44 @@ Start with [your first connection](en/GETTING_STARTED.md), then use this page fo
 configuration precedence and advanced sessions. [Failures and shutdown](en/ERROR_HANDLING.md)
 describes what to do after an exception.
 
+## Choose an API and follow a request
+
+```mermaid
+flowchart TD
+    A[Start device communication] --> B{Required behavior}
+    B -->|String queries| C[KableSimple]
+    B -->|Polling and latest values| D[KableProfileManager]
+    B -->|Binary or custom codec| E[KableClientBuilder]
+    B -->|Accept multiple clients| F[KableServerBuilder]
+    C --> G[Use the opened client]
+    D --> G
+    E --> H[Build then StartAsync]
+    F --> I[Build server then StartAsync]
+```
+
+Use the protocol clients for Modbus or MELSEC. The following is the general client-session request path.
+
+```mermaid
+flowchart TD
+    A[Call RequestAsync] --> B{Request mode}
+    B -->|FIFO| C[Acquire FIFO lock and reserve reply]
+    B -->|CID| D[Reserve unique correlation ID]
+    C --> E[Enqueue outbound command]
+    D --> E
+    E --> F[Encode and flush]
+    F --> G[Receive and decode]
+    G --> H{Autonomous message or alarm}
+    H -->|Yes| I[Stream or alarm path]
+    I --> G
+    H -->|No| J{Matches a pending request}
+    J -->|Yes| K[Return reply and release reservation]
+    J -->|No| L[Deliver to incoming stream]
+    L --> G
+```
+
+Request deadlines include FIFO lock and outbound waits. See the [failure flow](en/ERROR_HANDLING.md)
+for timeout, cancellation and disconnect behavior. Correlated codecs must supply a valid request CID.
+
 ## Connection and request timeouts are different
 
 ```csharp

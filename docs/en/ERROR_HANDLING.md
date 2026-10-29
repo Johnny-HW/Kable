@@ -3,6 +3,30 @@
 Start with [your first connection](en/GETTING_STARTED.md) for the normal string-query flow.
 Replace the sample endpoint and commands with your device's specification.
 
+## Decide what to do after failure
+
+```mermaid
+flowchart TD
+    A[Request failed] --> B{Failure kind}
+    B -->|Physical disconnect| C[Dispose the old client]
+    B -->|Timeout or cancellation| D{Still waiting for FIFO lock}
+    D -->|Yes| E[Session may remain usable]
+    D -->|No| F{Request mode}
+    F -->|FIFO| C
+    F -->|CID| G[Release this request; session may remain usable]
+    B -->|FIFO send tracing fails before reply confirmation| C
+    C --> H[Check equipment state]
+    H --> I[Create a new client or wait for recovery wrapper]
+    I --> J[Decide the next operation]
+    E --> J
+    G --> K[Check CID reuse and late reply policy]
+    K --> J
+```
+
+FIFO timeout or cancellation after acquiring the lock closes the connection even during outbound waits.
+This flow covers general client requests. Initial connection failures and server sends follow their own guides.
+A failed command may have executed; recovery wrappers do not automatically replay failed commands.
+
 ## What to do after a failure
 
 | Situation | Result visible to the caller | Next action |
