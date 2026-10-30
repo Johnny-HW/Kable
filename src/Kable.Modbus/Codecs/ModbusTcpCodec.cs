@@ -64,6 +64,8 @@ public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>
 
         Span<byte> headerBytes = stackalloc byte[6];
         buffer.Slice(0, 6).CopyTo(headerBytes);
+        if (BinaryPrimitives.ReadUInt16BigEndian(headerBytes.Slice(2, 2)) != 0)
+            throw new Kable.Exceptions.ProtocolViolationException("Modbus TCP ProtocolId must be zero.");
 
         ushort length = BinaryPrimitives.ReadUInt16BigEndian(headerBytes.Slice(4, 2));
         int totalFrameSize = 6 + length;

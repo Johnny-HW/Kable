@@ -119,12 +119,8 @@ public sealed class KableClientBuilder<TMessage>
     /// </summary>
     public KableClientBuilder<TMessage> UseSimulator(Action<MockHardwareSimulator> configure)
     {
-        var (clientContext, serverContext) = InMemoryConnectionContext.CreatePair();
-        var simulator = new MockHardwareSimulator(serverContext);
-        configure(simulator);
-        simulator.Start();
-
-        _factory = new DelegateConnectionFactory(() => new ValueTask<IConnectionContext>(clientContext));
+        if (configure == null) throw new ArgumentNullException(nameof(configure));
+        _factory = new SimulatorConnectionFactory(configure);
         return this;
     }
 

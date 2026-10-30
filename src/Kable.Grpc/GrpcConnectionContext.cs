@@ -20,6 +20,9 @@ public sealed class GrpcConnectionContext : IConnectionContext
     private readonly Task _pumpInboundTask;
     private readonly Task _pumpOutboundTask;
     private int _isDisposed;
+    private readonly object _lifetime = new();
+    private bool _aborted;
+    private IDisposable? _callScope;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
@@ -35,6 +38,7 @@ public sealed class GrpcConnectionContext : IConnectionContext
     {
         ConnectionId = Guid.NewGuid().ToString("N");
         EndpointDescription = endpointDescription;
+        _callScope = callScope;
 
         var pipeOptions = new PipeOptions(
             pauseWriterThreshold: 64 * 1024,
@@ -45,7 +49,7 @@ public sealed class GrpcConnectionContext : IConnectionContext
         _outboundPipe = new Pipe(pipeOptions);
 
         _pumpInboundTask = PumpInboundAsync(responseStream, _inboundPipe.Writer, _cts.Token);
-        _pumpOutboundTask = PumpOutboundAsync(_outboundPipe.Reader, requestStream, callScope, _cts.Token);
+        _pumpOutboundTask = PumpOutboundAsync(_outboundPipe.Reader, requestStream, _cts.Token);
     }
 
     public GrpcConnectionContext(
@@ -101,10 +105,9 @@ public sealed class GrpcConnectionContext : IConnectionContext
         }
     }
 
-    private static async Task PumpOutboundAsync(
+    private async Task PumpOutboundAsync(
         PipeReader reader,
         IClientStreamWriter<KablePacket> stream,
-        IDisposable? callScope,
         CancellationToken ct)
     {
         long sequence = 0;
@@ -152,7 +155,7 @@ public sealed class GrpcConnectionContext : IConnectionContext
         }
         finally
         {
-            callScope?.Dispose();
+            Interlocked.Exchange(ref _callScope, null)?.Dispose();
         }
     }
 
@@ -203,9 +206,12 @@ public sealed class GrpcConnectionContext : IConnectionContext
 
     public void Abort(string reason)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        lock (_lifetime)
         {
+            if (_isDisposed != 0 || _aborted) return;
+            _aborted = true;
             _cts.Cancel();
+            Interlocked.Exchange(ref _callScope, null)?.Dispose();
             _inboundPipe.Writer.CancelPendingFlush();
             _outboundPipe.Reader.CancelPendingRead();
         }
@@ -213,9 +219,15 @@ public sealed class GrpcConnectionContext : IConnectionContext
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        lock (_lifetime)
         {
+            if (_isDisposed != 0) return;
+            _isDisposed = 1;
             _cts.Cancel();
+            Interlocked.Exchange(ref _callScope, null)?.Dispose();
+        }
+        try
+        {
 
             try { await _inboundPipe.Reader.CompleteAsync().ConfigureAwait(false); } catch { }
             try { await _outboundPipe.Writer.CompleteAsync().ConfigureAwait(false); } catch { }
@@ -229,7 +241,7 @@ public sealed class GrpcConnectionContext : IConnectionContext
                 // Background pump exceptions during shutdown are expected
             }
 
-            _cts.Dispose();
         }
+        finally { _cts.Dispose(); }
     }
 }

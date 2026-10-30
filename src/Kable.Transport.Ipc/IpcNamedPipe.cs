@@ -12,6 +12,8 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
     private readonly Stream _pipeStream;
     private readonly CancellationTokenSource _cts = new();
     private int _isDisposed;
+    private readonly object _lifetime = new();
+    private bool _aborted;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
@@ -31,8 +33,10 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
 
     public void Abort(string reason)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        lock (_lifetime)
         {
+            if (_isDisposed != 0 || _aborted) return;
+            _aborted = true;
             _cts.Cancel();
             try { _pipeStream.Close(); } catch (Exception) { /* Stream already closed or pipe broken by remote process */ }
         }
@@ -40,9 +44,14 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        lock (_lifetime)
         {
+            if (_isDisposed != 0) return;
+            _isDisposed = 1;
             _cts.Cancel();
+        }
+        try
+        {
             try { await Input.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* PipeReader already completed */ }
             try { await Output.CompleteAsync().ConfigureAwait(false); } catch (Exception) { /* PipeWriter already completed */ }
 #if NETSTANDARD2_0
@@ -50,8 +59,8 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
 #else
             await _pipeStream.DisposeAsync().ConfigureAwait(false);
 #endif
-            _cts.Dispose();
         }
+        finally { _cts.Dispose(); }
     }
 }
 
@@ -76,14 +85,12 @@ public sealed class IpcNamedPipeClientFactory : IConnectionFactory
             PipeDirection.InOut,
             System.IO.Pipes.PipeOptions.Asynchronous);
 
-#if NETSTANDARD2_0
-        pipeStream.Connect(_timeoutMs);
-        await Task.CompletedTask;
-#else
-        await pipeStream.ConnectAsync(_timeoutMs, ct).ConfigureAwait(false);
-#endif
-
-        return new IpcNamedPipeConnectionContext(pipeStream, _pipeName);
+        try
+        {
+            await pipeStream.ConnectAsync(_timeoutMs, ct).ConfigureAwait(false);
+            return new IpcNamedPipeConnectionContext(pipeStream, _pipeName);
+        }
+        catch { pipeStream.Dispose(); throw; }
     }
 }
 
@@ -92,6 +99,10 @@ public sealed class IpcNamedPipeServerListener : IConnectionListener
     private readonly string _pipeName;
     private NamedPipeServerStream? _currentServerStream;
     private readonly CancellationTokenSource _cts = new();
+    private readonly object _acceptSync = new();
+    private bool _stopped;
+    private bool _disposeRequested;
+    private bool _sourceDisposed;
 
     public IpcNamedPipeServerListener(string pipeName)
     {
@@ -107,42 +118,71 @@ public sealed class IpcNamedPipeServerListener : IConnectionListener
             PipeTransmissionMode.Byte,
             System.IO.Pipes.PipeOptions.Asynchronous);
 
-        _currentServerStream = serverStream;
-
-#if NETSTANDARD2_0
-        await Task.Factory.FromAsync(
-            serverStream.BeginWaitForConnection,
-            serverStream.EndWaitForConnection,
-            null).ConfigureAwait(false);
-#else
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _cts.Token);
-        await serverStream.WaitForConnectionAsync(linkedCts.Token).ConfigureAwait(false);
-#endif
-
-        return new IpcNamedPipeConnectionContext(serverStream, _pipeName);
+        try
+        {
+            lock (_acceptSync)
+            {
+                if (_stopped) throw new OperationCanceledException("Listener stopped.");
+                if (_currentServerStream != null) throw new InvalidOperationException("An accept is already pending.");
+                _currentServerStream = serverStream;
+            }
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _cts.Token);
+            using var registration = linkedCts.Token.Register(() => serverStream.Dispose());
+            try
+            {
+                await serverStream.WaitForConnectionAsync(linkedCts.Token).ConfigureAwait(false);
+            }
+            catch (Exception) when (linkedCts.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(linkedCts.Token);
+            }
+            lock (_acceptSync)
+            {
+                linkedCts.Token.ThrowIfCancellationRequested();
+                if (_stopped) throw new OperationCanceledException("Listener stopped.");
+                _currentServerStream = null; // Ownership passes to the returned context.
+            }
+            return new IpcNamedPipeConnectionContext(serverStream, _pipeName);
+        }
+        catch { serverStream.Dispose(); throw; }
+        finally
+        {
+            lock (_acceptSync)
+            {
+                if (ReferenceEquals(_currentServerStream, serverStream)) _currentServerStream = null;
+                DisposeStoppedSource();
+            }
+        }
     }
 
     public void Stop()
     {
-        _cts.Cancel();
-        try { _currentServerStream?.Close(); } catch (Exception) { /* Stream already closed */ }
+        lock (_acceptSync)
+        {
+            if (_stopped) return;
+            _stopped = true;
+            _cts.Cancel();
+            _currentServerStream?.Dispose();
+        }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        _cts.Cancel();
-        if (_currentServerStream != null)
+        Stop();
+        lock (_acceptSync)
         {
-            try
-            {
-#if NETSTANDARD2_0
-                _currentServerStream.Dispose();
-#else
-                await _currentServerStream.DisposeAsync().ConfigureAwait(false);
-#endif
-            }
-            catch (Exception) { /* Stream already disposed */ }
+            _disposeRequested = true;
+            DisposeStoppedSource();
         }
-        _cts.Dispose();
+        return default;
+    }
+
+    private void DisposeStoppedSource()
+    {
+        if (_disposeRequested && _currentServerStream == null && !_sourceDisposed)
+        {
+            _sourceDisposed = true;
+            _cts.Dispose();
+        }
     }
 }
