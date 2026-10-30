@@ -21,6 +21,7 @@ public sealed class SuperSocketClient : IComparisonClient
     }
     public async Task<string> QueryAsync(string request, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         await _client.SendAsync(Encoding.ASCII.GetBytes(request + "\n")).AsTask().WaitAsync(ct);
         return await _inbox.ReadAsync(ct);
     }

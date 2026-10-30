@@ -13,6 +13,7 @@ public sealed class DotNetClient : IComparisonClient
     }
     public async Task<string> QueryAsync(string request, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         await _client.GetStream().WriteAsync(Encoding.ASCII.GetBytes(request + "\n"), ct);
         return await _reader!.ReadLineAsync(ct) ?? throw new EndOfStreamException();
     }

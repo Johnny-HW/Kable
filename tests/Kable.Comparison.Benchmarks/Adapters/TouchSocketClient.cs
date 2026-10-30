@@ -17,13 +17,16 @@ public sealed class TouchSocketClient : IComparisonClient
     }
     public async Task<string> QueryAsync(string request, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         await _client.SendAsync(Encoding.ASCII.GetBytes(request + "\n")).WaitAsync(ct);
         return await _inbox.ReadAsync(ct);
     }
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        _client.Dispose();
-        _inbox.Close();
-        return ValueTask.CompletedTask;
+        try
+        {
+            if (_client.Online) await _client.CloseAsync("Comparison cleanup", CancellationToken.None);
+        }
+        finally { _client.Dispose(); _inbox.Close(); }
     }
 }

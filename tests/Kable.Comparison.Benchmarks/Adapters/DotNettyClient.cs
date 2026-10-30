@@ -36,6 +36,7 @@ public sealed class DotNettyClient : IComparisonClient
     }
     public async Task<string> QueryAsync(string request, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         await _channel!.WriteAndFlushAsync(request + "\n").WaitAsync(ct);
         return await _inbox.ReadAsync(ct);
     }
