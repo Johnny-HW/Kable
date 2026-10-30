@@ -1,6 +1,6 @@
 # Failures and shutdown
 
-Start with [your first connection](en/GETTING_STARTED.md) for the normal string-query flow.
+Start with [your first connection](GETTING_STARTED.md) for the normal string-query flow.
 Replace the sample endpoint and commands with your device's specification.
 
 ## Decide what to do after failure
@@ -42,6 +42,25 @@ A failed command may have executed; recovery wrappers do not automatically repla
 An exception does not prove that the equipment did not execute a command.
 Check actual device state before repeating motion, write or start commands.
 Calling `StartAsync` again on the same closed session does not restore it.
+
+## Why a failed FIFO session needs a new connection
+
+Canceling the wait for request A does not prove that the equipment stopped executing A.
+If request B reuses the connection, a delayed reply to A could otherwise be consumed as B's reply.
+
+Kable manages this boundary through its FIFO lifetime contract. If timeout or cancellation
+ends the session after FIFO lock acquisition and before reply confirmation, do not issue the
+next query through that client. Dispose it and create a new client, or observe the recovery wrapper.
+Check device state before deciding the next command; do not blindly repeat a failed command.
+
+Cancellation before starting a request or while waiting for the FIFO lock, and CID request
+failures, follow different rules. Consult the [lifecycle matrix](CONNECTION_LIFECYCLE.md).
+Timeout and cancellation request asynchronous completion; they are not exact real-time deadlines.
+Await DisposeAsync separately to complete resource cleanup.
+
+The [fault comparison](../ko/benchmarks/FaultComparison.md), written in Korean, covers delayed
+replies, cancellation, peer closure and pending-work cleanup. TCP FIN observations do not measure
+physical cable-loss detection, and short resource observations do not establish long-term leak freedom.
 
 ## Handle QueryAsync failures where you await them
 
@@ -114,12 +133,12 @@ The OpenAsync token applies to the initial connection. DisposeAsync ends the ret
 3. Await the retained worker Tasks. Handle expected cancellation and report other errors.
 4. Unsubscribe events and dispose the client with `DisposeAsync` or `await using`.
 
-See the [cancel-and-await example](en/GETTING_STARTED.md) for application polling.
+See the [cancel-and-await example](GETTING_STARTED.md) for application polling.
 Do not block inside communication events with `.Wait()`, `.Result` or synchronous disposal.
-[Configuration and events](en/DEVELOPER_USAGE.md) explains UI-thread dispatch.
+[Configuration and events](DEVELOPER_USAGE.md) explains UI-thread dispatch.
 
 For diagnostics, retain the exception, device ID/endpoint, command, connection/query deadlines
-and recent `ICommObserver` traffic. See [observability](en/03_OBSERVABILITY_LOGGING.md).
+and recent `ICommObserver` traffic. See [observability](03_OBSERVABILITY_LOGGING.md).
 
 ## Diagnostic failures and FIFO lifetime in 1.10.1
 

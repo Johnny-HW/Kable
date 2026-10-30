@@ -52,3 +52,18 @@ dotnet run --project tests/Kable.Benchmarks/Kable.Benchmarks.csproj -c Release -
 ```
 
 안정적인 성능 비교는 프로세스·측정 횟수와 반복 시간을 늘려 수행한다. 원본 측정 요약은 [코덱](benchmarks/AsciiLineBenchmarks.md), [세션](benchmarks/SessionBenchmarks.md)에 보존했다.
+
+## 장비 애플리케이션 수준의 검토
+
+이 문서의 2026-10-01 코덱·인메모리 결과와 2026-10-30 로컬 TCP 비교는 서로 다른 측정이다.
+네트워크 왕복 수치를 코덱 실행 시간과 직접 비교하거나 합산하지 않는다.
+
+- [TCP 라이브러리 비교](benchmarks/LibraryComparison.md): 실제 API 경로의 지연·처리량·할당량과 실행 조건.
+- [오류 처리 비교](benchmarks/FaultComparison.md): 늦은 응답, 취소, 명시적 연결 종료와 반복 장애 관측.
+- [기본 API로 같은 장비 기능을 구성할 때 필요한 작업](WHY_KABLE.md): API 예제와 구현·검증 책임.
+
+오류 처리 비교에서는 모든 구현에 같은 보호 정책을 적용한 600개 관측이 공통 기준을 만족했다.
+Kable의 내장 FIFO 수명 정책과 기본 API 예제에 추가한 애플리케이션 정책을 구분해 해석한다.
+문자열 API 전체의 무할당, 모든 부하에서의 성능 우위, 정확한 시각의 타임아웃 반환,
+실제 장비나 장시간 운용의 안정성을 보장하는 결과는 아니다.
+실장비 응답·CID·알람 부하·장시간 장애/복구는 해당 조건의 추가 검증이 필요하다.
