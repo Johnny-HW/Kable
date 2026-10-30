@@ -1,0 +1,15 @@
+{
+  "Utc": "2026-10-30T00:24:12.0196215+00:00",
+  "OS": "Microsoft Windows 10.0.22631",
+  "Runtime": ".NET 10.0.9",
+  "LogicalProcessors": 12,
+  "TrialsPerScenario": 20,
+  "ResourceCyclesPerWorker": 100,
+  "ServerGC": false,
+  "Versions": {
+    "Kable": "1.10.1.0",
+    "TouchSocket": "4.3.11.0",
+    "SuperSocket.Client": "2.1.0.0",
+    "DotNetty.Transport": "0.7.6.0"
+  }
+}
