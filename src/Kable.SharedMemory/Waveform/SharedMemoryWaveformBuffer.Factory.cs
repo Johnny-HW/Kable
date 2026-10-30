@@ -1,6 +1,7 @@
 namespace Kable.SharedMemory.Waveform;
 
 using System;
+using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 
@@ -13,7 +14,21 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacityPowerOfTwo));
         long totalBytes = 256 + (long)capacityPowerOfTwo * sizeof(WaveformSample);
         var (mmfName, evtName) = GetKernelObjectNames(bufferName);
-        var mmf = MemoryMappedFile.CreateNew(mmfName, totalBytes, MemoryMappedFileAccess.ReadWrite);
+        MemoryMappedFile mmf;
+        try
+        {
+            mmf = MemoryMappedFile.CreateNew(mmfName, totalBytes, MemoryMappedFileAccess.ReadWrite);
+        }
+        catch (IOException error) when ((error.HResult & 0xFFFF) is 183 or 80)
+        {
+            var duplicate = new IOException(
+                $"Waveform buffer '{bufferName}' already exists; initialization stopped. " +
+                "Check for a duplicate application instance or buffer name. " +
+                "Use Open only when intentionally attaching to the existing buffer. Existing data was not changed.", error);
+            duplicate.Data["ErrorCode"] = "DUPLICATE_WAVEFORM_BUFFER";
+            duplicate.Data["BufferName"] = bufferName;
+            throw duplicate;
+        }
         return Attach(mmf, evtName, true, capacityPowerOfTwo, totalBytes);
     }
 

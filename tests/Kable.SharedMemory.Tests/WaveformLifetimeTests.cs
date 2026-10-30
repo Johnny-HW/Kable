@@ -17,7 +17,12 @@ public sealed class WaveformLifetimeTests
         string name = Guid.NewGuid().ToString("N");
         using var buffer = SharedMemoryWaveformBuffer.Create(name, 8);
         buffer.TryWrite(new WaveformSample(1, 42));
-        Assert.Throws<IOException>(() => SharedMemoryWaveformBuffer.Create(name, 8));
+        var error = Assert.Throws<IOException>(() => SharedMemoryWaveformBuffer.Create(name, 8));
+        Assert.Contains(name, error.Message);
+        Assert.Contains("initialization stopped", error.Message);
+        Assert.Contains("Open", error.Message);
+        Assert.Equal("DUPLICATE_WAVEFORM_BUFFER", error.Data["ErrorCode"]);
+        Assert.IsType<IOException>(error.InnerException);
         using var reader = SharedMemoryWaveformBuffer.Open(name);
         Assert.True(reader.TryRead(out var sample));
         Assert.Equal(42, sample.Value);
