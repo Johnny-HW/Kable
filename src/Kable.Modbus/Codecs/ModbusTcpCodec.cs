@@ -8,7 +8,7 @@ using Kable.Core;
 using Kable.Modbus.Messages;
 
 /// <summary>
-/// System.IO.Pipelines 기반 0-GC Modbus-TCP 코덱.
+/// System.IO.Pipelines 기반 Modbus-TCP 코덱. 반환 페이로드는 호출자 소유 메모리로 복사합니다.
 /// MBAP 헤더(7바이트)를 파싱 및 생성하며, Transaction ID를 통한 동시 다중 요청 파이프라이닝을 지원합니다.
 /// </summary>
 public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>

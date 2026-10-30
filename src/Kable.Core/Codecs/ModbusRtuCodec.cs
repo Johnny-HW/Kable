@@ -5,7 +5,8 @@ using System.Buffers;
 using Kable.Core.Checksums;
 
 /// <summary>
-/// System.IO.Pipelines 기반 초고속 0-GC Modbus-RTU 프레이밍 및 자동 CRC 코덱.
+/// System.IO.Pipelines 기반 Modbus-RTU 프레이밍 및 자동 CRC 코덱.
+/// 완성된 반환 프레임은 호출자 소유 배열로 복사하며, 불완전 프레임 검사와는 할당 특성이 다릅니다.
 /// Encode는 PDU에 CRC-16을 부착한다. TryDecode는 마스터 응답과 슬레이브 요청을
 /// 후보 길이 + CRC로 구분한다 (FC01-04 8바이트 요청 vs ByteCount 응답, FC15/16 가변 요청 vs 8바이트 ACK).
 /// </summary>
