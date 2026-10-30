@@ -87,6 +87,10 @@ public sealed partial class KableSession<TMessage>
             if (tasksToWait.Count > 0)
             {
                 var joinAllTask = Task.WhenAll(tasksToWait);
+                // Observe faults even when the bounded shutdown wait expires first.
+                _ = joinAllTask.ContinueWith(task => { _ = task.Exception; }, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
                 var timeoutTask = Task.Delay(2000);
                 await Task.WhenAny(joinAllTask, timeoutTask).ConfigureAwait(false);
             }
