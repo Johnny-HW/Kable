@@ -42,7 +42,7 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | Periodic polling and latest-value cache | `KableProfileManager` |
 | Binary/custom protocol and framing | `KableClientBuilder<T>` with a codec |
 | Modbus or MELSEC | `Kable.Modbus` or `Kable.Melsec` client |
-| Optional recovery after disconnection | `ReconnectingKableClient` |
+| Automatic reconnection | [`ReconnectingKableClient`](docs/en/ERROR_HANDLING.md#optional-connection-recovery) |
 | Incoming multi-client server | `KableServerBuilder<T>` / `IKableServer<T>` |
 
 Builder sessions need StartAsync after Build. Simple Open and Profile Connect return started clients.
@@ -83,7 +83,7 @@ Server setup and shutdown: [multi-client server hosting](docs/en/SERVER_HOSTING.
 - QueryAsync returns the matched reply. LineReceived delivers unmatched/event lines on a background path.
 - Handle query errors where you await the query; ErrorOccurred is not an all-errors channel.
 - A transmitted FIFO request that times out or is canceled closes its connection. Create a new client.
-- The recovery wrapper restores connectivity using new clients and does not replay failed commands.
+- The automatic reconnection client creates new connections and does not replay failed commands.
 - Before repeating a motion/write command, check actual device state.
 - Cancel and await application workers, unsubscribe handlers and dispose asynchronously.
 

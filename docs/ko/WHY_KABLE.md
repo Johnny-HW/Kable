@@ -104,10 +104,9 @@ flowchart TB
 | 화면·업무의 최신값 사용 | 항목별 값·수신 시각·유효 기간 | 최신값 캐시·`TryGetFresh` |
 | 조회 중 알람 수신 | 응답과 자발 메시지 분류·전달 | 코덱 분류·세션 전달 경로 |
 | 취소·연결 종료 | 대기자 종료·늦은 응답 정책·자원 정리 | 세션 수명 계약·`DisposeAsync` |
-| 단절 후 복구 | 새 연결 교체·재시도 수명 | 별도 선택 기능 `ReconnectingKableClient` |
+| 자동 재연결 | 새 연결 교체·재시도 수명 | [자동 재연결 클라이언트](ERROR_HANDLING.md#선택적-자동-재연결) |
 
 기본 API로도 구성할 수 있는 기능입니다. Kable은 이 공통 통신 동작을 제공해 앱에서 작성·유지할 영역을 줄여줍니다.
-복구 래퍼는 별도 기능이며 위 Profile 설정만으로 자동 재연결을 켠다는 의미는 아닙니다.
 
 [API별 시작 가이드](GETTING_STARTED.md) · [실패 처리·새 연결](ERROR_HANDLING.md) ·
 [세션 수명 계약](CONNECTION_LIFECYCLE.md) · [검증 보고서](benchmarks/FaultComparison.md)

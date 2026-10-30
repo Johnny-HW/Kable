@@ -104,11 +104,10 @@ flowchart TB
 | Reuse recent values in the UI | Values, timestamps and acceptable age | Latest-value cache and `TryGetFresh` |
 | Receive alarms during queries | Classify and dispatch unsolicited messages | Codec rules and session delivery |
 | Cancel or close a connection | Complete waiters, handle late replies and release resources | Session lifetime contract and `DisposeAsync` |
-| Recover connectivity | Replace connections and manage retries | Separate optional `ReconnectingKableClient` |
+| Automatic reconnection | Replace connections and manage retries | [Automatic reconnection client](ERROR_HANDLING.md#optional-connection-recovery) |
 
 Basic APIs can implement these behaviors. Kable provides the shared communication coordination to reduce
-what each application builds and maintains. The recovery wrapper is a separate feature; the Profile example
-does not enable automatic reconnection by itself.
+what each application builds and maintains.
 
 [Getting started](GETTING_STARTED.md) · [Failures and new connections](ERROR_HANDLING.md) ·
 [Session lifetime](CONNECTION_LIFECYCLE.md) · [Fault report in Korean](../ko/benchmarks/FaultComparison.md)

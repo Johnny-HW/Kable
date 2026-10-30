@@ -40,7 +40,7 @@ dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
 | 주기 조회와 최신값 캐시 | `KableProfileManager` |
 | 바이너리/장비 전용 프로토콜 | `KableClientBuilder<T>`와 코덱 |
 | Modbus / MELSEC 장비 | `Kable.Modbus` / `Kable.Melsec` 클라이언트 |
-| 단절 후 선택적 연결 복구 | `ReconnectingKableClient` |
+| 자동 재연결 | [`ReconnectingKableClient`](docs/ko/ERROR_HANDLING.md#선택적-자동-재연결) |
 | 다중 클라이언트 서버 | `KableServerBuilder<T>` / `IKableServer<T>` |
 
 Builder는 Build 후 StartAsync가 필요하고, Simple Open/Profile Connect는 시작된 클라이언트를 반환한다.
@@ -79,7 +79,7 @@ flowchart LR
 - 질의 응답은 QueryAsync 반환값으로 받고, LineReceived는 소비되지 않은 라인/이벤트를 전달한다.
 - QueryAsync의 오류는 await한 곳에서 처리한다. ErrorOccurred가 모든 오류를 대신 받지 않는다.
 - FIFO 송신 후 타임아웃/취소가 발생하면 연결이 종료된다. 기존 클라이언트를 폐기하고 새로 연결한다.
-- 재연결 래퍼는 새 연결로 복구하며 실패한 명령을 자동 재전송하지 않는다.
+- 자동 재연결 클라이언트는 새 연결을 생성하며 실패한 명령을 자동 재전송하지 않는다.
 - 이동·쓰기 명령을 반복하기 전 실제 장비 상태를 확인한다.
 - 앱 작업 취소·await, 이벤트 구독 해제 후 비동기로 클라이언트를 정리한다.
 
