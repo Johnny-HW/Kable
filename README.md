@@ -50,24 +50,23 @@ Server listeners accept incoming 1:N connections via `IConnectionListener.Accept
 Internal asynchronous loops handle sending, receiving and reply routing; they do not each reserve
 a dedicated OS thread. Keep and cancel a Task only for application-owned repeated work.
 
-## What Kable manages for your application
+## Register continuous polling, call on-demand queries
 
-Kable lets application code query equipment and configure polling through device-oriented APIs.
-It manages receive processing and request lifetimes so each application can focus on endpoint,
-command, protocol and event-classification rules.
+**Register commands and intervals** for values such as status and temperature.
+Keep **on-demand commands separate** for buttons and workflow steps.
 
-| Device application task | Built directly with .NET APIs | Kable entry point |
-| --- | --- | --- |
-| Match replies to concurrent callers | Receive loop, serialization or ID matching, pending-request cleanup | FIFO requests and codec-defined CID routing |
-| Poll and retain fresh values | Timers, task lifetime, cache and freshness checks | Profile polling and latest-value cache |
-| Separate unsolicited alarms from replies | Frame classification and separate delivery paths | Codec rules, LineReceived and streams |
-| Prevent late FIFO reply contamination | Cancellation-stage and connection-reuse policy | Session lifetime contract |
-| Restore connectivity | Retry worker, new connections and shutdown handling | Optional ReconnectingKableClient |
+```mermaid
+flowchart LR
+    P["Periodic: AddPeriodic<br/>Automatic interval queries"] --> K["Kable Profile<br/>Coordinate requests and replies"]
+    A["On-demand: AddAperiodic<br/>Call ExecuteAsync when needed"] --> K
+    K <--> D["Device"]
+    K --> C["Periodic results: cache and events"]
+    K --> R["On-demand results: return to caller"]
+```
 
-See [the .NET API examples and implementation responsibilities](docs/en/WHY_KABLE.md).
-The [performance comparison](docs/ko/benchmarks/LibraryComparison.md) and
-[fault comparison](docs/ko/benchmarks/FaultComparison.md) document reproducible conditions
-and the scope of the observations; these methodology reports are in Korean.
+Configure continuous polling without an application timer or loop, and use `TryGetFresh` for recent cached values.
+On-demand commands execute once per call and share session request coordination with polling.
+See [the polling diagrams, short example and basic API comparison](docs/en/WHY_KABLE.md).
 
 ## Read in this order
 
