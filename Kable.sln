@@ -71,6 +71,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.ProtocolPack.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.SharedMemory.TestPeer", "tests\Kable.SharedMemory.TestPeer\Kable.SharedMemory.TestPeer.csproj", "{E2BD1BAC-C169-499B-B2E6-FA5F59FA521F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.Comparison.Benchmarks", "tests\Kable.Comparison.Benchmarks\Kable.Comparison.Benchmarks.csproj", "{B05C99E7-6ACE-4070-850D-94C8ACD0823E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -453,6 +455,18 @@ Global
 		{E2BD1BAC-C169-499B-B2E6-FA5F59FA521F}.Release|x64.Build.0 = Release|Any CPU
 		{E2BD1BAC-C169-499B-B2E6-FA5F59FA521F}.Release|x86.ActiveCfg = Release|Any CPU
 		{E2BD1BAC-C169-499B-B2E6-FA5F59FA521F}.Release|x86.Build.0 = Release|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Debug|x64.Build.0 = Debug|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Debug|x86.Build.0 = Debug|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x64.ActiveCfg = Release|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x64.Build.0 = Release|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x86.ActiveCfg = Release|Any CPU
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -489,5 +503,6 @@ Global
 		{0C15AE10-BE9F-4BDF-B9CD-B90B83B550BC} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F1BBADD5-C2DA-4544-A9E3-96E70C21785D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{E2BD1BAC-C169-499B-B2E6-FA5F59FA521F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{B05C99E7-6ACE-4070-850D-94C8ACD0823E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
