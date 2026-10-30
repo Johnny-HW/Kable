@@ -75,8 +75,9 @@ public abstract class DelimitedFrameCodec<TMessage> : IProtocolCodec<TMessage>
                 {
                     if (buffer.Length > _options.MaxFrameSize)
                     {
-                        buffer = buffer.Slice(buffer.End); // 전체 비우기
-                        throw new ProtocolViolationException($"Frame size limit exceeded ({buffer.Length} > {_options.MaxFrameSize}) without start marker.");
+                        long rejectedLength = buffer.Length;
+                        buffer = buffer.Slice(buffer.End);
+                        throw new ProtocolViolationException($"Frame size limit exceeded ({rejectedLength} > {_options.MaxFrameSize}) without start marker.");
                     }
                     message = default!;
                     return false;
@@ -96,14 +97,15 @@ public abstract class DelimitedFrameCodec<TMessage> : IProtocolCodec<TMessage>
             // 2. 종료 구분자 탐색 (단일 바이트 vs 다중 바이트)
             SequencePosition? endPos = null;
             int delimiterLength = _options.EndDelimiter.Length;
+            var searchBuffer = _options.StartMarker.HasValue ? buffer.Slice(1) : buffer;
 
             if (delimiterLength == 1)
             {
-                endPos = buffer.PositionOf(_options.EndDelimiter[0]);
+                endPos = searchBuffer.PositionOf(_options.EndDelimiter[0]);
             }
             else
             {
-                endPos = FindMultiByteDelimiter(buffer, _options.EndDelimiter);
+                endPos = FindMultiByteDelimiter(searchBuffer, _options.EndDelimiter);
             }
 
             if (endPos == null)
@@ -117,8 +119,9 @@ public abstract class DelimitedFrameCodec<TMessage> : IProtocolCodec<TMessage>
                         buffer = buffer.Slice(buffer.GetPosition(1, buffer.Start));
                         continue;
                     }
+                    long rejectedLength = buffer.Length;
                     buffer = buffer.Slice(buffer.End);
-                    throw new ProtocolViolationException($"Frame size limit exceeded ({buffer.Length} > {_options.MaxFrameSize}) without end delimiter.");
+                    throw new ProtocolViolationException($"Frame size limit exceeded ({rejectedLength} > {_options.MaxFrameSize}) without end delimiter.");
                 }
 
                 message = default!;

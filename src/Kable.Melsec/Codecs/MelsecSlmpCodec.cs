@@ -58,6 +58,12 @@ public sealed class MelsecSlmpCodec : IProtocolCodec<Slmp3EFrame>
         buffer.Slice(0, AccessRouteLength).CopyTo(header);
 
         ushort subheader = (ushort)(header[0] | (header[1] << 8));
+        if (subheader != RequestSubheader && subheader != ResponseSubheader)
+        {
+            buffer = buffer.Slice(1);
+            message = null!;
+            return false;
+        }
         ushort lengthField = BinaryPrimitives.ReadUInt16LittleEndian(header.Slice(7, 2));
         int totalFrameSize = AccessRouteLength + lengthField;
         int minBody = subheader == RequestSubheader ? RequestCommandHeaderLength : ResponseEndCodeLength;

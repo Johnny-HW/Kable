@@ -71,6 +71,8 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
         }
 
         var span = response.Data.Span;
+        if (span.Length != count * 2)
+            throw new InvalidOperationException($"MELSEC read response length {span.Length} does not match requested {count * 2} bytes.");
         int wordCount = span.Length / 2;
         var words = new ushort[wordCount];
 
@@ -87,6 +89,9 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
     /// </summary>
     public async Task WriteWordsAsync(MelsecDeviceCode device, int headDeviceNo, ushort[] values, CancellationToken ct = default)
     {
+        if (values == null) throw new ArgumentNullException(nameof(values));
+        if (values.Length == 0 || values.Length > ushort.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(values));
         var request = Slmp3EFrame.CreateWriteWordsRequest(
             device: device,
             headDeviceNo: headDeviceNo,
@@ -100,6 +105,8 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
         {
             throw new InvalidOperationException($"MELSEC PLC Error EndCode: 0x{response.EndCode:X4}");
         }
+        if (!response.Data.IsEmpty)
+            throw new InvalidOperationException("MELSEC write acknowledgement must not contain data.");
     }
 
     public async ValueTask DisposeAsync()

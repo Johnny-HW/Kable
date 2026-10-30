@@ -52,6 +52,7 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
         Span<byte> header = stackalloc byte[3];
         buffer.Slice(0, 3).CopyTo(header);
         byte fc = header[1];
+        if (header[0] > 247) return DropByte(ref buffer, out message);
 
         if (fc >= 0x01 && fc <= 0x04 && buffer.Length < 8)
         {
@@ -63,7 +64,7 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
             return TryFinishFixed(ref buffer, ExceptionLength, out message);
         }
 
-        if (fc == 0x05 || fc == 0x06)
+        if (fc == 0x05 || fc == 0x06 || fc == 0x08)
         {
             return TryFinishFixed(ref buffer, WriteSingleLength, out message);
         }
@@ -78,7 +79,16 @@ public sealed partial class ModbusRtuCodec : IProtocolCodec<ReadOnlyMemory<byte>
             return TryDecodeWriteMultiple(ref buffer, out message);
         }
 
-        return TryFinishFixed(ref buffer, (int)buffer.Length, out message);
+        // Unknown function lengths cannot be inferred from an arbitrary read boundary.
+        // Preserve partial frames; CRC-valid prefixes allow coalesced frames to be separated.
+        int available = (int)Math.Min(buffer.Length, _maxFrameSize);
+        for (int length = 4; length <= available; length++)
+        {
+            if (TryConsumeValidFrame(ref buffer, length, out message)) return true;
+        }
+        if (buffer.Length >= _maxFrameSize) return DropByte(ref buffer, out message);
+        message = ReadOnlyMemory<byte>.Empty;
+        return false;
     }
 
     public string? ExtractCorrelationId(ReadOnlyMemory<byte> message) => null;

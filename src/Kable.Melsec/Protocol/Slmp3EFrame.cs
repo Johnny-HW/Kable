@@ -21,7 +21,7 @@ public sealed class Slmp3EFrame
 
     public bool IsRequest => Subheader == 0x0050;
     public bool IsResponse => Subheader == 0x00D0;
-    public bool IsSuccess => EndCode == 0;
+    public bool IsSuccess => IsResponse && EndCode == 0;
     public ushort EndCode => IsResponse ? MonitoringTimer : (ushort)0;
 
     public Slmp3EFrame(

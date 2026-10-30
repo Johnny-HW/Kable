@@ -144,7 +144,12 @@ public sealed class KableModbusDeviceChannel : IKableModbusChannel
                 try
                 {
                     if (result.IsCanceled) throw new OperationCanceledException(io.Token);
-                    if (_codec.TryDecode(ref buffer, out var response)) return response.ToArray();
+                    long previousLength;
+                    do
+                    {
+                        previousLength = buffer.Length;
+                        if (_codec.TryDecode(ref buffer, out var response)) return response.ToArray();
+                    } while (!buffer.IsEmpty && buffer.Length < previousLength);
                     if (result.IsCompleted) throw new DeviceDisconnectedException("Modbus input completed.");
                 }
                 finally { context.Input.AdvanceTo(buffer.Start, buffer.End); }

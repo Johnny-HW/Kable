@@ -102,8 +102,9 @@ public abstract class LengthFieldCodec<TMessage> : IProtocolCodec<TMessage>
                     // 버퍼 전체에 마커가 없음 -> 버퍼가 MaxFrameSize 초과 시 OOM 방어
                     if (buffer.Length > _options.MaxFrameSize)
                     {
-                        buffer = buffer.Slice(buffer.End); // 전체 버리기
-                        throw new ProtocolViolationException($"Frame size limit exceeded ({buffer.Length} > {_options.MaxFrameSize}) without valid header marker.");
+                        long rejectedLength = buffer.Length;
+                        buffer = buffer.Slice(buffer.End);
+                        throw new ProtocolViolationException($"Frame size limit exceeded ({rejectedLength} > {_options.MaxFrameSize}) without valid header marker.");
                     }
                     message = default!;
                     return false;
