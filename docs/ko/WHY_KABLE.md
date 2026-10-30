@@ -106,7 +106,81 @@ flowchart TB
 | 취소·연결 종료 | 대기자 종료·늦은 응답 정책·자원 정리 | 세션 수명 계약·`DisposeAsync` |
 | 자동 재연결 | 새 연결 교체·재시도 수명 | [자동 재연결 클라이언트](ERROR_HANDLING.md#선택적-자동-재연결) |
 
-기본 API로도 구성할 수 있는 기능입니다. Kable은 이 공통 통신 동작을 제공해 앱에서 작성·유지할 영역을 줄여줍니다.
+**Kable이 폴링·응답 조율·캐시를 관리하므로, 앱은 항목 등록과 업무 로직 작성에 집중할 수 있습니다.**
+
+## 클래스로 보면, 앱에서 관리할 코드가 줄어듭니다
+
+### 기본 API 직접 구성 · 앱에서 구현하고 연결할 역할
+
+```mermaid
+classDiagram
+    direction TB
+    class EquipmentViewModel {
+        +RefreshView()
+        +OnReadModelClicked()
+    }
+    class PollingWorker {
+        +RunAsync()
+        +StopAsync()
+    }
+    class CommandClient {
+        +QueryAsync()
+    }
+    class ReplyRouter {
+        +MatchReply()
+        +FailPendingRequests()
+    }
+    class LatestValueCache {
+        +Update()
+        +TryGetFresh()
+    }
+    class ConnectionOwner {
+        +ConnectAsync()
+        +DisposeAsync()
+    }
+    EquipmentViewModel --> PollingWorker : 상시 조회 구성
+    EquipmentViewModel --> CommandClient : 수시 호출
+    EquipmentViewModel --> LatestValueCache : 화면 값 조회
+    PollingWorker --> CommandClient : 반복 요청
+    PollingWorker --> LatestValueCache : 최신값 갱신
+    CommandClient --> ReplyRouter : 응답 매칭
+    CommandClient --> ConnectionOwner : 연결 사용
+```
+
+직접 구성하는 쪽은 역할을 나눈 설계 예시입니다. 폴링 작업·응답 라우터·캐시의 수명도 앱에서 연결합니다.
+
+### Kable 사용 · 항목 등록과 업무 코드에 집중
+
+```mermaid
+classDiagram
+    direction TB
+    class EquipmentViewModel {
+        +RefreshView()
+        +OnReadModelClicked()
+    }
+    class KableProfileConfig {
+        +AddPeriodic()
+        +AddAperiodic()
+    }
+    class KableProfileManager {
+        +ConnectAsync()
+    }
+    class IKableProfileClient {
+        <<interface>>
+        +ExecuteAsync()
+        +TryGetFresh()
+        +DisposeAsync()
+    }
+    EquipmentViewModel ..> KableProfileConfig : 항목과 간격 등록
+    EquipmentViewModel ..> KableProfileManager : 연결
+    EquipmentViewModel --> IKableProfileClient : 수시 호출과 캐시 조회
+    KableProfileManager ..> KableProfileConfig : 설정 사용
+    KableProfileManager ..> IKableProfileClient : 클라이언트 반환
+```
+
+**직접 작성하는 부분은 장비 항목·간격 설정과 업무 로직입니다.**
+`KableProfileConfig`, `KableProfileManager`, `IKableProfileClient`는 Kable이 제공하며,
+별도의 폴링 작업·응답 라우터·캐시 클래스를 앱마다 만들고 연결하는 작업을 줄여줍니다.
 
 [API별 시작 가이드](GETTING_STARTED.md) · [실패 처리·새 연결](ERROR_HANDLING.md) ·
 [세션 수명 계약](CONNECTION_LIFECYCLE.md) · [검증 보고서](benchmarks/FaultComparison.md)

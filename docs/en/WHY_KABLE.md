@@ -106,8 +106,82 @@ flowchart TB
 | Cancel or close a connection | Complete waiters, handle late replies and release resources | Session lifetime contract and `DisposeAsync` |
 | Automatic reconnection | Replace connections and manage retries | [Automatic reconnection client](ERROR_HANDLING.md#optional-connection-recovery) |
 
-Basic APIs can implement these behaviors. Kable provides the shared communication coordination to reduce
-what each application builds and maintains.
+**Kable manages polling, reply coordination and caching so application code can focus on item registration and business behavior.**
+
+## Fewer communication classes to build and coordinate
+
+### Basic APIs · application-managed responsibilities
+
+```mermaid
+classDiagram
+    direction TB
+    class EquipmentViewModel {
+        +RefreshView()
+        +OnReadModelClicked()
+    }
+    class PollingWorker {
+        +RunAsync()
+        +StopAsync()
+    }
+    class CommandClient {
+        +QueryAsync()
+    }
+    class ReplyRouter {
+        +MatchReply()
+        +FailPendingRequests()
+    }
+    class LatestValueCache {
+        +Update()
+        +TryGetFresh()
+    }
+    class ConnectionOwner {
+        +ConnectAsync()
+        +DisposeAsync()
+    }
+    EquipmentViewModel --> PollingWorker : configure periodic work
+    EquipmentViewModel --> CommandClient : on-demand calls
+    EquipmentViewModel --> LatestValueCache : read UI values
+    PollingWorker --> CommandClient : repeated requests
+    PollingWorker --> LatestValueCache : update latest values
+    CommandClient --> ReplyRouter : match replies
+    CommandClient --> ConnectionOwner : use connection
+```
+
+This is one possible decomposition of a direct implementation. The application coordinates the polling,
+reply-routing and cache lifetimes.
+
+### Kable · focus on registration and application behavior
+
+```mermaid
+classDiagram
+    direction TB
+    class EquipmentViewModel {
+        +RefreshView()
+        +OnReadModelClicked()
+    }
+    class KableProfileConfig {
+        +AddPeriodic()
+        +AddAperiodic()
+    }
+    class KableProfileManager {
+        +ConnectAsync()
+    }
+    class IKableProfileClient {
+        <<interface>>
+        +ExecuteAsync()
+        +TryGetFresh()
+        +DisposeAsync()
+    }
+    EquipmentViewModel ..> KableProfileConfig : register items and intervals
+    EquipmentViewModel ..> KableProfileManager : connect
+    EquipmentViewModel --> IKableProfileClient : query and read cache
+    KableProfileManager ..> KableProfileConfig : use configuration
+    KableProfileManager ..> IKableProfileClient : return client
+```
+
+**Write the device registrations and application behavior.** Kable provides `KableProfileConfig`,
+`KableProfileManager` and `IKableProfileClient`, reducing the polling workers, reply routers and caches
+that each application needs to build and coordinate.
 
 [Getting started](GETTING_STARTED.md) · [Failures and new connections](ERROR_HANDLING.md) ·
 [Session lifetime](CONNECTION_LIFECYCLE.md) · [Fault report in Korean](../ko/benchmarks/FaultComparison.md)
