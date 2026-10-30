@@ -14,6 +14,7 @@ public sealed class ZeroAllocLatencyCollector
     private readonly int _capacity;
     private int _head;
     private int _count;
+    private readonly object _sync = new();
 
     public ZeroAllocLatencyCollector(int capacity = 131_072)
     {
@@ -25,7 +26,7 @@ public sealed class ZeroAllocLatencyCollector
     }
 
     public int Capacity => _capacity;
-    public int Count => _count;
+    public int Count { get { lock (_sync) return _count; } }
 
     /// <summary>
     /// Records an elapsed duration in stopwatch ticks without any heap allocation.
@@ -33,12 +34,15 @@ public sealed class ZeroAllocLatencyCollector
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RecordTicks(long elapsedTicks)
     {
+        lock (_sync)
+        {
         int index = _head;
         _timestamps[index] = elapsedTicks;
         _head = (index + 1) % _capacity;
         if (_count < _capacity)
         {
             _count++;
+        }
         }
     }
 
@@ -57,8 +61,11 @@ public sealed class ZeroAllocLatencyCollector
     /// </summary>
     public void Reset()
     {
+        lock (_sync)
+        {
         _head = 0;
         _count = 0;
+        }
     }
 
     /// <summary>
@@ -68,14 +75,19 @@ public sealed class ZeroAllocLatencyCollector
     /// </summary>
     public LatencySummary ComputeSummary()
     {
-        int count = _count;
+        int count;
+        long[] copy;
+        lock (_sync)
+        {
+        count = _count;
         if (count == 0)
         {
             return new LatencySummary(0, 0, 0, 0, 0, 0);
         }
 
-        long[] copy = new long[count];
+        copy = new long[count];
         Array.Copy(_timestamps, copy, count);
+        }
         Array.Sort(copy);
 
         double tickFrequencyNs = (1_000_000_000.0 / Stopwatch.Frequency);

@@ -55,7 +55,7 @@ public struct WaveformBufferHeader
 /// 초당 수천~수만 회의 고주파 파형 샘플을 Zero-Copy로 교환하는 SPSC MMF 파형 버퍼.
 /// </summary>
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
-public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
+public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
 {
     private readonly MemoryMappedFile _mmf;
     private readonly MemoryMappedViewAccessor _accessor;
@@ -63,12 +63,15 @@ public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
     private readonly WaveformBufferHeader* _header;
     private readonly WaveformSample* _samples;
     private readonly EventWaitHandle _dataEvent;
-    private readonly bool _ownsMmf;
     private int _isDisposed;
+    private readonly object _lifetime = new();
 
     public int Capacity { get; }
     public int Mask { get; }
-    public bool IsClosed => Volatile.Read(ref _header->IsClosed) != 0;
+    public bool IsClosed
+    {
+        get { lock (_lifetime) { ThrowIfDisposed(); return Volatile.Read(ref _header->IsClosed) != 0; } }
+    }
 
     private SharedMemoryWaveformBuffer(
         MemoryMappedFile mmf,
@@ -84,177 +87,173 @@ public unsafe sealed class SharedMemoryWaveformBuffer : IDisposable
         _header = (WaveformBufferHeader*)pointer;
         _samples = (WaveformSample*)(pointer + 256);
         _dataEvent = dataEvent;
-        _ownsMmf = isCreator;
 
         if (isCreator)
         {
             Capacity = requestedCapacity;
             Mask = requestedCapacity - 1;
 
-            _header->Magic = WaveformBufferHeader.MagicVal;
             _header->Capacity = Capacity;
             _header->Mask = Mask;
             Volatile.Write(ref _header->Head, 0);
             Volatile.Write(ref _header->Tail, 0);
             Volatile.Write(ref _header->IsClosed, 0);
+            Volatile.Write(ref _header->Magic, WaveformBufferHeader.MagicVal);
         }
         else
         {
-            if (_header->Magic != WaveformBufferHeader.MagicVal)
+            if (Volatile.Read(ref _header->Magic) != WaveformBufferHeader.MagicVal)
             {
                 throw new InvalidOperationException("Invalid waveform buffer magic.");
             }
             Capacity = _header->Capacity;
             Mask = _header->Mask;
+            if (Capacity <= 0 || (Capacity & (Capacity - 1)) != 0 || Mask != Capacity - 1 ||
+                accessor.Capacity < 256L + (long)Capacity * sizeof(WaveformSample))
+                throw new InvalidOperationException("Invalid waveform buffer capacity or mapping size.");
         }
     }
-
-    public static SharedMemoryWaveformBuffer Create(string bufferName, int capacityPowerOfTwo = 16384)
-    {
-        if ((capacityPowerOfTwo & (capacityPowerOfTwo - 1)) != 0)
-        {
-            throw new ArgumentException("Capacity must be a power of two.", nameof(capacityPowerOfTwo));
-        }
-
-        long totalBytes = 256 + ((long)capacityPowerOfTwo * sizeof(WaveformSample));
-        var (mmfName, evtName) = GetKernelObjectNames(bufferName);
-
-        var mmf = MemoryMappedFile.CreateOrOpen(mmfName, totalBytes, MemoryMappedFileAccess.ReadWrite);
-        var accessor = mmf.CreateViewAccessor(0, totalBytes, MemoryMappedFileAccess.ReadWrite);
-
-        byte* ptr = null;
-        accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
-
-        var dataEvt = new EventWaitHandle(false, EventResetMode.AutoReset, evtName);
-
-        return new SharedMemoryWaveformBuffer(mmf, accessor, ptr, dataEvt, isCreator: true, capacityPowerOfTwo);
-    }
-
-    public static SharedMemoryWaveformBuffer Open(string bufferName)
-    {
-        var (mmfName, evtName) = GetKernelObjectNames(bufferName);
-
-        var mmf = MemoryMappedFile.OpenExisting(mmfName, MemoryMappedFileRights.ReadWrite);
-        var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.ReadWrite);
-
-        byte* ptr = null;
-        accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
-
-        var dataEvt = EventWaitHandle.OpenExisting(evtName);
-
-        return new SharedMemoryWaveformBuffer(mmf, accessor, ptr, dataEvt, isCreator: false, 0);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (string MmfName, string EvtName) GetKernelObjectNames(string bufferName)
-        => ($"{bufferName}_wave_mmf", $"{bufferName}_wave_evt");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryWrite(in WaveformSample sample)
     {
-        if (IsClosed) return false;
-
-        long head = Volatile.Read(ref _header->Head);
-        long tail = Volatile.Read(ref _header->Tail);
-
-        if (head - tail >= Capacity) return false; // Buffer full
-
-        _samples[head & Mask] = sample;
-        Volatile.Write(ref _header->Head, head + 1);
-        _dataEvent.Set();
-        return true;
+        lock (_lifetime)
+        {
+            ThrowIfDisposed();
+            if (IsClosed) return false;
+    
+            long head = Volatile.Read(ref _header->Head);
+            long tail = Volatile.Read(ref _header->Tail);
+    
+            if (head - tail >= Capacity) return false; // Buffer full
+    
+            _samples[head & Mask] = sample;
+            Volatile.Write(ref _header->Head, head + 1);
+            _dataEvent.Set();
+            return true;
+        
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int WriteBatch(ReadOnlySpan<WaveformSample> samples)
     {
-        if (samples.IsEmpty || IsClosed) return 0;
-
-        long head = Volatile.Read(ref _header->Head);
-        long tail = Volatile.Read(ref _header->Tail);
-
-        long available = Capacity - (head - tail);
-        if (available <= 0) return 0;
-
-        int toWrite = (int)Math.Min(samples.Length, available);
-        for (int i = 0; i < toWrite; i++)
+        lock (_lifetime)
         {
-            _samples[(head + i) & Mask] = samples[i];
+            ThrowIfDisposed();
+            if (samples.IsEmpty || IsClosed) return 0;
+    
+            long head = Volatile.Read(ref _header->Head);
+            long tail = Volatile.Read(ref _header->Tail);
+    
+            long available = Capacity - (head - tail);
+            if (available <= 0) return 0;
+    
+            int toWrite = (int)Math.Min(samples.Length, available);
+            for (int i = 0; i < toWrite; i++)
+            {
+                _samples[(head + i) & Mask] = samples[i];
+            }
+    
+            Volatile.Write(ref _header->Head, head + toWrite);
+            _dataEvent.Set();
+            return toWrite;
+        
         }
-
-        Volatile.Write(ref _header->Head, head + toWrite);
-        _dataEvent.Set();
-        return toWrite;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryRead(out WaveformSample sample)
     {
-        long tail = Volatile.Read(ref _header->Tail);
-        long head = Volatile.Read(ref _header->Head);
-
-        if (tail >= head)
+        lock (_lifetime)
         {
-            sample = default;
-            return false;
+            ThrowIfDisposed();
+            long tail = Volatile.Read(ref _header->Tail);
+            long head = Volatile.Read(ref _header->Head);
+    
+            if (tail >= head)
+            {
+                sample = default;
+                return false;
+            }
+    
+            sample = _samples[tail & Mask];
+            Volatile.Write(ref _header->Tail, tail + 1);
+            return true;
+        
         }
-
-        sample = _samples[tail & Mask];
-        Volatile.Write(ref _header->Tail, tail + 1);
-        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ReadBatch(Span<WaveformSample> destination)
     {
-        if (destination.IsEmpty) return 0;
-
-        long tail = Volatile.Read(ref _header->Tail);
-        long head = Volatile.Read(ref _header->Head);
-
-        long available = head - tail;
-        if (available <= 0) return 0;
-
-        int toRead = (int)Math.Min(destination.Length, available);
-        for (int i = 0; i < toRead; i++)
+        lock (_lifetime)
         {
-            destination[i] = _samples[(tail + i) & Mask];
+            ThrowIfDisposed();
+            if (destination.IsEmpty) return 0;
+    
+            long tail = Volatile.Read(ref _header->Tail);
+            long head = Volatile.Read(ref _header->Head);
+    
+            long available = head - tail;
+            if (available <= 0) return 0;
+    
+            int toRead = (int)Math.Min(destination.Length, available);
+            for (int i = 0; i < toRead; i++)
+            {
+                destination[i] = _samples[(tail + i) & Mask];
+            }
+    
+            Volatile.Write(ref _header->Tail, tail + toRead);
+            return toRead;
+        
         }
-
-        Volatile.Write(ref _header->Tail, tail + toRead);
-        return toRead;
     }
 
     public bool WaitForData(int timeoutMs)
     {
-        long tail = Volatile.Read(ref _header->Tail);
-        long head = Volatile.Read(ref _header->Head);
-        if (head > tail || IsClosed) return true;
-
-        return _dataEvent.WaitOne(timeoutMs);
+        bool held = false;
+        var handle = _dataEvent.SafeWaitHandle;
+        lock (_lifetime)
+        {
+            ThrowIfDisposed();
+            if (Volatile.Read(ref _header->Head) > Volatile.Read(ref _header->Tail) ||
+                Volatile.Read(ref _header->IsClosed) != 0) return true;
+            handle.DangerousAddRef(ref held);
+        }
+        try { return _dataEvent.WaitOne(timeoutMs); }
+        finally { if (held) handle.DangerousRelease(); }
     }
 
     public void Close()
     {
-        if (Interlocked.Exchange(ref _header->IsClosed, 1) == 0)
+        lock (_lifetime)
         {
-            _dataEvent.Set();
+            ThrowIfDisposed();
+            if (Interlocked.Exchange(ref _header->IsClosed, 1) == 0)
+            {
+                _dataEvent.Set();
+            }
+        
         }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_isDisposed != 0) throw new ObjectDisposedException(nameof(SharedMemoryWaveformBuffer));
     }
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
-
-        Close();
-
-        if (_pointer != null)
+        lock (_lifetime)
         {
+            if (_isDisposed != 0) return;
+            Close();
+            _isDisposed = 1;
             _accessor.SafeMemoryMappedViewHandle.ReleasePointer();
+            _accessor.Dispose();
+            _mmf.Dispose();
+            _dataEvent.Dispose();
         }
-
-        _accessor.Dispose();
-        _mmf.Dispose();
-        _dataEvent.Dispose();
     }
 }

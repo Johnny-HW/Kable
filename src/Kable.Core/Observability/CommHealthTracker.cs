@@ -8,7 +8,7 @@ using Kable.Core.Metrics;
 /// <summary>
 /// 런타임 제로 알로케이션(Zero-GC) 통신 건전성 및 메트릭스 트래커.
 /// 원자적(Interlocked) 연산과 지수이동평균(EMA)을 사용하여 수십만 ops/sec 환경에서도
-/// 락 없이 초고속으로 RTT, 패킷 수 및 에러율을 집계합니다.
+/// RTT 기록은 짧은 임계 구역으로 보호하고 패킷 수 및 에러율은 원자적 연산으로 집계합니다.
 /// </summary>
 public sealed class CommHealthTracker
 {
