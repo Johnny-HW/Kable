@@ -1,90 +1,70 @@
-# Kable
+# Kable · Register continuous polling, call on-demand queries
 
+**Register commands and intervals; Kable manages repeated queries, reply coordination and latest values.**
 Asynchronous device communication for .NET 8, .NET 10 and netstandard2.0.
-Connect, query, poll and recover connections using the API that matches your equipment.
 
-## Start with one query
-
-Add the package from your .NET application project directory. For a new app, first run `dotnet new console -n KableDemo` and `cd KableDemo`.
-
-```bash
-dotnet add package Kable
+```mermaid
+flowchart LR
+    P["Continuous polling<br/>Query status and temperature at intervals"] --> K["Kable Profile<br/>Coordinate requests on one connection"]
+    A["On-demand query or command<br/>Button or workflow call"] --> K
+    K <--> D["Device"]
+    K --> C["Periodic results<br/>Cache and events"]
+    K --> R["On-demand results<br/>Return to caller"]
 ```
+
+| Application task | What you write | Kable feature |
+| --- | --- | --- |
+| Keep reading device status | Register items, commands and intervals | `AddPeriodic` automatic polling |
+| Query once when needed | Register and call an on-demand command | `AddAperiodic` + `ExecuteAsync` |
+| Use recent values in the UI | Choose the acceptable data age | `TryGetFresh` cache access |
+
+[Explore periodic and on-demand workflows](WHY_KABLE.md) · [Compare implementation responsibilities with basic .NET APIs](WHY_KABLE.md#building-the-same-behavior-with-basic-net-apis)
+
+## Configure polling and on-demand queries together
+
+Run `dotnet add package Kable` in the project directory.
+This .NET 8/10 console example uses an equipment-specific endpoint and commands; replace them for your device.
 
 ```csharp
-using Kable.Simple;
+using Kable.Engine.Profiles;
 
-await using var device = await KableSimple.OpenTcpAsync("192.168.0.100", 9000);
-string status = await device.QueryAsync("STATUS?");
-Console.WriteLine(status);
+var config = new KableProfileConfig<PeriodicItem, OnDemandCommand>()
+    .UseTcp("192.168.0.100", 9000)
+    .AddPeriodic(PeriodicItem.Status, "STATUS?", TimeSpan.FromSeconds(1))
+    .AddPeriodic(PeriodicItem.Temperature, "TEMP?", TimeSpan.FromMilliseconds(500))
+    .AddAperiodic(OnDemandCommand.ReadModel, "MODEL?");
+
+await using var device = await KableProfileManager.ConnectAsync(config);
+
+string model = await device.ExecuteAsync(OnDemandCommand.ReadModel);
+Console.WriteLine(model);
+
+await Task.Delay(TimeSpan.FromSeconds(10));
+if (device.TryGetFresh(PeriodicItem.Status, TimeSpan.FromSeconds(3), out var status))
+    Console.WriteLine(status);
+
+enum PeriodicItem { Status, Temperature }
+enum OnDemandCommand { ReadModel }
 ```
 
-Replace the endpoint and command with your device's specification. The defaults are ASCII
-and LF framing. OpenTcpAsync returns a started client; no separate Thread, Task.Run or
-StartAsync is required for ordinary communication. Await using performs asynchronous cleanup.
+Periodic items repeat automatically after connection; on-demand commands execute once per call.
+The ten-second delay keeps the demonstration alive. `TryGetFresh` returns false if no reply has arrived or the value is stale.
 
-Without hardware, run the repository's local mock-device example:
+## Choose your entry point
 
-```bash
-dotnet run --project samples/Kable.QuickStart/Kable.QuickStart.csproj
-```
-
-## Choose your API
-
-| Your task | Entry point |
+| Need | API and guide |
 | --- | --- |
-| String command and one-line reply | `KableSimple` |
-| Periodic polling and latest-value cache | `KableProfileManager` |
-| Binary/custom protocol and framing | `KableClientBuilder<T>` with a codec |
-| Modbus or MELSEC | `Kable.Modbus` or `Kable.Melsec` client |
-| Optional recovery after disconnection | `ReconnectingKableClient` |
-| Incoming multi-client server | `KableServerBuilder<T>` / `IKableServer<T>` |
+| Send a single string query | [KableSimple getting started](GETTING_STARTED.md) |
+| Periodic and on-demand queries with a cache | [Profile workflows and example](WHY_KABLE.md) |
+| Binary or custom framing | [Builder and codecs](DEVELOPER_USAGE.md) |
+| Modbus, MELSEC and protocol extensions | [Features and usage (Korean)](/ko/SOFTWARE_HARDENING_USAGE.md) |
+| Automatic reconnection | [ReconnectingKableClient usage](ERROR_HANDLING.md#optional-connection-recovery) |
+| Incoming multi-client server | [Server hosting](SERVER_HOSTING.md) |
 
-Builder sessions need StartAsync after Build. Simple Open and Profile Connect return started clients.
-Internal asynchronous loops handle sending, receiving and reply routing; they do not each reserve
-a dedicated OS thread. Keep and cancel a Task only for application-owned repeated work.
+## Continue
 
-## Read in this order
+[Installation and supported environments](RELEASE_GUIDE.md) · [Configuration and events](DEVELOPER_USAGE.md) ·
+[Failures and shutdown](ERROR_HANDLING.md) · [Session lifetime](CONNECTION_LIFECYCLE.md)
 
-1. [First connection and polling](en/GETTING_STARTED.md): transports, API choice, Tasks and Profile.
-2. [Configuration and events](en/DEVELOPER_USAGE.md): connection/query deadlines, event routing and UI dispatch.
-3. [Failures and shutdown](en/ERROR_HANDLING.md): timeout handling, optional recovery and cleanup.
-4. [Connection lifecycle](en/CONNECTION_LIFECYCLE.md): FIFO/CID contracts and session reuse.
-
-Server setup and shutdown: [multi-client server hosting](SERVER_HOSTING.md).
-
-## Configuration and failure rules
-
-- Connection timeout and reply timeout are separate settings.
-- QueryAsync returns the matched reply. LineReceived delivers unmatched/event lines on a background path.
-- Handle query errors where you await the query; ErrorOccurred is not an all-errors channel.
-- A transmitted FIFO request that times out or is canceled closes its connection. Create a new client.
-- The recovery wrapper restores connectivity using new clients and does not replay failed commands.
-- Before repeating a motion/write command, check actual device state.
-- Cancel and await application workers, unsubscribe handlers and dispose asynchronously.
-
-## Packages and extension points
-
-| Package | Purpose |
-| --- | --- |
-| `Kable` | Simple, Profile, Builder, TCP/Serial/Named Pipe, codecs and simulator |
-| `Kable.Core` | Contracts, protocol building blocks and shared types |
-| `Kable.Modbus`, `Kable.Melsec` | Modbus-TCP and MELSEC SLMP clients/codecs |
-| `Kable.OpcUa`, `Kable.Mqtt`, `Kable.Grpc` | Protocol bridges and streaming integrations |
-| `Kable.SharedMemory` | Windows shared-memory transport and waveform buffers |
-| `Kable.UI.Wpf` | WPF communication terminal and diagnostics controls |
-| `Kable.Observability.OpenTelemetry` | OpenTelemetry integration |
-
-The library reuses pipeline buffers. String decoding and asynchronous queries allocate;
-see the [measured scope](ko/PERFORMANCE_BASELINE.md) before interpreting allocation claims.
-
-For extension contracts and dependency injection, continue with
-[architecture](en/01_ARCHITECTURE_OVERVIEW.md), [core interfaces](en/02_CORE_INTERFACES.md)
-and [observability](en/03_OBSERVABILITY_LOGGING.md).
-
-## Documentation and source
-
-- [한국어 시작 가이드](ko/GETTING_STARTED.md)
-- [GitHub Pages documentation](https://johnny-hw.github.io/Kable/)
-- [Compiled QuickStart examples](https://github.com/Johnny-HW/Kable/tree/main/samples/Kable.QuickStart)
-- [Repository](https://github.com/Johnny-HW/Kable) · [Apache-2.0 license](https://github.com/Johnny-HW/Kable/blob/main/LICENSE)
+[Performance comparison (Korean)](/ko/benchmarks/LibraryComparison.md) · [Fault comparison (Korean)](/ko/benchmarks/FaultComparison.md) ·
+[1.10.1 release notes](/releases/1.10.1.md) · [GitHub repository](https://github.com/Johnny-HW/Kable)

@@ -1,37 +1,39 @@
-# Kable documentation
+# Kable · 장비 폴링을 설정으로 구성하세요
 
-Connect a device, send a query, then add polling and recovery when needed.
-일반 통신을 위해 별도 Thread나 Task.Run을 만들 필요 없습니다.
+**상시 폴링은 등록하고, 수시 조회는 필요할 때 호출하세요.**
+Register periodic items and intervals, then call on-demand commands from your workflow.
 
-**Kable 1.9.2 — planned / 배포 예정.**
-[Release notes](releases/1.9.2.md) · [한국어 릴리즈 노트](releases/1.9.2.ko.md)
+```mermaid
+flowchart LR
+    P["상시 · Periodic<br/>AddPeriodic"] --> K["Kable Profile"]
+    A["수시 · On-demand<br/>ExecuteAsync"] --> K
+    K <--> D["장비 · Device"]
+    K --> C["최신값 · Latest cache"]
+    K --> R["수시 응답 · On-demand reply"]
+```
 
-[Installation, security and release guide](en/RELEASE_GUIDE.md) · [설치·보안·업그레이드·배포 안내](ko/RELEASE_GUIDE.md)
+| 언어 · Language | 컨셉과 예제 · Concepts | 시작하기 · Get started |
+| --- | --- | --- |
+| 한국어 | [상시·수시 폴링과 기본 API 비교](ko/WHY_KABLE.md) | [한국어 메인](ko/README.md) |
+| English | [Polling workflows and basic API comparison](en/WHY_KABLE.md) | [English overview](en/README.md) |
 
-| Language | Start here | Configuration | Failures and shutdown |
-| --- | --- | --- | --- |
-| 한국어 | [처음 연결하기](ko/GETTING_STARTED.md) | [설정과 이벤트](ko/DEVELOPER_USAGE.md) | [실패 처리와 종료](ko/ERROR_HANDLING.md) |
-| English | [First connection](en/GETTING_STARTED.md) | [Configuration and events](en/DEVELOPER_USAGE.md) | [Failures and shutdown](en/ERROR_HANDLING.md) |
+## 사용 가이드 · Usage guides
 
-## Other language documentation
+[설치·지원 환경](ko/RELEASE_GUIDE.md) · [Installation](en/RELEASE_GUIDE.md) ·
+[오류 처리·자동 재연결](ko/ERROR_HANDLING.md) · [Failures and reconnection](en/ERROR_HANDLING.md)
 
-- [繁體中文](zh-tw/README.md)
-- [简体中文](zh-cn/README.md)
-- [日本語](ja/README.md)
-- [Deutsch](de/README.md)
-- [Español](es/README.md)
+## 검증 자료 · Verification
 
-The usage-first guides above are maintained in Korean and English.
-Other languages retain their existing architecture documentation.
+[성능 비교 · Performance](ko/benchmarks/LibraryComparison.md) ·
+[오류 처리 비교 · Fault handling](ko/benchmarks/FaultComparison.md)
 
-## Choose an API
+## 릴리즈 · Releases
 
-| Need | API |
-| --- | --- |
-| String command/reply | KableSimple |
-| Periodic polling and cache | KableProfileManager |
-| Custom framing | KableClientBuilder and a codec |
-| Connection recovery | ReconnectingKableClient |
+[1.10.1 한국어](releases/1.10.1.ko.md) · [1.10.1 English](releases/1.10.1.md)
 
-Kable targets .NET 8, .NET 10 and netstandard2.0. Pipeline buffers are reused;
-string decoding and asynchronous requests allocate. See [measured scope](ko/PERFORMANCE_BASELINE.md).
+## 다른 언어 · Other languages
+
+[繁體中文](zh-tw/README.md) · [简体中文](zh-cn/README.md) · [日本語](ja/README.md) ·
+[Deutsch](de/README.md) · [Español](es/README.md)
+
+.NET 8 · .NET 10 · netstandard2.0 · [GitHub](https://github.com/Johnny-HW/Kable)
