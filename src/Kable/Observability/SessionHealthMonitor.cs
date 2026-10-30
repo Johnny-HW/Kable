@@ -122,14 +122,28 @@ public sealed class SessionHealthMonitor
     {
         if (_alarmManager == null) return;
 
-        var snap = GetSnapshot();
-        if (snap.JitterMs >= _jitterWarningThresholdMs)
+        double jitter;
+        lock (_lock)
+        {
+            if (_count == 0) return;
+            double sum = 0;
+            for (int i = 0; i < _count; i++) sum += _rttWindow[i];
+            double mean = sum / _count;
+            double variance = 0;
+            for (int i = 0; i < _count; i++)
+            {
+                double difference = _rttWindow[i] - mean;
+                variance += difference * difference;
+            }
+            jitter = Math.Sqrt(variance / _count);
+        }
+        if (jitter >= _jitterWarningThresholdMs)
         {
             _alarmManager.RaiseAlarm(
                 alarmId: "ALM_HIGH_JITTER",
                 deviceId: _deviceId,
                 severity: AlarmSeverity.Warning,
-                description: $"High communication jitter detected: {snap.JitterMs:F1}ms (Threshold: {_jitterWarningThresholdMs}ms)");
+                description: $"High communication jitter detected: {jitter:F1}ms (Threshold: {_jitterWarningThresholdMs}ms)");
         }
     }
 }

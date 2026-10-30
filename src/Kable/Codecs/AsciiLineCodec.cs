@@ -13,6 +13,8 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>, IAlarmMessageC
     private readonly byte _delimiter;
     private readonly Encoding _encoding;
     private readonly Func<string, bool>? _isAutonomousPredicate;
+    private static readonly char[] LineEndings = { '\r', '\n' };
+    private readonly bool _trimBytes;
 
     public AsciiLineCodec(
         byte delimiter = 0x0A,
@@ -30,6 +32,7 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>, IAlarmMessageC
     {
         _delimiter = delimiter;
         _encoding = encoding ?? Encoding.ASCII;
+        _trimBytes = _encoding.CodePage == 20127 || _encoding.CodePage == 65001 || _encoding.CodePage == 28591;
         _isAutonomousPredicate = isAutonomousPredicate;
     }
 
@@ -46,7 +49,19 @@ public sealed class AsciiLineCodec : DelimitedFrameCodec<string>, IAlarmMessageC
 
     protected override bool TryDecodePayload(in ReadOnlySequence<byte> payloadSequence, out string message)
     {
-        message = GetStringFromSequence(payloadSequence).TrimEnd('\r', '\n');
+        var payload = payloadSequence;
+        if (_trimBytes)
+        {
+            Span<byte> last = stackalloc byte[1];
+            while (!payload.IsEmpty)
+            {
+                payload.Slice(payload.Length - 1, 1).CopyTo(last);
+                if (last[0] != 13 && last[0] != 10) break;
+                payload = payload.Slice(0, payload.Length - 1);
+            }
+            message = GetStringFromSequence(payload);
+        }
+        else message = GetStringFromSequence(payload).TrimEnd(LineEndings);
         return true;
     }
 
