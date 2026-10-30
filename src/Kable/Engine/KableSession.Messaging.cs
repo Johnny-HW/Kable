@@ -25,7 +25,9 @@ public sealed partial class KableSession<TMessage>
     {
         if (State != SessionLifecycleState.Running || Volatile.Read(ref _isConnected) == 0 || _context == null)
         {
-            throw new DeviceDisconnectedException("Connection is not open. Call StartAsync() first.");
+            throw new DeviceDisconnectedException(State == SessionLifecycleState.Created
+                ? "Connection is not open. Call StartAsync() first."
+                : "Session is disconnected or closing. Dispose this session and create a new session.");
         }
     }
 
@@ -203,11 +205,15 @@ public sealed partial class KableSession<TMessage>
             {
                 _healthTracker.RecordError(1);
                 var timeoutError = CreateTimeoutError(request, timeout);
-                _observer?.OnPacketTrace(new PacketTraceRecord(
+                try
+                {
+                    _observer?.OnPacketTrace(new PacketTraceRecord(
                     DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                     "DEVICE_TIMEOUT", ReadOnlyMemory<byte>.Empty,
                     $"Command '{timeoutError.Command}' timed out after {timeout.TotalMilliseconds}ms.",
                     timeout, LogLevel.Warning));
+                }
+                catch (Exception traceError) { timeoutError.Data["TraceException"] = traceError; }
 
                 throw timeoutError;
             }
@@ -216,39 +222,6 @@ public sealed partial class KableSession<TMessage>
                 _responses.Release(cid!, tcs);
             }
         }
-    }
-
-    private static async Task<T> WaitWithCancellationAsync<T>(Task<T> task, CancellationToken ct)
-    {
-        if (task.IsCompleted)
-        {
-            return await task.ConfigureAwait(false);
-        }
-
-        var delayTask = Task.Delay(Timeout.Infinite, ct);
-        var completed = await Task.WhenAny(task, delayTask).ConfigureAwait(false);
-        if (completed == delayTask)
-        {
-            ct.ThrowIfCancellationRequested();
-        }
-        return await task.ConfigureAwait(false);
-    }
-
-    private static async Task WaitWithCancellationAsync(Task task, CancellationToken ct)
-    {
-        if (task.IsCompleted)
-        {
-            await task.ConfigureAwait(false);
-            return;
-        }
-
-        var delayTask = Task.Delay(Timeout.Infinite, ct);
-        var completed = await Task.WhenAny(task, delayTask).ConfigureAwait(false);
-        if (completed == delayTask)
-        {
-            ct.ThrowIfCancellationRequested();
-        }
-        await task.ConfigureAwait(false);
     }
 
     public async ValueTask SendUrgentAsync(TMessage urgentMessage)

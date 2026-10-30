@@ -21,6 +21,7 @@ public sealed partial class KableSession<TMessage>
         var token = _sessionCts.Token;
         Task<bool>? urgentWait = null;
         Task<bool>? normalWait = null;
+        var commandsToComplete = new List<OutboundCommand>(32);
 
         try
         {
@@ -58,7 +59,8 @@ public sealed partial class KableSession<TMessage>
                 }
 
                 // 2. Encode primary and batched messages inside safe bulkhead
-                var commandsToComplete = new List<OutboundCommand>(8) { cmd };
+                commandsToComplete.Clear();
+                commandsToComplete.Add(cmd);
                 try
                 {
                     _codec.Encode(cmd.Message, output);
@@ -160,6 +162,7 @@ public sealed partial class KableSession<TMessage>
                     }
                     throw;
                 }
+                finally { commandsToComplete.Clear(); }
             }
         }
         catch (OperationCanceledException)

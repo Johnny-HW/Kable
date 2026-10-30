@@ -14,6 +14,7 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
     private int _isDisposed;
     private readonly object _lifetime = new();
     private bool _aborted;
+    private Task? _disposeTask;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
@@ -37,18 +38,25 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
         {
             if (_isDisposed != 0 || _aborted) return;
             _aborted = true;
-            _cts.Cancel();
-            try { _pipeStream.Close(); } catch (Exception) { /* Stream already closed or pipe broken by remote process */ }
+            try { _cts.Cancel(); }
+            finally { _pipeStream.Close(); }
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
+        lock (_lifetime) return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        Exception? cancellationError = null;
         lock (_lifetime)
         {
             if (_isDisposed != 0) return;
             _isDisposed = 1;
-            _cts.Cancel();
+            try { _cts.Cancel(); }
+            catch (Exception error) { cancellationError = error; }
         }
         try
         {
@@ -61,6 +69,7 @@ public sealed class IpcNamedPipeConnectionContext : IConnectionContext
 #endif
         }
         finally { _cts.Dispose(); }
+        if (cancellationError != null) throw cancellationError;
     }
 }
 

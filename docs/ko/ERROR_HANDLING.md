@@ -160,8 +160,11 @@ FIFO 명령 송신 후 응답을 확정하기 전에 송신 추적이 실패하�
 관찰자 예외를 받은 호출자도 기존 클라이언트를 폐기하고 새 연결을 사용한다.
 명령이 실행되었을 수 있으므로 자동 재전송하지 않는다.
 
-FIFO 타임아웃 로그가 실패해도 호출자에게는 DeviceTimeoutException을 반환한다.
+FIFO 및 CID 타임아웃 로그가 실패해도 호출자에게는 DeviceTimeoutException을 반환한다.
 로그 오류는 ex.Data["TraceException"]에 보존한다. 메시지 ToString()이 실패하면
 Command는 "UnknownCommand"이며 원인은 ex.Data["CommandFormattingException"]에 보존한다.
-이 진단 항목은 오류가 발생한 경우에만 존재한다. CID 타임아웃의 관찰자 예외까지
-동일하게 격리한다는 의미는 아니다.
+이 진단 항목은 오류가 발생한 경우에만 존재한다. CID 타임아웃은 해당 요청만 실패하고 세션은 유지한다.
+
+물리 단절 후 State는 Stopping을 거쳐 Stopped로 전이한다. 같은 세션의 StartAsync는
+재연결을 수행하지 않으며 실패한다. 자동 정리 실패는 KableSession.LastCleanupError로 확인하고,
+StopAsync/DisposeAsync를 await하면 동일한 정리 실패를 받는다.

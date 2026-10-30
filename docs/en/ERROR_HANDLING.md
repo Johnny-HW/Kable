@@ -146,8 +146,11 @@ If send tracing fails after a FIFO command is transmitted but before its respons
 the session closes. Dispose that client and create a new connection even when the caller sees
 an observer exception. Check equipment state before retrying: transmission may have succeeded.
 
-FIFO timeout logging failures do not replace DeviceTimeoutException. The logging failure is
+FIFO and CID timeout logging failures do not replace DeviceTimeoutException. The logging failure is
 retained in ex.Data["TraceException"]. If message ToString() fails, Command is "UnknownCommand"
 and ex.Data["CommandFormattingException"] retains the cause. These entries exist only when
-that diagnostic operation fails. This isolation does not extend to observer exceptions in the
-CID timeout logging path.
+that diagnostic operation fails. CID timeouts fail only the affected request and keep the session alive.
+
+After a physical disconnection, State transitions through Stopping to Stopped. StartAsync on the
+same session fails; create a fresh session to reconnect. KableSession.LastCleanupError exposes
+automatic cleanup failures. Awaiting StopAsync/DisposeAsync reports the shared cleanup failure.

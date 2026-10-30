@@ -59,11 +59,25 @@ public sealed class ReconnectingKableClient : IAsyncDisposable
         }
     }
 
-    public ValueTask<string> QueryAsync(string command, TimeSpan? timeout = null, CancellationToken ct = default)
-        => GetConnectedClient().QueryAsync(command, timeout, ct);
+    public async ValueTask<string> QueryAsync(string command, TimeSpan? timeout = null, CancellationToken ct = default)
+    {
+        var client = GetConnectedClient();
+        try { return await client.QueryAsync(command, timeout, ct).ConfigureAwait(false); }
+        catch (ObjectDisposedException error)
+        {
+            throw new DeviceDisconnectedException("Connection was released while the command was in flight. Command was not replayed.", error);
+        }
+    }
 
-    public ValueTask SendLineAsync(string command, CancellationToken ct = default)
-        => GetConnectedClient().SendLineAsync(command, ct);
+    public async ValueTask SendLineAsync(string command, CancellationToken ct = default)
+    {
+        var client = GetConnectedClient();
+        try { await client.SendLineAsync(command, ct).ConfigureAwait(false); }
+        catch (ObjectDisposedException error)
+        {
+            throw new DeviceDisconnectedException("Connection was released while sending. Command was not replayed.", error);
+        }
+    }
 
     private IKableSimpleClient GetConnectedClient()
     {

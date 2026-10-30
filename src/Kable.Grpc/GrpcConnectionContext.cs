@@ -23,6 +23,7 @@ public sealed class GrpcConnectionContext : IConnectionContext
     private readonly object _lifetime = new();
     private bool _aborted;
     private IDisposable? _callScope;
+    private Task? _disposeTask;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
@@ -210,21 +211,35 @@ public sealed class GrpcConnectionContext : IConnectionContext
         {
             if (_isDisposed != 0 || _aborted) return;
             _aborted = true;
-            _cts.Cancel();
-            Interlocked.Exchange(ref _callScope, null)?.Dispose();
-            _inboundPipe.Writer.CancelPendingFlush();
-            _outboundPipe.Reader.CancelPendingRead();
+            try { _cts.Cancel(); }
+            finally
+            {
+                try { Interlocked.Exchange(ref _callScope, null)?.Dispose(); }
+                finally
+                {
+                    _inboundPipe.Writer.CancelPendingFlush();
+                    _outboundPipe.Reader.CancelPendingRead();
+                }
+            }
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
+        lock (_lifetime) return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        Exception? cancellationError = null;
         lock (_lifetime)
         {
             if (_isDisposed != 0) return;
             _isDisposed = 1;
-            _cts.Cancel();
-            Interlocked.Exchange(ref _callScope, null)?.Dispose();
+            try { _cts.Cancel(); }
+            catch (Exception error) { cancellationError = error; }
+            try { Interlocked.Exchange(ref _callScope, null)?.Dispose(); }
+            catch (Exception error) { cancellationError = cancellationError == null ? error : new AggregateException(cancellationError, error); }
         }
         try
         {
@@ -243,5 +258,6 @@ public sealed class GrpcConnectionContext : IConnectionContext
 
         }
         finally { _cts.Dispose(); }
+        if (cancellationError != null) throw cancellationError;
     }
 }

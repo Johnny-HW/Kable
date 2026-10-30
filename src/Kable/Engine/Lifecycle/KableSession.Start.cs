@@ -27,7 +27,15 @@ public sealed partial class KableSession<TMessage>
     private readonly TaskCompletionSource<bool> _startTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _cleanupTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public SessionLifecycleState State => (SessionLifecycleState)Volatile.Read(ref _lifecycleState);
+    public SessionLifecycleState State
+    {
+        get
+        {
+            var state = (SessionLifecycleState)Volatile.Read(ref _lifecycleState);
+            return state == SessionLifecycleState.Running && Volatile.Read(ref _isConnected) == 0
+                ? SessionLifecycleState.Stopping : state;
+        }
+    }
 
     public async ValueTask StartAsync(CancellationToken ct = default)
     {
@@ -46,6 +54,8 @@ public sealed partial class KableSession<TMessage>
             var currentState = (SessionLifecycleState)Volatile.Read(ref _lifecycleState);
             if (currentState == SessionLifecycleState.Running)
             {
+                if (Volatile.Read(ref _isConnected) == 0)
+                    throw new InvalidOperationException("Disconnected sessions cannot restart. Dispose this session and create a new session.");
                 return;
             }
             if (currentState == SessionLifecycleState.Starting)

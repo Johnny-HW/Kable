@@ -10,6 +10,9 @@ using Kable.Observability;
 
 public sealed partial class KableSession<TMessage>
 {
+    private Exception? _backgroundCleanupError;
+    /// <summary>Failure observed during automatic cleanup; StopAsync also reports the shared failure.</summary>
+    public Exception? LastCleanupError => Volatile.Read(ref _backgroundCleanupError);
     private void OnConnectionClosed()
     {
         OnConnectionClosed(null);
@@ -49,6 +52,20 @@ public sealed partial class KableSession<TMessage>
                 _context?.Abort("Hardware connection has been disconnected.");
             }
             catch { }
+            QueueCleanup(specificReason is AlarmBufferOverflowException ? specificReason : null);
         }
+    }
+
+    private void QueueCleanup(Exception? reason)
+    {
+        _ = Task.Run(async () =>
+        {
+            try { await PerformCleanupAsync(reason).ConfigureAwait(false); }
+            catch (Exception cleanupError)
+            {
+                // StopAsync/DisposeAsync still expose the shared cleanup failure to callers.
+                Volatile.Write(ref _backgroundCleanupError, cleanupError);
+            }
+        });
     }
 }

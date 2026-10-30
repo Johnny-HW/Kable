@@ -120,18 +120,17 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
         lock (_lifetime)
         {
             ThrowIfDisposed();
-            if (IsClosed) return false;
-    
+            if (Volatile.Read(ref _header->IsClosed) != 0) return false;
+
             long head = Volatile.Read(ref _header->Head);
             long tail = Volatile.Read(ref _header->Tail);
-    
+
             if (head - tail >= Capacity) return false; // Buffer full
-    
+
             _samples[head & Mask] = sample;
             Volatile.Write(ref _header->Head, head + 1);
             _dataEvent.Set();
             return true;
-        
         }
     }
 
@@ -141,24 +140,23 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
         lock (_lifetime)
         {
             ThrowIfDisposed();
-            if (samples.IsEmpty || IsClosed) return 0;
-    
+            if (samples.IsEmpty || Volatile.Read(ref _header->IsClosed) != 0) return 0;
+
             long head = Volatile.Read(ref _header->Head);
             long tail = Volatile.Read(ref _header->Tail);
-    
+
             long available = Capacity - (head - tail);
             if (available <= 0) return 0;
-    
+
             int toWrite = (int)Math.Min(samples.Length, available);
             for (int i = 0; i < toWrite; i++)
             {
                 _samples[(head + i) & Mask] = samples[i];
             }
-    
+
             Volatile.Write(ref _header->Head, head + toWrite);
             _dataEvent.Set();
             return toWrite;
-        
         }
     }
 
@@ -170,17 +168,16 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
             ThrowIfDisposed();
             long tail = Volatile.Read(ref _header->Tail);
             long head = Volatile.Read(ref _header->Head);
-    
+
             if (tail >= head)
             {
                 sample = default;
                 return false;
             }
-    
+
             sample = _samples[tail & Mask];
             Volatile.Write(ref _header->Tail, tail + 1);
             return true;
-        
         }
     }
 
@@ -191,22 +188,21 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
         {
             ThrowIfDisposed();
             if (destination.IsEmpty) return 0;
-    
+
             long tail = Volatile.Read(ref _header->Tail);
             long head = Volatile.Read(ref _header->Head);
-    
+
             long available = head - tail;
             if (available <= 0) return 0;
-    
+
             int toRead = (int)Math.Min(destination.Length, available);
             for (int i = 0; i < toRead; i++)
             {
                 destination[i] = _samples[(tail + i) & Mask];
             }
-    
+
             Volatile.Write(ref _header->Tail, tail + toRead);
             return toRead;
-        
         }
     }
 
@@ -234,7 +230,6 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
             {
                 _dataEvent.Set();
             }
-        
         }
     }
 

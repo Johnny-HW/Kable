@@ -64,8 +64,6 @@ public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>
 
         Span<byte> headerBytes = stackalloc byte[6];
         buffer.Slice(0, 6).CopyTo(headerBytes);
-        if (BinaryPrimitives.ReadUInt16BigEndian(headerBytes.Slice(2, 2)) != 0)
-            throw new Kable.Exceptions.ProtocolViolationException("Modbus TCP ProtocolId must be zero.");
 
         ushort length = BinaryPrimitives.ReadUInt16BigEndian(headerBytes.Slice(4, 2));
         int totalFrameSize = 6 + length;
@@ -84,6 +82,8 @@ public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>
             message = null!;
             return false;
         }
+        if (BinaryPrimitives.ReadUInt16BigEndian(headerBytes.Slice(2, 2)) != 0)
+            throw new Kable.Exceptions.ProtocolViolationException("Modbus TCP ProtocolId must be zero.");
 
         // 전체 프레임 복사 없이 파싱
         Span<byte> fullHeader = stackalloc byte[8]; // 6 + UnitId(1) + FC(1)

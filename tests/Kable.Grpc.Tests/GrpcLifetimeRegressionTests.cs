@@ -7,6 +7,21 @@ using Xunit;
 public sealed class GrpcLifetimeRegressionTests
 {
     [Fact]
+    public async Task ConcurrentDisposeCallsWaitForTheSamePumpShutdown()
+    {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reader = new WaitingReader { Release = release };
+        var context = new GrpcConnectionContext(reader, new Sink(), "test");
+        context.Abort("test");
+        var first = context.DisposeAsync().AsTask();
+        var second = context.DisposeAsync().AsTask();
+        Assert.False(second.IsCompleted);
+        release.TrySetResult();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(reader.Exited);
+    }
+
+    [Fact]
     public async Task AbortThenDisposeAwaitsPumpsAndDisposesTokenSource()
     {
         var reader = new WaitingReader();
@@ -22,10 +37,15 @@ public sealed class GrpcLifetimeRegressionTests
     {
         public KablePacket Current => new();
         public bool Exited;
+        public TaskCompletionSource? Release { get; init; }
         public async Task<bool> MoveNext(CancellationToken ct)
         {
             try { await Task.Delay(Timeout.Infinite, ct); return false; }
-            finally { Exited = true; }
+            finally
+            {
+                if (Release != null) await Release.Task;
+                Exited = true;
+            }
         }
     }
     private sealed class Sink : IServerStreamWriter<KablePacket>

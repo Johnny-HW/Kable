@@ -63,7 +63,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
         _codec = codec;
         _responses = new Messaging.ResponseRouter<TMessage>(codec);
         _decoder = new Decoding.FrameDecoder<TMessage>(codec);
-        _observer = observer;
+        _observer = observer == null ? null : new SessionCommObserver(observer, deviceId ?? "DEFAULT");
         _heartbeatOptions = heartbeatOptions;
         _timeProvider = heartbeatOptions?.TimeProvider ?? TimeProvider.System;
         DeviceId = deviceId ?? "DEFAULT";
@@ -79,7 +79,7 @@ public sealed partial class KableSession<TMessage> : IDeviceSession<TMessage>, I
         _alarmStream = Channel.CreateBounded<TMessage>(alarmOptions);
 
         _alarmSpool = new Alarms.AlarmSpoolWorker<TMessage>(_sessionOptions, _observer,
-            error => _ = Task.Run(() => PerformCleanupAsync(error)));
+            error => QueueCleanup(error));
 
         _delivery = new Streaming.InboundDelivery<TMessage>(_sessionOptions.InboundQueueCapacity,
             _sessionOptions.InboundDeliveryCapacity, _sessionOptions.TelemetryOverflowMode, message =>

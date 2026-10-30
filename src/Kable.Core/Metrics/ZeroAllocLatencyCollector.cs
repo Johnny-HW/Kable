@@ -36,13 +36,13 @@ public sealed class ZeroAllocLatencyCollector
     {
         lock (_sync)
         {
-        int index = _head;
-        _timestamps[index] = elapsedTicks;
-        _head = (index + 1) % _capacity;
-        if (_count < _capacity)
-        {
-            _count++;
-        }
+            int index = _head;
+            _timestamps[index] = elapsedTicks;
+            _head = (index + 1) % _capacity;
+            if (_count < _capacity)
+            {
+                _count++;
+            }
         }
     }
 
@@ -63,8 +63,8 @@ public sealed class ZeroAllocLatencyCollector
     {
         lock (_sync)
         {
-        _head = 0;
-        _count = 0;
+            _head = 0;
+            _count = 0;
         }
     }
 
@@ -79,14 +79,14 @@ public sealed class ZeroAllocLatencyCollector
         long[] copy;
         lock (_sync)
         {
-        count = _count;
-        if (count == 0)
-        {
-            return new LatencySummary(0, 0, 0, 0, 0, 0);
-        }
+            count = _count;
+            if (count == 0)
+            {
+                return new LatencySummary(0, 0, 0, 0, 0, 0);
+            }
 
-        copy = new long[count];
-        Array.Copy(_timestamps, copy, count);
+            copy = new long[count];
+            Array.Copy(_timestamps, copy, count);
         }
         Array.Sort(copy);
 

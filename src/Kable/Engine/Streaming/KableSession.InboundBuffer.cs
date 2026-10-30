@@ -69,7 +69,7 @@ public sealed partial class KableSession<TMessage>
                         DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
                         "ALARM_SPOOL_OVERFLOW_FAILFAST", ReadOnlyMemory<byte>.Empty, spoolOverflowEx.Message, TimeSpan.Zero, LogLevel.Critical));
 
-                    _ = Task.Run(() => PerformCleanupAsync(spoolOverflowEx));
+                    QueueCleanup(spoolOverflowEx);
                     throw spoolOverflowEx;
                 }
                 goto default;
@@ -95,7 +95,7 @@ public sealed partial class KableSession<TMessage>
                     "ALARM_BUFFER_OVERFLOW_FAILFAST", ReadOnlyMemory<byte>.Empty, ex.Message, TimeSpan.Zero, LogLevel.Critical));
                 
                 // 비동기로 세션 페일패스트 정리 수행 (디스패치 루프 블로킹 방지)
-                _ = Task.Run(() => PerformCleanupAsync(ex));
+                QueueCleanup(ex);
                 throw ex;
         }
     }

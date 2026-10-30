@@ -47,4 +47,27 @@ public sealed class WaveformLifetimeTests
         buffer.Dispose();
         await wait.WaitAsync(TimeSpan.FromSeconds(5));
     }
+
+    [Fact]
+    public async Task ConcurrentDisposeCannotReleaseMemoryDuringAnOperation()
+    {
+        var buffer = SharedMemoryWaveformBuffer.Create(Guid.NewGuid().ToString("N"), 8);
+        using var started = new ManualResetEventSlim();
+        var writer = Task.Run(() =>
+        {
+            started.Set();
+            try
+            {
+                for (int i = 0; i < 100000; i++)
+                {
+                    buffer.WriteBatch(new WaveformSample[] { new(1, i) });
+                    buffer.ReadBatch(new WaveformSample[1]);
+                }
+            }
+            catch (ObjectDisposedException) { }
+        });
+        Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
+        buffer.Dispose();
+        await writer.WaitAsync(TimeSpan.FromSeconds(5));
+    }
 }

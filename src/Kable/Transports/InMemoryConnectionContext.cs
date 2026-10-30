@@ -16,12 +16,16 @@ public sealed class InMemoryConnectionContext : IConnectionContext
     private readonly Pipe _outboundPipe;
     private readonly CancellationTokenSource _cts = new();
     private int _isDisposed;
+    private readonly object _lifetime = new();
+    private bool _aborted;
+    private Task? _disposeTask;
+    private readonly CancellationToken _closed;
 
     public string ConnectionId { get; }
     public string EndpointDescription { get; }
     public PipeReader Input => _inboundPipe.Reader;
     public PipeWriter Output => _outboundPipe.Writer;
-    public CancellationToken ConnectionClosed => _cts.Token;
+    public CancellationToken ConnectionClosed => _closed;
 
     /// <summary>
     /// 시뮬레이터/상대방 입장에서 읽고 쓰는 페어(Pair) 컨텍스트
@@ -36,6 +40,7 @@ public sealed class InMemoryConnectionContext : IConnectionContext
         InMemoryConnectionContext? peer)
     {
         _inboundPipe = inboundPipe;
+        _closed = _cts.Token;
         _outboundPipe = outboundPipe;
         ConnectionId = connectionId;
         EndpointDescription = endpointDescription;
@@ -80,17 +85,42 @@ public sealed class InMemoryConnectionContext : IConnectionContext
 
     public void Abort(string reason)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+        lock (_lifetime)
         {
-            _cts.Cancel();
-            _inboundPipe.Reader.CancelPendingRead();
-            _outboundPipe.Writer.CancelPendingFlush();
+            if (_aborted || _isDisposed != 0) return;
+            _aborted = true;
+            try { _cts.Cancel(); }
+            finally
+            {
+                _inboundPipe.Reader.CancelPendingRead();
+                _outboundPipe.Writer.CancelPendingFlush();
+            }
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        Abort("Disposed");
-        await Task.CompletedTask;
+        lock (_lifetime) return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        Exception? cancellationError = null;
+        lock (_lifetime)
+        {
+            _isDisposed = 1;
+            try { _cts.Cancel(); }
+            catch (Exception error) { cancellationError = error; }
+        }
+        try
+        {
+            await _inboundPipe.Reader.CompleteAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            try { await _outboundPipe.Writer.CompleteAsync().ConfigureAwait(false); }
+            finally { _cts.Dispose(); }
+        }
+        if (cancellationError != null) throw cancellationError;
     }
 }

@@ -6,6 +6,31 @@ using Xunit;
 public sealed class LifetimeRegressionTests
 {
     [Fact]
+    public async Task ConcurrentDisposeCallsShareCompletion()
+    {
+        var stream = new DelayedDisposeStream();
+        var context = new IpcNamedPipeConnectionContext(stream, "test");
+        var first = context.DisposeAsync().AsTask();
+        await stream.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var second = context.DisposeAsync().AsTask();
+        Assert.False(second.IsCompleted);
+        stream.Finish.TrySetResult();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    private sealed class DelayedDisposeStream : MemoryStream
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Finish { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override async ValueTask DisposeAsync()
+        {
+            Started.TrySetResult();
+            await Finish.Task;
+            await base.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task AbortDoesNotSkipDisposeCleanup()
     {
         var context = new IpcNamedPipeConnectionContext(new MemoryStream(), "test");

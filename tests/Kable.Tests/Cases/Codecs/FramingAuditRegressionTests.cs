@@ -28,6 +28,29 @@ public sealed class FramingAuditRegressionTests
         Assert.True(sequence.IsEmpty);
     }
 
+    [Fact]
+    public void MissingLengthFieldMarkerReportsRejectedLength()
+    {
+        var codec = new LengthBytesCodec();
+        var sequence = new ReadOnlySequence<byte>(new byte[] { 1, 2, 3, 4, 5 });
+        var error = Assert.Throws<ProtocolViolationException>(() => codec.TryDecode(ref sequence, out _));
+        Assert.Contains("5 > 4", error.Message);
+        Assert.True(sequence.IsEmpty);
+    }
+
+    private sealed class LengthBytesCodec() : LengthFieldCodec<byte[]>(new()
+    {
+        HeaderMarker = 0x7E, MaxFrameSize = 4
+    })
+    {
+        protected override bool TryDecodePayload(in ReadOnlySequence<byte> sequence, out byte[] message)
+        {
+            message = sequence.ToArray();
+            return true;
+        }
+        public override void Encode(byte[] message, IBufferWriter<byte> output) => throw new NotSupportedException();
+    }
+
     private sealed class BytesCodec(DelimitedFrameOptions options) : DelimitedFrameCodec<byte[]>(options)
     {
         protected override bool TryDecodePayload(in ReadOnlySequence<byte> sequence, out byte[] message)
