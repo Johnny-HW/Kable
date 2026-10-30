@@ -1,0 +1,18 @@
+{
+  "Utc": "2026-10-30T00:06:58.5050992+00:00",
+  "OS": "Microsoft Windows 10.0.22631",
+  "Runtime": ".NET 10.0.9",
+  "Architecture": "X64",
+  "CpuIdentifier": "Intel64 Family 6 Model 186 Stepping 3, GenuineIntel",
+  "LogicalProcessors": 12,
+  "ServerGC": false,
+  "Iterations": 10000,
+  "WarmupPerConnection": 200,
+  "Rounds": 3,
+  "Versions": {
+    "Kable": "1.10.1\u002Bf0ababf9c4f1bb8c8f5ac8d67f7399a638881b80",
+    "TouchSocket": "4.3.11\u002Bc4ee117d0529a4786e24b0f0c006a994183bb26f",
+    "SuperSocket.Client": "2.1.0.36\u002Bf7cf1f5558ad7d0c6e6b22c9cc2f659c60d11f15",
+    "DotNetty.Transport": "0.7.6.0"
+  }
+}
