@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.SharedMemory.TestPeer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.Comparison.Benchmarks", "tests\Kable.Comparison.Benchmarks\Kable.Comparison.Benchmarks.csproj", "{B05C99E7-6ACE-4070-850D-94C8ACD0823E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kable.UI.Wpf.Tests", "tests\Kable.UI.Wpf.Tests\Kable.UI.Wpf.Tests.csproj", "{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -467,6 +469,18 @@ Global
 		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x64.Build.0 = Release|Any CPU
 		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x86.ActiveCfg = Release|Any CPU
 		{B05C99E7-6ACE-4070-850D-94C8ACD0823E}.Release|x86.Build.0 = Release|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Debug|x64.Build.0 = Debug|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Debug|x86.Build.0 = Debug|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Release|x64.ActiveCfg = Release|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Release|x64.Build.0 = Release|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Release|x86.ActiveCfg = Release|Any CPU
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -504,5 +518,6 @@ Global
 		{F1BBADD5-C2DA-4544-A9E3-96E70C21785D} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{E2BD1BAC-C169-499B-B2E6-FA5F59FA521F} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{B05C99E7-6ACE-4070-850D-94C8ACD0823E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{DFD18A4D-7461-4005-8F4C-F6E8BDB431EF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

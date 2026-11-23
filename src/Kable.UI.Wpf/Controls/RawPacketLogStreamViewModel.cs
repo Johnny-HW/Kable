@@ -1,10 +1,13 @@
 namespace Kable.UI.Wpf.Controls;
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Channels;
 using System.Windows;
 using System.Windows.Threading;
@@ -15,11 +18,18 @@ using Kable.Observability;
 using Kable.UI.Wpf.Services;
 using Kable.UI.Wpf.ViewModels;
 
-public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserver
+public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserver, IDisposable
 {
     private readonly Dispatcher _dispatcher;
     private readonly int _maxLogCount;
+    private readonly int _maxPendingCount;
     private readonly IPacketLogExportService _logExportService;
+    private readonly ConcurrentQueue<PacketDisplayModel> _pendingPackets = new();
+    private readonly DispatcherTimer _flushTimer;
+    private int _pendingCount;
+    private int _isPausedSnapshot;
+    private string _filterSnapshot = string.Empty;
+    private int _disposed;
 
     [ObservableProperty]
     private bool _isPaused;
@@ -62,25 +72,31 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
     public RawPacketLogStreamViewModel(Dispatcher? dispatcher, int maxLogCount, IPacketLogExportService? logExportService)
     {
         _dispatcher = dispatcher ?? (Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher);
-        _maxLogCount = maxLogCount;
+        _maxLogCount = Math.Max(1, maxLogCount);
+        _maxPendingCount = Math.Max(_maxLogCount * 2, 2048);
         _logExportService = logExportService ?? WpfPacketLogExportService.Instance;
+        _flushTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(50), DispatcherPriority.Background, (_, _) => FlushPending(), _dispatcher);
+        _flushTimer.Start();
     }
+
+    partial void OnIsPausedChanged(bool value) => Volatile.Write(ref _isPausedSnapshot, value ? 1 : 0);
+
+    partial void OnFilterTextChanged(string value) => Volatile.Write(ref _filterSnapshot, value ?? string.Empty);
 
     public void OnPacketTrace(in PacketTraceRecord trace)
     {
-        if (IsPaused) return;
+        if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _isPausedSnapshot) != 0) return;
 
         var raw = trace.RawBytes.ToArray();
         string ascii = trace.ParsedText ?? Encoding.ASCII.GetString(raw).Replace("\r", "\\r").Replace("\n", "\\n");
+        string filter = Volatile.Read(ref _filterSnapshot);
 
-        if (!string.IsNullOrEmpty(FilterText))
+        if (filter.Length > 0 &&
+            !ascii.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+            !trace.DeviceId.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+            !trace.Tag.Contains(filter, StringComparison.OrdinalIgnoreCase))
         {
-            if (!ascii.Contains(FilterText, StringComparison.OrdinalIgnoreCase) &&
-                !trace.DeviceId.Contains(FilterText, StringComparison.OrdinalIgnoreCase) &&
-                !trace.Tag.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
+            return;
         }
 
         var model = new PacketDisplayModel
@@ -96,22 +112,59 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
             LatencyMs = trace.Latency > TimeSpan.Zero ? $"{trace.Latency.TotalMilliseconds:F1} ms" : "-"
         };
 
-        _dispatcher.BeginInvoke(() =>
+        _pendingPackets.Enqueue(model);
+        if (Interlocked.Increment(ref _pendingCount) > _maxPendingCount && _pendingPackets.TryDequeue(out _))
         {
-            if (Packets.Count >= _maxLogCount)
-            {
-                Packets.RemoveAt(Packets.Count - 1);
-            }
-            Packets.Insert(0, model);
-        });
+            Interlocked.Decrement(ref _pendingCount);
+        }
     }
 
-    /// <summary>
-    /// 외부 세션 또는 백그라운드 폴러로부터 통신 건전성 지표를 전달받아 UI를 갱신합니다.
-    /// </summary>
+    /// <summary>대기 중인 원본 패킷 배치를 UI 컬렉션에 일괄 반영합니다.</summary>
+    public void FlushPending()
+    {
+        if (Volatile.Read(ref _disposed) != 0) return;
+        if (!_dispatcher.CheckAccess())
+        {
+            _dispatcher.BeginInvoke(FlushPending);
+            return;
+        }
+
+        if (_pendingPackets.IsEmpty) return;
+
+        var batch = new List<PacketDisplayModel>();
+        while (_pendingPackets.TryDequeue(out var item))
+        {
+            Interlocked.Decrement(ref _pendingCount);
+            batch.Add(item);
+        }
+
+        if (batch.Count == 0) return;
+
+        if (batch.Count >= _maxLogCount)
+        {
+            Packets.Clear();
+            for (int i = batch.Count - 1; i >= batch.Count - _maxLogCount; i--)
+            {
+                Packets.Add(batch[i]);
+            }
+            return;
+        }
+
+        int overflow = Packets.Count + batch.Count - _maxLogCount;
+        for (int i = 0; i < overflow && Packets.Count > 0; i++)
+        {
+            Packets.RemoveAt(Packets.Count - 1);
+        }
+
+        for (int i = 0; i < batch.Count; i++)
+        {
+            Packets.Insert(0, batch[i]);
+        }
+    }
+
     public void UpdateHealthMetrics(CommHealthMetrics metrics)
     {
-        _dispatcher.BeginInvoke(() =>
+        void Apply()
         {
             ConnectionState = metrics.State;
             RttText = metrics.LastRttMs > 0 ? $"{metrics.LastRttMs:F1} ms (avg {metrics.AvgRttMs:F1})" : "- ms";
@@ -120,21 +173,35 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
 
             StateBadgeColor = metrics.State switch
             {
-                DeviceConnectionState.Connected => "#34C759", // Green
-                DeviceConnectionState.Simulated => "#FF9F0A", // Orange/Yellow
-                DeviceConnectionState.Connecting => "#0071E3", // Blue
-                DeviceConnectionState.Faulted => "#FF3B30",   // Red
-                _ => "#94A3B8"                               // Gray
+                DeviceConnectionState.Connected => "#34C759",
+                DeviceConnectionState.Simulated => "#FF9F0A",
+                DeviceConnectionState.Connecting => "#0071E3",
+                DeviceConnectionState.Faulted => "#FF3B30",
+                _ => "#94A3B8"
             };
-        });
+        }
+
+        if (_dispatcher.CheckAccess()) Apply();
+        else _dispatcher.BeginInvoke(Apply);
     }
 
     [RelayCommand]
     public void ClearLogs()
     {
-        Packets.Clear();
-        SelectedPacket = null;
-        StatusMessage = "Logs cleared";
+        while (_pendingPackets.TryDequeue(out _))
+        {
+            Interlocked.Decrement(ref _pendingCount);
+        }
+
+        void ClearUi()
+        {
+            Packets.Clear();
+            SelectedPacket = null;
+            StatusMessage = "Logs cleared";
+        }
+
+        if (_dispatcher.CheckAccess()) ClearUi();
+        else _dispatcher.BeginInvoke(ClearUi);
     }
 
     [RelayCommand]
@@ -147,6 +214,7 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
     [RelayCommand]
     public void ExportToFile()
     {
+        FlushPending();
         try
         {
             string? savedPath = _logExportService.ExportPacketsWithDialog(
@@ -164,6 +232,19 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
         {
             Debug.WriteLine($"[RawPacketLogStreamViewModel] ExportToFile failed: {ex.Message}");
             StatusMessage = $"Export Failed: {ex.Message}";
+        }
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (_dispatcher.CheckAccess())
+        {
+            _flushTimer.Stop();
+        }
+        else if (!_dispatcher.HasShutdownStarted)
+        {
+            _dispatcher.BeginInvoke(() => _flushTimer.Stop());
         }
     }
 }

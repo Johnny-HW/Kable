@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Kable.Core;
 using Kable.Observability;
+using Kable.Protocol;
 using Kable.UI.Wpf.Models;
 using Kable.UI.Wpf.Services;
 
@@ -25,30 +26,14 @@ public partial class MainViewModel
 
         var defaultCommands = new[]
         {
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("REQ_STATUS", "Device Status Query", "GET_STATUS", "STATUS: READY"),
-                Kable.Protocol.CommandExecutionMode.Aperiodic),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("SET_TARGET_TEMP", "Target Temperature Control (Chamber)", "SET TEMP_TARGET", "ACK: TEMP_TARGET UPDATED", "°C", 45.0, 10.0, 120.0, 0.5, 10.0),
-                Kable.Protocol.CommandExecutionMode.Aperiodic),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("SET_PRESS_LIMIT", "Supply Pressure Limit", "SET PRESS_LIMIT", "ACK: PRESS_LIMIT UPDATED", "kPa", 150.0, 50.0, 300.0, 1.0, 1.0),
-                Kable.Protocol.CommandExecutionMode.Aperiodic),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("SET_FLOW_OFFSET", "Chemical Flow Offset", "SET FLOW_OFFSET", "ACK: FLOW_OFFSET APPLIED", "mL/min", 1.5, -5.0, 10.0, 0.1, 1.0),
-                Kable.Protocol.CommandExecutionMode.Aperiodic),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("CHAMBER_TEMP", "Chamber Temperature", "", "TEMP:{VAL}", "°C", 24.8),
-                Kable.Protocol.CommandExecutionMode.Periodic, 800),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("LINE_PRESSURE", "Line Supply Pressure", "", "PRESS:{VAL}", "kPa", 101.3),
-                Kable.Protocol.CommandExecutionMode.Periodic, 1000),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("FLOW_RATE", "Chemical Flow Rate", "", "FLOW:{VAL}", "mL/min", 12.5),
-                Kable.Protocol.CommandExecutionMode.Periodic, 600),
-            new Kable.Protocol.ScheduledCommandItem(
-                new Kable.Protocol.CommandDefinition("ALM_OVERTEMP", "Overtemp Detected Alarm", "", "ALM_001: OVERTEMP"),
-                Kable.Protocol.CommandExecutionMode.Aperiodic)
+            new ScheduledCommandItem(new CommandDefinition("REQ_STATUS", "Device Status Query", "GET_STATUS", "STATUS: READY"), CommandExecutionMode.Aperiodic),
+            new ScheduledCommandItem(new CommandDefinition("SET_TARGET_TEMP", "Target Temperature Control (Chamber)", "SET TEMP_TARGET", "ACK: TEMP_TARGET UPDATED", "°C", 45.0, 10.0, 120.0, 0.5, 10.0), CommandExecutionMode.Aperiodic),
+            new ScheduledCommandItem(new CommandDefinition("SET_PRESS_LIMIT", "Supply Pressure Limit", "SET PRESS_LIMIT", "ACK: PRESS_LIMIT UPDATED", "kPa", 150.0, 50.0, 300.0, 1.0, 1.0), CommandExecutionMode.Aperiodic),
+            new ScheduledCommandItem(new CommandDefinition("SET_FLOW_OFFSET", "Chemical Flow Offset", "SET FLOW_OFFSET", "ACK: FLOW_OFFSET APPLIED", "mL/min", 1.5, -5.0, 10.0, 0.1, 1.0), CommandExecutionMode.Aperiodic),
+            new ScheduledCommandItem(new CommandDefinition("CHAMBER_TEMP", "Chamber Temperature", "", "TEMP:{VAL}", "°C", 24.8), CommandExecutionMode.Periodic, 800),
+            new ScheduledCommandItem(new CommandDefinition("LINE_PRESSURE", "Line Supply Pressure", "", "PRESS:{VAL}", "kPa", 101.3), CommandExecutionMode.Periodic, 1000),
+            new ScheduledCommandItem(new CommandDefinition("FLOW_RATE", "Chemical Flow Rate", "", "FLOW:{VAL}", "mL/min", 12.5), CommandExecutionMode.Periodic, 600),
+            new ScheduledCommandItem(new CommandDefinition("ALM_OVERTEMP", "Overtemp Detected Alarm", "", "ALM_001: OVERTEMP"), CommandExecutionMode.Aperiodic)
         };
 
         PacketCatalog.Clear();
@@ -57,6 +42,11 @@ public partial class MainViewModel
             var item = PacketCatalogItem.FromScheduledItem(sc);
             AttachCatalogItemSync(item);
             PacketCatalog.Add(item);
+            if (!string.IsNullOrWhiteSpace(item.Unit))
+            {
+                Terminal.TelemetryStream.RegisterUnit(item.Name, item.Unit);
+                Terminal.TelemetryStream.RegisterUnit(item.Id, item.Unit);
+            }
         }
 
         Terminal.CommandConsole.LoadScheduledCommands(defaultCommands);
@@ -67,7 +57,8 @@ public partial class MainViewModel
         _simulator = new VirtualDeviceSimulator(
             Terminal,
             () => PacketCatalog,
-            () => Profile.DeviceName);
+            () => Profile.DeviceName,
+            System.Windows.Application.Current?.Dispatcher);
 
         Terminal.TelemetryUpdated += HandleTelemetryUpdated;
         Terminal.AlarmList.Alarms.CollectionChanged += (_, _) =>
@@ -154,7 +145,7 @@ public partial class MainViewModel
         if (string.Equals(tag, "Chamber Temperature", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(tag, "CHAMBER_TEMP", StringComparison.OrdinalIgnoreCase))
         {
-            LiveChamberTemp = $"{val} {unit}";
+            LiveChamberTemp = $"{val} {(string.IsNullOrWhiteSpace(unit) ? "°C" : unit)}";
             if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out double tVal))
             {
                 LiveChamberThermalStatus = tVal > 60.0 ? $"Warning • {tVal:F1}°C" : $"Normal • {tVal:F1}°C";
@@ -164,7 +155,7 @@ public partial class MainViewModel
         else if (string.Equals(tag, "Line Supply Pressure", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(tag, "LINE_PRESSURE", StringComparison.OrdinalIgnoreCase))
         {
-            LiveLinePressure = $"{val} {unit}";
+            LiveLinePressure = $"{val} {(string.IsNullOrWhiteSpace(unit) ? "kPa" : unit)}";
             if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out double pVal))
             {
                 LiveVacuumSealPa = $"{pVal / 8.0:F1} Pa";
@@ -174,7 +165,7 @@ public partial class MainViewModel
         else if (string.Equals(tag, "Chemical Flow Rate", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(tag, "FLOW_RATE", StringComparison.OrdinalIgnoreCase))
         {
-            LiveFlowRate = $"{val} {unit}";
+            LiveFlowRate = $"{val} {(string.IsNullOrWhiteSpace(unit) ? "mL/min" : unit)}";
         }
     }
 
@@ -234,14 +225,19 @@ public partial class MainViewModel
         {
             if (Profile.Transport == TransportType.Serial)
             {
-                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] COM 포트 열기 시도: {Profile.PortName} ({Profile.BaudRate} bps)");
-                using var serial = new SerialPort(Profile.PortName, Profile.BaudRate);
-                serial.Open();
+                string portName = Profile.PortName;
+                int baudRate = Profile.BaudRate;
+                TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] COM 포트 열기 시도: {portName} ({baudRate} bps)");
+                await Task.Run(() =>
+                {
+                    using var serial = new SerialPort(portName, baudRate);
+                    serial.Open();
+                    serial.Close();
+                });
                 sw.Stop();
                 TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [LIVE] COM 포트 열기 성공 ({sw.Elapsed.TotalMilliseconds:F2}ms)");
-                serial.Close();
 
-                TestStatus = $"🟢 [LIVE 성공] 시리얼 포트 '{Profile.PortName}' 열기 성공 (RTT: {sw.Elapsed.TotalMilliseconds:F2}ms)";
+                TestStatus = $"🟢 [LIVE 성공] 시리얼 포트 '{portName}' 열기 성공 (RTT: {sw.Elapsed.TotalMilliseconds:F2}ms)";
                 TestResultColor = "#A6E3A1";
             }
             else if (Profile.Transport == TransportType.NamedPipe)

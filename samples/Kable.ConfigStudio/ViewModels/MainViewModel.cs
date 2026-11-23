@@ -17,10 +17,11 @@ using Kable.UI.Wpf.Models;
 using Kable.UI.Wpf.Services;
 using Kable.UI.Wpf.ViewModels;
 
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IConfigStudioFileService _fileService;
     private VirtualDeviceSimulator? _simulator;
+    private bool _disposed;
 
     public IReadOnlyList<TransportType> AvailableTransports { get; } = Enum.GetValues<TransportType>();
     public IReadOnlyList<CodecType> AvailableCodecs { get; } = Enum.GetValues<CodecType>();
@@ -271,5 +272,16 @@ public partial class MainViewModel : ObservableObject
         SupervisorPinStatus = "● ● ● ● (AUTHENTICATED)";
         IsMasterOverrideActive = !IsMasterOverrideActive;
         TestStatus = IsMasterOverrideActive ? "⚠️ [Supervisor Key] Master Override Active" : "🔒 [Supervisor Key] Normal Security Lock";
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Terminal.ManualSendRequested -= HandleManualSendRequestedAsync;
+        Terminal.TelemetryUpdated -= HandleTelemetryUpdated;
+        _simulator?.Dispose();
+        Terminal.Dispose();
+        IsSimulatorRunning = false;
     }
 }

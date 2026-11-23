@@ -12,7 +12,7 @@ using Kable.Observability;
 /// 수시 명령(CommandConsole), 상시 텔레메트리(TelemetryStream), 알람(AlarmList)을 조립한 복합 터미널 뷰모델입니다.
 /// 각 컴포넌트 뷰모델을 외부에 공개하여 개별 바인딩할 수도 있고, 복합 뷰에서 통합 바인딩할 수도 있습니다.
 /// </summary>
-public partial class CommTerminalViewModel : ObservableObject, ICommObserver
+public partial class CommTerminalViewModel : ObservableObject, ICommObserver, IDisposable
 {
     public CommandConsoleViewModel CommandConsole { get; }
     public TelemetryStreamViewModel TelemetryStream { get; }
@@ -33,13 +33,13 @@ public partial class CommTerminalViewModel : ObservableObject, ICommObserver
     public CommTerminalViewModel(Dispatcher? dispatcher = null, int maxLogCount = 1000)
     {
         CommandConsole = new CommandConsoleViewModel(dispatcher, maxLogCount);
-        TelemetryStream = new TelemetryStreamViewModel(dispatcher);
+        TelemetryStream = new TelemetryStreamViewModel(dispatcher, maxLogCount);
         AlarmList = new AlarmListViewModel(dispatcher);
     }
 
     public void OnPacketTrace(in PacketTraceRecord trace)
     {
-        // 모든 원본 패킷(상시, 수시, 알람)을 공통 원본 로그 스트림에 전달
+        // 모든 원본 패킷(상시, 수시, 알람)을 공통 원본 로그 스트림에 단 한 번만 전달합니다.
         TelemetryStream.RawLogStream.OnPacketTrace(in trace);
 
         switch (trace.Kind)
@@ -48,12 +48,17 @@ public partial class CommTerminalViewModel : ObservableObject, ICommObserver
                 CommandConsole.OnPacketTrace(in trace);
                 break;
             case TrafficKind.PeriodicTelemetry:
-                TelemetryStream.OnPacketTrace(in trace);
-                TelemetryUpdated?.Invoke(trace.Tag, trace.ParsedText ?? string.Empty, string.Empty);
+                string unit = TelemetryStream.OnPacketTraceCore(in trace, forwardToRawLog: false);
+                TelemetryUpdated?.Invoke(trace.Tag, trace.ParsedText ?? string.Empty, unit);
                 break;
             case TrafficKind.SpontaneousAlarm:
                 AlarmList.OnPacketTrace(in trace);
                 break;
         }
+    }
+
+    public void Dispose()
+    {
+        TelemetryStream.Dispose();
     }
 }
