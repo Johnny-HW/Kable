@@ -55,18 +55,60 @@ internal static class ProtocolPackPersistence
 
         if (value is string text)
         {
-            bool flag;
-            if (bool.TryParse(text, out flag))
+            var trimmed = text.Trim();
+            if (bool.TryParse(trimmed, out var flag))
             {
                 return flag;
             }
 
-            return Convert.ToInt32(text, CultureInfo.InvariantCulture);
+            if (trimmed.Length > 2 &&
+                trimmed[0] == '0' &&
+                (trimmed[1] == 'x' || trimmed[1] == 'X'))
+            {
+                if (long.TryParse(trimmed.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexSigned))
+                {
+                    return hexSigned >= int.MinValue && hexSigned <= int.MaxValue ? (object)(int)hexSigned : hexSigned;
+                }
+
+                if (ulong.TryParse(trimmed.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexUnsigned))
+                {
+                    return hexUnsigned;
+                }
+            }
+
+            if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i32))
+            {
+                return i32;
+            }
+
+            if (long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i64))
+            {
+                return i64;
+            }
+
+            if (double.TryParse(trimmed, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var dbl) &&
+                !double.IsNaN(dbl) && !double.IsInfinity(dbl))
+            {
+                return dbl;
+            }
+
+            return text;
         }
 
-        if (value is IConvertible)
+        if (value is int || value is long || value is ulong || value is double || value is float || value is decimal)
         {
-            return Convert.ToInt32(value, CultureInfo.InvariantCulture);
+            if (value is long l64 && l64 >= int.MinValue && l64 <= int.MaxValue)
+            {
+                return (int)l64;
+            }
+
+            return value;
+        }
+
+        if (value is byte || value is sbyte || value is short || value is ushort || value is uint)
+        {
+            var asLong = Convert.ToInt64(value, CultureInfo.InvariantCulture);
+            return asLong >= int.MinValue && asLong <= int.MaxValue ? (object)(int)asLong : asLong;
         }
 
         return value ?? 0;
@@ -132,7 +174,22 @@ internal static class ProtocolPackPersistence
 
     private static void WriteText(string folder, string relativePath, string contents)
     {
-        var path = Path.Combine(folder, relativePath);
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+        {
+            throw new ProtocolPackException("Refusing to write to an invalid or rooted protocol pack path: '" + (relativePath ?? string.Empty) + "'.");
+        }
+
+        var rootFull = Path.GetFullPath(folder);
+        var rootPrefix = rootFull.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) ||
+                         rootFull.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+            ? rootFull
+            : rootFull + Path.DirectorySeparatorChar;
+        var path = Path.GetFullPath(Path.Combine(rootFull, relativePath));
+        if (!path.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ProtocolPackException("Refusing to write outside protocol pack folder: '" + relativePath + "'.");
+        }
+
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory))
         {

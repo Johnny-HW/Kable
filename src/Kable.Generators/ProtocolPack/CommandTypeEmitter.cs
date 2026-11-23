@@ -2,6 +2,7 @@ namespace Kable.Generators.ProtocolPack;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using Kable.ProtocolPack.Models;
 
@@ -9,12 +10,14 @@ internal static class CommandTypeEmitter
 {
     public static string Emit(string ns, string typeKind, CommandSpec command)
     {
-        var typeName = command.Name + "Command";
-        var parameters = FormatParameters(command.Params);
+        var typeName = ProtocolPackIdentifiers.SanitizeTypeName(command.Name) + "Command";
+        var escapedMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        var parameters = FormatParameters(command.Params, escapedMap);
         var template = command.Match ?? string.Empty;
+        var interpolatedTemplate = RewriteEscapedPlaceholders(template, escapedMap);
         var attribute = FormatAttribute(template, command.Urgent);
         var formatExpression = template.IndexOf('{') >= 0
-            ? ProtocolPackCSharp.Interpolated(template)
+            ? ProtocolPackCSharp.Interpolated(interpolatedTemplate)
             : ProtocolPackCSharp.Literal(template);
 
         var sb = new StringBuilder();
@@ -48,7 +51,7 @@ internal static class CommandTypeEmitter
         return "[global::Kable.Generators.DeviceCommand(" + argument + ")]";
     }
 
-    private static string FormatParameters(IList<ParamSpec>? parameters)
+    private static string FormatParameters(IList<ParamSpec>? parameters, Dictionary<string, string> escapedMap)
     {
         if (parameters == null || parameters.Count == 0)
         {
@@ -58,11 +61,60 @@ internal static class CommandTypeEmitter
         var parts = new string[parameters.Count];
         for (var i = 0; i < parameters.Count; i++)
         {
-            var name = string.IsNullOrWhiteSpace(parameters[i].Name) ? "Arg" + i : parameters[i].Name;
-            parts[i] = MapType(parameters[i].Type) + " " + name;
+            var rawName = string.IsNullOrWhiteSpace(parameters[i].Name)
+                ? "Arg" + i.ToString(CultureInfo.InvariantCulture)
+                : parameters[i].Name!.Trim();
+            var ident = SanitizeParameterName(rawName, i);
+            var escaped = ProtocolPackCSharp.EscapeIdentifier(ident);
+            if (!string.Equals(rawName, escaped, StringComparison.Ordinal))
+            {
+                escapedMap[rawName] = escaped;
+            }
+            parts[i] = MapType(parameters[i].Type) + " " + escaped;
         }
 
         return "(" + string.Join(", ", parts) + ")";
+    }
+
+    private static string SanitizeParameterName(string rawName, int index)
+    {
+        var sb = new StringBuilder(rawName.Length);
+        for (var i = 0; i < rawName.Length; i++)
+        {
+            var ch = rawName[i];
+            if (char.IsLetterOrDigit(ch) || ch == '_')
+            {
+                sb.Append(ch);
+            }
+        }
+
+        if (sb.Length == 0)
+        {
+            return "Arg" + index.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (char.IsDigit(sb[0]))
+        {
+            sb.Insert(0, '_');
+        }
+
+        return sb.ToString();
+    }
+
+    private static string RewriteEscapedPlaceholders(string template, Dictionary<string, string> escapedMap)
+    {
+        if (escapedMap.Count == 0 || template.IndexOf('{') < 0)
+        {
+            return template;
+        }
+
+        var result = template;
+        foreach (var pair in escapedMap)
+        {
+            result = result.Replace("{" + pair.Key + "}", "{" + pair.Value + "}");
+        }
+
+        return result;
     }
 
     private static string MapType(string? type)

@@ -72,8 +72,12 @@ internal static class ProtocolPackFileBinder
         var root = ProtocolRoot(protocol.Path);
         var commands = new List<AdditionalPackFile>();
         var maps = new List<AdditionalPackFile>();
-        var commandsPrefix = root + "/" + ProtocolPackLoader.CommandsDirectoryName + "/";
-        var mapsPrefix = root + "/" + ProtocolPackLoader.MapsDirectoryName + "/";
+        var commandsPrefix = string.IsNullOrEmpty(root)
+            ? ProtocolPackLoader.CommandsDirectoryName + "/"
+            : root + "/" + ProtocolPackLoader.CommandsDirectoryName + "/";
+        var mapsPrefix = string.IsNullOrEmpty(root)
+            ? ProtocolPackLoader.MapsDirectoryName + "/"
+            : root + "/" + ProtocolPackLoader.MapsDirectoryName + "/";
 
         for (var i = 0; i < files.Length; i++)
         {

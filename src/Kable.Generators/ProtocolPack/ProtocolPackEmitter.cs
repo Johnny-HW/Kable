@@ -28,7 +28,14 @@ internal static class ProtocolPackEmitter
 
             for (var i = 0; i < packs.Count; i++)
             {
-                EmitPack(context, packs[i]);
+                try
+                {
+                    EmitPack(context, packs[i]);
+                }
+                catch (Exception ex)
+                {
+                    context.ReportDiagnostic(ProtocolPackDiagnostics.Unexpected(packs[i].ProtocolFile.Path + ": " + ex.Message));
+                }
             }
         }
         catch (Exception ex)
@@ -196,11 +203,12 @@ internal static class ProtocolPackEmitter
         for (var i = 0; i < commands.Count; i++)
         {
             var command = commands[i];
+            var baseName = ProtocolPackIdentifiers.SanitizeTypeName(command.Name);
             context.AddSource(
-                ProtocolPackCSharp.HintName(ns, command.Name + "Command"),
+                ProtocolPackCSharp.HintName(ns, baseName + "Command"),
                 SourceText.From(CommandTypeEmitter.Emit(ns, typeKind, command), Encoding.UTF8));
             context.AddSource(
-                ProtocolPackCSharp.HintName(ns, command.Name + "Reply"),
+                ProtocolPackCSharp.HintName(ns, baseName + "Reply"),
                 SourceText.From(ReplyEnumEmitter.Emit(ns, command), Encoding.UTF8));
         }
     }

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using YamlDotNet.Core;
-using YamlDotNet.RepresentationModel;
+using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Kable.ProtocolPack.Models;
@@ -14,6 +14,9 @@ namespace Kable.ProtocolPack.Loading;
 /// </summary>
 public static class ProtocolPackYaml
 {
+    private static readonly IDeserializer CachedDeserializer = CreateDeserializer();
+    private static readonly ISerializer CachedSerializer = CreateSerializer();
+
     public static T DeserializeDocument<T>(string yaml)
     {
         if (yaml == null)
@@ -23,7 +26,7 @@ public static class ProtocolPackYaml
 
         try
         {
-            return CreateDeserializer().Deserialize<T>(yaml);
+            return CachedDeserializer.Deserialize<T>(yaml);
         }
         catch (YamlException ex)
         {
@@ -38,12 +41,19 @@ public static class ProtocolPackYaml
             throw new ArgumentNullException(nameof(yaml));
         }
 
-        var stream = new YamlStream();
+        var results = new List<T>();
         try
         {
-            using (var reader = new StringReader(yaml))
+            using var reader = new StringReader(yaml);
+            var parser = new Parser(reader);
+            parser.Consume<StreamStart>();
+            while (parser.Accept<DocumentStart>(out _))
             {
-                stream.Load(reader);
+                var item = CachedDeserializer.Deserialize<T>(parser);
+                if (item != null)
+                {
+                    results.Add(item);
+                }
             }
         }
         catch (YamlException ex)
@@ -51,38 +61,49 @@ public static class ProtocolPackYaml
             throw new ProtocolPackException("Failed to parse YAML: " + ex.Message, ex);
         }
 
-        var results = new List<T>(stream.Documents.Count);
-        var deserializer = CreateDeserializer();
-        foreach (var document in stream.Documents)
-        {
-            if (IsEmptyDocument(document))
-            {
-                continue;
-            }
-
-            var text = SaveSingleDocument(document);
-            try
-            {
-                var item = deserializer.Deserialize<T>(text);
-                if (item != null)
-                {
-                    results.Add(item);
-                }
-            }
-            catch (YamlException ex)
-            {
-                throw new ProtocolPackException("Failed to parse YAML: " + ex.Message, ex);
-            }
-        }
-
         return results;
     }
 
     public static IReadOnlyList<MapSpec> DeserializeMapDocuments(string yaml)
     {
-        var maps = DeserializeDocuments<MapSpec>(yaml);
-        MarkScalarValueKeys(yaml, maps);
-        return maps;
+        if (yaml == null)
+        {
+            throw new ArgumentNullException(nameof(yaml));
+        }
+
+        var results = new List<MapSpec>();
+        try
+        {
+            using var reader = new StringReader(yaml);
+            var tracker = new ScalarKeyTrackingParser(new Parser(reader), "value");
+            tracker.Consume<StreamStart>();
+            while (tracker.Accept<DocumentStart>(out _))
+            {
+                tracker.ResetDocumentState();
+                var map = CachedDeserializer.Deserialize<MapSpec>(tracker);
+                if (map == null)
+                {
+                    continue;
+                }
+
+                if (tracker.HasTrackedKey)
+                {
+                    map.HasScalarValue = true;
+                    if (map.Value == null)
+                    {
+                        map.Value = tracker.TrackedScalarValue ?? (object)true;
+                    }
+                }
+
+                results.Add(map);
+            }
+        }
+        catch (YamlException ex)
+        {
+            throw new ProtocolPackException("Failed to parse YAML: " + ex.Message, ex);
+        }
+
+        return results;
     }
 
     public static string SerializeDocument<T>(T value)
@@ -92,7 +113,7 @@ public static class ProtocolPackYaml
             throw new ArgumentNullException(nameof(value));
         }
 
-        return CreateSerializer().Serialize(value);
+        return CachedSerializer.Serialize(value);
     }
 
     public static string SerializeDocuments<T>(IReadOnlyList<T> values)
@@ -102,22 +123,19 @@ public static class ProtocolPackYaml
             throw new ArgumentNullException(nameof(values));
         }
 
-        var serializer = CreateSerializer();
-        using (var writer = new StringWriter())
+        using var writer = new StringWriter();
+        for (var i = 0; i < values.Count; i++)
         {
-            for (var i = 0; i < values.Count; i++)
+            if (i > 0)
             {
-                if (i > 0)
-                {
-                    writer.WriteLine("---");
-                    writer.WriteLine();
-                }
-
-                writer.Write(serializer.Serialize(values[i]));
+                writer.WriteLine("---");
+                writer.WriteLine();
             }
 
-            return writer.ToString();
+            writer.Write(CachedSerializer.Serialize(values[i]));
         }
+
+        return writer.ToString();
     }
 
     internal static IDeserializer CreateDeserializer()
@@ -140,86 +158,85 @@ public static class ProtocolPackYaml
             .Build();
     }
 
-    private static bool IsEmptyDocument(YamlDocument document)
+    private sealed class ScalarKeyTrackingParser : IParser
     {
-        if (document.RootNode is YamlScalarNode scalar)
+        private readonly IParser _inner;
+        private readonly string _trackedKey;
+        private int _depth;
+        private bool _expectingRootKey;
+        private bool _capturingValue;
+
+        public ScalarKeyTrackingParser(IParser inner, string trackedKey)
         {
-            return string.IsNullOrWhiteSpace(scalar.Value);
+            _inner = inner;
+            _trackedKey = trackedKey;
         }
 
-        return false;
-    }
+        public bool HasTrackedKey { get; private set; }
+        public string? TrackedScalarValue { get; private set; }
+        public ParsingEvent? Current => _inner.Current;
 
-    private static string SaveSingleDocument(YamlDocument document)
-    {
-        using (var writer = new StringWriter())
+        public void ResetDocumentState()
         {
-            var single = new YamlStream(document);
-            single.Save(writer, assignAnchors: false);
-            return writer.ToString();
-        }
-    }
-
-    private static void MarkScalarValueKeys(string yaml, IReadOnlyList<MapSpec> maps)
-    {
-        var stream = new YamlStream();
-        using (var reader = new StringReader(yaml))
-        {
-            stream.Load(reader);
+            _depth = 0;
+            _expectingRootKey = false;
+            _capturingValue = false;
+            HasTrackedKey = false;
+            TrackedScalarValue = null;
         }
 
-        var index = 0;
-        foreach (var document in stream.Documents)
+        public bool MoveNext()
         {
-            if (IsEmptyDocument(document))
+            if (!_inner.MoveNext())
             {
-                continue;
+                return false;
             }
 
-            if (index >= maps.Count)
+            switch (_inner.Current)
             {
-                break;
+                case MappingStart:
+                    _depth++;
+                    if (_depth == 1)
+                    {
+                        _expectingRootKey = true;
+                    }
+                    else
+                    {
+                        _capturingValue = false;
+                    }
+                    break;
+                case SequenceStart:
+                    _depth++;
+                    _capturingValue = false;
+                    break;
+                case MappingEnd:
+                case SequenceEnd:
+                    _depth--;
+                    _expectingRootKey = _depth == 1;
+                    break;
+                case Scalar scalar when _depth == 1:
+                    if (_expectingRootKey)
+                    {
+                        if (string.Equals(scalar.Value, _trackedKey, StringComparison.Ordinal))
+                        {
+                            HasTrackedKey = true;
+                            _capturingValue = true;
+                        }
+                        _expectingRootKey = false;
+                    }
+                    else
+                    {
+                        if (_capturingValue)
+                        {
+                            TrackedScalarValue = scalar.Value;
+                            _capturingValue = false;
+                        }
+                        _expectingRootKey = true;
+                    }
+                    break;
             }
 
-            if (document.RootNode is YamlMappingNode mapping && HasKey(mapping, "value"))
-            {
-                maps[index].HasScalarValue = true;
-                if (maps[index].Value == null)
-                {
-                    maps[index].Value = ReadScalar(mapping, "value") ?? true;
-                }
-            }
-
-            index++;
+            return true;
         }
-    }
-
-    private static bool HasKey(YamlMappingNode mapping, string key)
-    {
-        foreach (var pair in mapping.Children)
-        {
-            if (pair.Key is YamlScalarNode scalar &&
-                string.Equals(scalar.Value, key, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static object? ReadScalar(YamlMappingNode mapping, string key)
-    {
-        foreach (var pair in mapping.Children)
-        {
-            if (pair.Key is YamlScalarNode scalar &&
-                string.Equals(scalar.Value, key, StringComparison.Ordinal) &&
-                pair.Value is YamlScalarNode value)
-            {
-                return value.Value;
-            }
-        }
-
-        return null;
     }
 }

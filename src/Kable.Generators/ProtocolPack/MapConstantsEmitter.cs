@@ -75,8 +75,15 @@ internal static class MapConstantsEmitter
             return ident;
         }
 
-        var candidate = ident + (index + 1).ToString();
-        used.Add(candidate);
-        return candidate;
+        var suffix = Math.Max(2, index + 1);
+        while (true)
+        {
+            var candidate = ident + suffix.ToString(CultureInfo.InvariantCulture);
+            if (used.Add(candidate))
+            {
+                return candidate;
+            }
+            suffix++;
+        }
     }
 }
