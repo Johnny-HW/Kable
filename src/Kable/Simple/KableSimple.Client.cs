@@ -20,7 +20,7 @@ public static partial class KableSimple
         private readonly TimeSpan _defaultTimeout;
         private readonly CancellationTokenSource _cts = new();
         private Task? _readLoopTask;
-        private bool _disposed;
+        private int _disposed;
 
         public event Action<string>? LineReceived;
         public event Action<Exception>? ErrorOccurred;
@@ -42,7 +42,8 @@ public static partial class KableSimple
             try
             {
                 await _session.StartAsync(ct).ConfigureAwait(false);
-                _readLoopTask = Task.Run(ConsumeStreamAsync);
+                var token = _cts.Token;
+                _readLoopTask = Task.Run(() => ConsumeStreamAsync(token));
             }
             catch (Exception ex)
             {
@@ -54,23 +55,23 @@ public static partial class KableSimple
 
         public ValueTask SendLineAsync(string command, CancellationToken ct = default)
         {
-            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+            if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(GetType().FullName);
             return _session.SendAsync(command, ct);
         }
 
         public async ValueTask<string> QueryAsync(string command, TimeSpan? timeout = null, CancellationToken ct = default)
         {
-            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+            if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(GetType().FullName);
             var effectiveTimeout = timeout ?? _defaultTimeout;
             return await _session.RequestAsync<string>(command, effectiveTimeout, ct).ConfigureAwait(false);
         }
 
-        private async Task ConsumeStreamAsync()
+        private async Task ConsumeStreamAsync(CancellationToken token)
         {
             Exception? terminationReason = null;
             try
             {
-                await foreach (var line in _session.Stream.WithCancellation(_cts.Token).ConfigureAwait(false))
+                await foreach (var line in _session.Stream.WithCancellation(token).ConfigureAwait(false))
                 {
                     try
                     {
@@ -130,31 +131,47 @@ public static partial class KableSimple
         [Obsolete("동기 Dispose()는 Kable의 비차단 아키텍처에 위배될 수 있으므로 'await using' 또는 DisposeAsync()를 사용하십시오.")]
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-            _cts.Cancel();
-            _session.Dispose();
-            _cts.Dispose();
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            try
+            {
+                _cts.Cancel();
+                _session.Dispose();
+            }
+            finally
+            {
+                _cts.Dispose();
+            }
         }
 
         public async ValueTask DisposeAsync()
         {
-            if (_disposed) return;
-            _disposed = true;
-            _cts.Cancel();
-            await _session.DisposeAsync().ConfigureAwait(false);
-            if (_readLoopTask != null)
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            try
             {
+                _cts.Cancel();
                 try
                 {
-                    await _readLoopTask.ConfigureAwait(false);
+                    await _session.DisposeAsync().ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                finally
                 {
-                    ReportError("DISPOSE_READ_LOOP_FAULT", ex);
+                    if (_readLoopTask != null)
+                    {
+                        try
+                        {
+                            await _readLoopTask.ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            ReportError("DISPOSE_READ_LOOP_FAULT", ex);
+                        }
+                    }
                 }
             }
-            _cts.Dispose();
+            finally
+            {
+                _cts.Dispose();
+            }
         }
     }
 }

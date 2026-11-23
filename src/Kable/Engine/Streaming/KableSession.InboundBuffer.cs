@@ -34,6 +34,11 @@ public sealed partial class KableSession<TMessage>
                 return;
             }
 
+            if (Volatile.Read(ref _isConnected) == 0 || _alarmStream.Reader.Completion.IsCompleted)
+            {
+                return;
+            }
+
             // 알람 큐 포화 시 처리 (공통 디스패치 루프 블로킹 방지 및 조용한 유실 원천 차단)
             await HandleAlarmQueueOverflowAsync(message).ConfigureAwait(false);
             return;

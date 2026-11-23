@@ -78,10 +78,7 @@ public sealed partial class KableSession<TMessage>
 
             OnConnectionClosed(reason);
 
-            // 1. 신규 스풀 등록 차단
-            _alarmSpool.Complete();
-
-            // 2. 일반 송수신 루프는 기존 종료 정책(고정 2초 타임아웃)으로 정리
+            // 1. 일반 송수신 루프는 기존 종료 정책(고정 2초 타임아웃)으로 정리
             var tasksToWait = new List<Task>();
             if (_readLoopTask != null) tasksToWait.Add(_readLoopTask);
             if (_outboundPumpTask != null) tasksToWait.Add(_outboundPumpTask);
@@ -98,6 +95,9 @@ public sealed partial class KableSession<TMessage>
                 var timeoutTask = Task.Delay(2000);
                 await Task.WhenAny(joinAllTask, timeoutTask).ConfigureAwait(false);
             }
+
+            // 2. 수신 루프 정지 후 신규 스풀 등록 차단
+            _alarmSpool.Complete();
 
             // 3. _alarmSpool.Completion는 고정 2초에 묶지 않고 직접 await (배출 제한시간은 워커가 관리)
             Exception? workerException = null;

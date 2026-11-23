@@ -95,42 +95,81 @@ public sealed partial class KableSession<TMessage>
                 }
 
                 // 양쪽 채널이 정상 완료되었으면 스트림 종료
-                if (_alarmStream.Reader.Completion.IsCompleted && _telemetryStream.Reader.Completion.IsCompleted)
+                bool alarmCompleted = _alarmStream.Reader.Completion.IsCompleted;
+                bool telemCompleted = _telemetryStream.Reader.Completion.IsCompleted;
+                if (alarmCompleted && telemCompleted)
                 {
                     break;
                 }
 
                 token.ThrowIfCancellationRequested();
 
-                // 4. 대기 작업 단일 슬롯 재사용: 기존 태스크가 완료되었거나 비어있을 때만 새로 생성
-                if (pendingAlarmTask == null || pendingAlarmTask.IsCompleted)
+                // 4. 대기 작업 단일 슬롯 재사용: 열린 채널만 대기하여 단일 채널 완료 시 CPU 스핀 방지
+                if (alarmCompleted)
+                {
+                    pendingAlarmTask = null;
+                }
+                else if (pendingAlarmTask == null || pendingAlarmTask.IsCompleted)
                 {
                     var vt = _alarmStream.Reader.WaitToReadAsync(token);
-                    if (vt.IsCompletedSuccessfully && vt.Result)
+                    if (vt.IsCompletedSuccessfully)
                     {
-                        if (_alarmStream.Reader.TryRead(out var a))
-                            yield return a;
+                        if (vt.Result)
+                        {
+                            if (_alarmStream.Reader.TryRead(out var a))
+                                yield return a;
+                            pendingAlarmTask = null;
+                            continue;
+                        }
+                        alarmCompleted = true;
                         pendingAlarmTask = null;
-                        continue;
                     }
-                    pendingAlarmTask = vt.AsTask();
+                    else
+                    {
+                        pendingAlarmTask = vt.AsTask();
+                    }
                 }
 
-                if (pendingTelemTask == null || pendingTelemTask.IsCompleted)
+                if (telemCompleted)
+                {
+                    pendingTelemTask = null;
+                }
+                else if (pendingTelemTask == null || pendingTelemTask.IsCompleted)
                 {
                     var vt = _telemetryStream.Reader.WaitToReadAsync(token);
-                    if (vt.IsCompletedSuccessfully && vt.Result)
+                    if (vt.IsCompletedSuccessfully)
                     {
-                        if (_telemetryStream.Reader.TryRead(out var t))
-                            yield return t;
+                        if (vt.Result)
+                        {
+                            if (_telemetryStream.Reader.TryRead(out var t))
+                                yield return t;
+                            pendingTelemTask = null;
+                            continue;
+                        }
+                        telemCompleted = true;
                         pendingTelemTask = null;
-                        continue;
                     }
-                    pendingTelemTask = vt.AsTask();
+                    else
+                    {
+                        pendingTelemTask = vt.AsTask();
+                    }
                 }
 
-                // Task.WhenAny 대기 (미완료된 쪽의 태스크는 pending에 남아 다음 루프에서 그대로 재사용됨)
-                var completedTask = await Task.WhenAny(pendingAlarmTask, pendingTelemTask).ConfigureAwait(false);
+                if (alarmCompleted && telemCompleted)
+                {
+                    break;
+                }
+
+                Task completedTask;
+                if (pendingAlarmTask != null && pendingTelemTask != null)
+                {
+                    completedTask = await Task.WhenAny(pendingAlarmTask, pendingTelemTask).ConfigureAwait(false);
+                }
+                else
+                {
+                    completedTask = (pendingAlarmTask ?? pendingTelemTask)!;
+                    await completedTask.ConfigureAwait(false);
+                }
                 token.ThrowIfCancellationRequested();
 
                 if (completedTask.IsFaulted)
@@ -172,26 +211,40 @@ public sealed partial class KableSession<TMessage>
             catch (ObjectDisposedException) { }
 
             // 남은 대기 Task 예외 관찰 및 완료 대기
-            if (pendingAlarmTask != null && !pendingAlarmTask.IsCompleted)
+            if (pendingAlarmTask != null)
             {
-                try
+                if (!pendingAlarmTask.IsCompleted)
                 {
-                    await pendingAlarmTask.ConfigureAwait(false);
+                    try
+                    {
+                        await pendingAlarmTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[KableSession.Stream] Pending alarm task cancelled/faulted: {ex.Message}");
+                    }
                 }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
+                else if (pendingAlarmTask.IsFaulted)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[KableSession.Stream] Pending alarm task cancelled/faulted: {ex.Message}");
+                    _ = pendingAlarmTask.Exception;
                 }
             }
-            if (pendingTelemTask != null && !pendingTelemTask.IsCompleted)
+            if (pendingTelemTask != null)
             {
-                try
+                if (!pendingTelemTask.IsCompleted)
                 {
-                    await pendingTelemTask.ConfigureAwait(false);
+                    try
+                    {
+                        await pendingTelemTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[KableSession.Stream] Pending telemetry task cancelled/faulted: {ex.Message}");
+                    }
                 }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
+                else if (pendingTelemTask.IsFaulted)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[KableSession.Stream] Pending telemetry task cancelled/faulted: {ex.Message}");
+                    _ = pendingTelemTask.Exception;
                 }
             }
 

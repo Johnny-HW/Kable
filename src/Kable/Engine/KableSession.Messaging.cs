@@ -57,7 +57,8 @@ public sealed partial class KableSession<TMessage>
         bool hasCid = _codec.SupportsCorrelationId;
         string? cid = hasCid ? _codec.ExtractCorrelationId(request) : null;
 
-        long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        long startTimestamp = _timeProvider.GetTimestamp();
+        long startStopwatch = System.Diagnostics.Stopwatch.GetTimestamp();
 
         if (string.IsNullOrEmpty(cid))
         {
@@ -106,7 +107,7 @@ public sealed partial class KableSession<TMessage>
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
                 responseReceived = true;
                 var latency = _timeProvider.GetElapsedTime(startTimestamp);
-                _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
+                _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startStopwatch);
 
                 var respKind = CommTrafficContext.CurrentKind;
                 TraceRequestPacket(responseMsg, PacketDirection.Rx, respKind, "RESP_RX", latency);
@@ -180,7 +181,7 @@ public sealed partial class KableSession<TMessage>
 
                 var responseMsg = await WaitWithCancellationAsync(tcs.Task, effectiveToken).ConfigureAwait(false);
                 var latency = _timeProvider.GetElapsedTime(startTimestamp);
-                _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp);
+                _healthTracker.RecordRttTicks(System.Diagnostics.Stopwatch.GetTimestamp() - startStopwatch);
 
                 var respKind = CommTrafficContext.CurrentKind;
                 TraceRequestPacket(responseMsg, PacketDirection.Rx, respKind, "RESP_RX", latency);

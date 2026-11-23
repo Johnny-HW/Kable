@@ -107,11 +107,33 @@ public sealed partial class KableSession<TMessage>
         }
 
         // Re-acquire lock to transition to Running and register context atomically
-        await _lifecycleLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        bool lockAcquired = false;
+        if (Volatile.Read(ref _isDisposed) == 0)
+        {
+            try
+            {
+                await _lifecycleLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+                lockAcquired = true;
+            }
+            catch (ObjectDisposedException)
+            {
+                lockAcquired = false;
+            }
+        }
+
+        if (!lockAcquired)
+        {
+            await DisposeOrphanContextAsync(context).ConfigureAwait(false);
+            Volatile.Write(ref _isConnected, 0);
+            var disposedEx = new OperationCanceledException("Session was stopped or disposed while establishing connection.");
+            _startTcs.TrySetException(disposedEx);
+            throw disposedEx;
+        }
+
         try
         {
             var currentState = (SessionLifecycleState)Volatile.Read(ref _lifecycleState);
-            if (currentState == SessionLifecycleState.Starting)
+            if (currentState == SessionLifecycleState.Starting && Volatile.Read(ref _isDisposed) == 0)
             {
                 _context = context;
                 _context.ConnectionClosed.Register(OnConnectionClosed);
@@ -140,14 +162,7 @@ public sealed partial class KableSession<TMessage>
             else
             {
                 // Stop or Dispose was called while connecting: immediately dispose orphan context
-                try
-                {
-                    await context.DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception disposeEx) when (disposeEx is not OutOfMemoryException)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[KableSession] Orphan context dispose failed: {disposeEx.Message}");
-                }
+                await DisposeOrphanContextAsync(context).ConfigureAwait(false);
 
                 Volatile.Write(ref _isConnected, 0);
                 var cancelEx = new OperationCanceledException("Session was stopped or disposed while establishing connection.");
@@ -157,7 +172,26 @@ public sealed partial class KableSession<TMessage>
         }
         finally
         {
-            _lifecycleLock.Release();
+            try
+            {
+                _lifecycleLock.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Lifecycle lock may already have been disposed after cleanup timeout.
+            }
+        }
+    }
+
+    private static async ValueTask DisposeOrphanContextAsync(IConnectionContext context)
+    {
+        try
+        {
+            await context.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception disposeEx) when (disposeEx is not OutOfMemoryException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[KableSession] Orphan context dispose failed: {disposeEx.Message}");
         }
     }
 
