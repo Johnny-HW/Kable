@@ -1,12 +1,11 @@
 namespace Kable.Generators;
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -15,6 +14,14 @@ public class ProtocolSourceGenerator : IIncrementalGenerator
 {
     private const string AttributeNamespace = "Kable.Generators";
     private const string DeviceCommandAttributeName = "DeviceCommandAttribute";
+
+    private static readonly DiagnosticDescriptor NonPartialCommandType = new(
+        id: "KABLEGEN001",
+        title: "DeviceCommand type must be partial",
+        messageFormat: "Type '{0}' annotated with [DeviceCommand] and all its containing types must be declared partial",
+        category: "Kable.Generators",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -40,6 +47,7 @@ namespace Kable.Generators
         public DeviceCommandAttribute(string template) => Template = template;
     }
 
+    [Obsolete(""Not yet implemented by Kable.Generators; reserved for a future release."")]
     [AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class SpontaneousEventAttribute : Attribute
     {
@@ -47,6 +55,7 @@ namespace Kable.Generators
         public SpontaneousEventAttribute(string pattern) => Pattern = pattern;
     }
 
+    [Obsolete(""Not yet implemented by Kable.Generators; reserved for a future release."")]
     [AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class TelemetryEventAttribute : Attribute
     {
@@ -54,6 +63,7 @@ namespace Kable.Generators
         public TelemetryEventAttribute(string pattern) => Pattern = pattern;
     }
 
+    [Obsolete(""Not yet implemented by Kable.Generators; reserved for a future release."")]
     [AttributeUsage(AttributeTargets.Interface, Inherited = false, AllowMultiple = false)]
     public sealed class DeviceRpcContractAttribute : Attribute
     {
@@ -61,6 +71,7 @@ namespace Kable.Generators
         public bool SupportsCorrelationId { get; set; } = false;
     }
 
+    [Obsolete(""Not yet implemented by Kable.Generators; reserved for a future release."")]
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class GeneratedProtocolCodecAttribute : Attribute
     {
@@ -78,10 +89,10 @@ namespace Kable.Generators
                 transform: static (ctx, _) => GetCommandSemanticTarget(ctx))
             .Where(static m => m != null);
 
-        // 3. Automatically generate partial methods and IDeviceWireCommand implementation code
-        context.RegisterSourceOutput(commandDeclarations.Collect(), static (spc, source) =>
+        // 3. Emit per-command partial implementation for optimal incremental caching
+        context.RegisterSourceOutput(commandDeclarations, static (spc, model) =>
         {
-            ExecuteCommandGeneration(spc, source!);
+            ExecuteCommandGeneration(spc, model!);
         });
 
         // 4. Protocol pack AdditionalFiles (complete types). Handwritten [DeviceCommand] stays on this path.
@@ -89,148 +100,196 @@ namespace Kable.Generators
     }
 
     private static bool IsCandidateType(SyntaxNode node)
-    {
-        return (node is TypeDeclarationSyntax tds) && tds.AttributeLists.Count > 0;
-    }
+        => node is TypeDeclarationSyntax tds && tds.AttributeLists.Count > 0;
 
     private static CommandModel? GetCommandSemanticTarget(GeneratorSyntaxContext context)
     {
         var typeDecl = (TypeDeclarationSyntax)context.Node;
-        var symbol = context.SemanticModel.GetDeclaredSymbol(typeDecl) as INamedTypeSymbol;
-        if (symbol == null) return null;
-
-        foreach (var attr in symbol.GetAttributes())
+        if (context.SemanticModel.GetDeclaredSymbol(typeDecl) is not INamedTypeSymbol symbol)
         {
-            if (attr.AttributeClass?.Name == DeviceCommandAttributeName ||
-                attr.AttributeClass?.Name == "DeviceCommand")
+            return null;
+        }
+
+        // For multi-part partial types, emit once from the first syntax declaration that carries [DeviceCommand]
+        var attrData = FindDeviceCommandAttribute(symbol);
+        if (attrData == null) return null;
+        if (attrData.ApplicationSyntaxReference?.SyntaxTree != typeDecl.SyntaxTree
+            || !typeDecl.Span.Contains(attrData.ApplicationSyntaxReference.Span))
+        {
+            return null;
+        }
+
+        string template = attrData.ConstructorArguments.Length > 0
+            ? attrData.ConstructorArguments[0].Value?.ToString() ?? string.Empty
+            : string.Empty;
+
+        bool isUrgent = false;
+        foreach (var namedArg in attrData.NamedArguments)
+        {
+            if (namedArg.Key == "IsUrgent" && namedArg.Value.Value is bool b)
             {
-                string template = attr.ConstructorArguments.Length > 0 
-                    ? attr.ConstructorArguments[0].Value?.ToString() ?? "" 
-                    : "";
-
-                bool isUrgent = false;
-                foreach (var namedArg in attr.NamedArguments)
-                {
-                    if (namedArg.Key == "IsUrgent" && namedArg.Value.Value is bool b)
-                    {
-                        isUrgent = b;
-                    }
-                }
-
-                string typeNamespace = symbol.ContainingNamespace.IsGlobalNamespace
-                    ? ""
-                    : symbol.ContainingNamespace.ToDisplayString();
-
-                string typeKind = symbol.IsRecord 
-                    ? (symbol.IsValueType ? "record struct" : "record") 
-                    : (symbol.IsValueType ? "struct" : "class");
-
-                var properties = symbol.GetMembers()
-                    .OfType<IPropertySymbol>()
-                    .Select(p => p.Name)
-                    .ToList();
-
-                return new CommandModel(
-                    typeNamespace,
-                    symbol.Name,
-                    typeKind,
-                    template,
-                    isUrgent,
-                    properties);
+                isUrgent = b;
             }
         }
 
+        string typeNamespace = symbol.ContainingNamespace.IsGlobalNamespace
+            ? string.Empty
+            : symbol.ContainingNamespace.ToDisplayString();
+
+        var containingTypes = CollectContainingTypes(symbol);
+        bool isPartial = HasPartialModifier(typeDecl) && containingTypes.All(static c => c.IsPartial);
+        string typeParameters = FormatTypeParameters(symbol);
+        string typeKind = GetTypeKind(symbol);
+        string hintName = BuildHintName(typeNamespace, containingTypes, symbol);
+
+        var location = typeDecl.Identifier.GetLocation();
+        var mapped = location.GetLineSpan();
+        var diagLocation = new CommandDiagnosticLocation(
+            location.SourceTree?.FilePath ?? string.Empty,
+            location.SourceSpan,
+            mapped.Span);
+
+        var properties = symbol.GetMembers()
+            .OfType<IPropertySymbol>()
+            .Select(static p => p.Name)
+            .ToImmutableArray();
+
+        return new CommandModel(
+            typeNamespace,
+            containingTypes,
+            symbol.Name,
+            typeParameters,
+            typeKind,
+            template,
+            isUrgent,
+            isPartial,
+            hintName,
+            diagLocation,
+            properties);
+    }
+
+    private static AttributeData? FindDeviceCommandAttribute(INamedTypeSymbol symbol)
+    {
+        foreach (var attr in symbol.GetAttributes())
+        {
+            var attrClass = attr.AttributeClass;
+            if (attrClass == null) continue;
+            if (string.Equals(attrClass.Name, DeviceCommandAttributeName, StringComparison.Ordinal)
+                && string.Equals(attrClass.ContainingNamespace.ToDisplayString(), AttributeNamespace, StringComparison.Ordinal))
+            {
+                return attr;
+            }
+        }
         return null;
     }
 
-    private static void ExecuteCommandGeneration(SourceProductionContext context, ImmutableArray<CommandModel> commands)
+    private static ImmutableArray<ContainingTypeInfo> CollectContainingTypes(INamedTypeSymbol symbol)
     {
-        if (commands.IsDefaultOrEmpty) return;
-
-        foreach (var cmd in commands.Distinct())
+        var builder = ImmutableArray.CreateBuilder<ContainingTypeInfo>();
+        var current = symbol.ContainingType;
+        while (current != null)
         {
-            if (cmd == null) continue;
-
-            string formatExpression = GenerateFormatExpression(cmd.Template, cmd.Properties);
-
-            var sb = new StringBuilder();
-            sb.AppendLine("// <auto-generated by Kable.Generators />");
-            sb.AppendLine("#nullable enable");
-            sb.AppendLine();
-
-            if (!string.IsNullOrEmpty(cmd.Namespace))
-            {
-                sb.AppendLine($"namespace {cmd.Namespace}");
-                sb.AppendLine("{");
-            }
-
-            string indent = string.IsNullOrEmpty(cmd.Namespace) ? "" : "    ";
-
-            sb.AppendLine($"{indent}partial {cmd.TypeKind} {cmd.TypeName} : global::Kable.Generators.IDeviceWireCommand");
-            sb.AppendLine($"{indent}{{");
-            sb.AppendLine($"{indent}    public bool IsUrgent => {(cmd.IsUrgent ? "true" : "false")};");
-            sb.AppendLine();
-            sb.AppendLine($"{indent}    public string FormatWireMessage()");
-            sb.AppendLine($"{indent}    {{");
-            sb.AppendLine($"{indent}        return {formatExpression};");
-            sb.AppendLine($"{indent}    }}");
-            sb.AppendLine($"{indent}}}");
-
-            if (!string.IsNullOrEmpty(cmd.Namespace))
-            {
-                sb.AppendLine("}");
-            }
-
-            context.AddSource($"{cmd.TypeName}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+            bool outerPartial = current.DeclaringSyntaxReferences
+                .Select(static r => r.GetSyntax())
+                .OfType<TypeDeclarationSyntax>()
+                .All(HasPartialModifier);
+            builder.Add(new ContainingTypeInfo(
+                GetTypeKind(current),
+                current.Name + FormatTypeParameters(current),
+                outerPartial));
+            current = current.ContainingType;
         }
+        builder.Reverse();
+        return builder.ToImmutable();
     }
 
-    private static string GenerateFormatExpression(string template, List<string> propertyNames)
+    private static bool HasPartialModifier(TypeDeclarationSyntax syntax)
+        => syntax.Modifiers.Any(static m => m.IsKind(SyntaxKind.PartialKeyword));
+
+    private static string GetTypeKind(INamedTypeSymbol symbol)
+        => symbol.IsRecord
+            ? (symbol.IsValueType ? "record struct" : "record")
+            : (symbol.IsValueType ? "struct" : "class");
+
+    private static string FormatTypeParameters(INamedTypeSymbol symbol)
     {
-        if (string.IsNullOrEmpty(template)) return "\"\"";
-
-        // Template example: "oBATCH.{ScriptPath}" or "oAPPEND{SampleIndex}" or "oPON"
-        if (!template.Contains("{"))
-        {
-            return $"\"{template}\"";
-        }
-
-        // Convert to interpolated string format ($"oBATCH.{ScriptPath}")
-        return $"$\"{template}\"";
+        if (symbol.TypeParameters.IsEmpty) return string.Empty;
+        return "<" + string.Join(", ", symbol.TypeParameters.Select(static tp => tp.Name)) + ">";
     }
 
-    private sealed class CommandModel : IEquatable<CommandModel>
+    private static string BuildHintName(
+        string @namespace,
+        ImmutableArray<ContainingTypeInfo> containingTypes,
+        INamedTypeSymbol symbol)
     {
-        public string Namespace { get; }
-        public string TypeName { get; }
-        public string TypeKind { get; }
-        public string Template { get; }
-        public bool IsUrgent { get; }
-        public List<string> Properties { get; }
-
-        public CommandModel(
-            string @namespace,
-            string typeName,
-            string typeKind,
-            string template,
-            bool isUrgent,
-            List<string> properties)
+        var sb = new StringBuilder();
+        if (!string.IsNullOrEmpty(@namespace))
         {
-            Namespace = @namespace;
-            TypeName = typeName;
-            TypeKind = typeKind;
-            Template = template;
-            IsUrgent = isUrgent;
-            Properties = properties;
+            sb.Append(@namespace).Append('.');
+        }
+        foreach (var outer in containingTypes)
+        {
+            sb.Append(SanitizeHintSegment(outer.DeclarationName)).Append('.');
+        }
+        sb.Append(symbol.Name);
+        if (symbol.TypeParameters.Length > 0)
+        {
+            sb.Append('_').Append(symbol.TypeParameters.Length);
+        }
+        sb.Append(".g.cs");
+        return sb.ToString();
+    }
+
+    private static string SanitizeHintSegment(string segment)
+        => segment.Replace('<', '_').Replace('>', '_').Replace(',', '_').Replace(" ", string.Empty);
+
+    private static void ExecuteCommandGeneration(SourceProductionContext context, CommandModel cmd)
+    {
+        if (!cmd.IsPartial)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(NonPartialCommandType, cmd.Location.ToLocation(), cmd.TypeName));
+            return;
         }
 
-        public bool Equals(CommandModel? other)
+        string formatExpression = CommandTemplateFormatter.GenerateFormatExpression(cmd.Template);
+        var sb = new StringBuilder();
+        sb.AppendLine("// <auto-generated by Kable.Generators />");
+        sb.AppendLine("#nullable enable");
+        sb.AppendLine();
+
+        int depth = 0;
+        if (!string.IsNullOrEmpty(cmd.Namespace))
         {
-            if (other is null) return false;
-            return Namespace == other.Namespace && TypeName == other.TypeName;
+            sb.AppendLine($"namespace {cmd.Namespace}");
+            sb.AppendLine("{");
+            depth++;
         }
 
-        public override bool Equals(object? obj) => Equals(obj as CommandModel);
-        public override int GetHashCode() => (Namespace + "." + TypeName).GetHashCode();
+        foreach (var outer in cmd.ContainingTypes)
+        {
+            string outerIndent = new string(' ', depth * 4);
+            sb.AppendLine($"{outerIndent}partial {outer.TypeKind} {outer.DeclarationName}");
+            sb.AppendLine($"{outerIndent}{{");
+            depth++;
+        }
+
+        string indent = new string(' ', depth * 4);
+        sb.AppendLine($"{indent}partial {cmd.TypeKind} {cmd.TypeName}{cmd.TypeParameters} : global::Kable.Generators.IDeviceWireCommand");
+        sb.AppendLine($"{indent}{{");
+        sb.AppendLine($"{indent}    public bool IsUrgent => {(cmd.IsUrgent ? "true" : "false")};");
+        sb.AppendLine();
+        sb.AppendLine($"{indent}    public string FormatWireMessage()");
+        sb.AppendLine($"{indent}    {{");
+        sb.AppendLine($"{indent}        return {formatExpression};");
+        sb.AppendLine($"{indent}    }}");
+        sb.AppendLine($"{indent}}}");
+
+        while (depth > 0)
+        {
+            depth--;
+            sb.AppendLine($"{new string(' ', depth * 4)}}}");
+        }
+
+        context.AddSource(cmd.HintName, SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 }
