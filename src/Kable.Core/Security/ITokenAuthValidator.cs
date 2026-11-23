@@ -11,7 +11,7 @@ public interface ITokenAuthValidator
     bool ValidateToken(string? token);
 
     /// <summary>
-    /// 헤더/메타데이터 원본 값(예: "Bearer <token>")에서 토큰을 추출하고 유효성을 검증합니다.
+    /// 헤더/메타데이터 원본 값(예: "Bearer &lt;token&gt;")에서 토큰을 추출하고 유효성을 검증합니다.
     /// </summary>
     bool ValidateHeader(string? rawHeaderValue);
 }

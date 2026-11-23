@@ -44,6 +44,14 @@ foreach ($package in Get-ChildItem -LiteralPath $feed -Filter '*.nupkg') {
                 if ("analyzers/dotnet/cs/$dll" -notin $names) { throw "Missing analyzer dependency: $dll" }
             }
             if ($spec.SelectNodes("//*[local-name()='dependencies']/*").Count) { throw 'Generator must not have runtime dependencies.' }
+        } else {
+            if (@($names | Where-Object { $_ -like 'lib/*/*.xml' }).Count -eq 0) {
+                throw "Missing XML documentation file: $($package.Name)"
+            }
+            $snupkg = [IO.Path]::ChangeExtension($package.FullName, '.snupkg')
+            if (-not (Test-Path -LiteralPath $snupkg)) {
+                throw "Missing symbol package (.snupkg): $($package.Name)"
+            }
         }
         if ($id -in @('Kable.Modbus', 'Kable.Mqtt', 'Kable.OpcUa')) {
             foreach ($tfm in @('net8.0', 'net10.0')) {

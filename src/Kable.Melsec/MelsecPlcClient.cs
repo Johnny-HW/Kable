@@ -50,7 +50,6 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
     }
 
     /// <summary>
-
     /// 지정된 워드 디바이스(D, W, R 등)에서 count 개수만큼의 ushort 값을 일괄 읽어옵니다.
     /// </summary>
     public async Task<ushort[]> ReadWordsAsync(MelsecDeviceCode device, int headDeviceNo, ushort count, CancellationToken ct = default)

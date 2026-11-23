@@ -48,7 +48,7 @@ public record LaunchGuardOptions
     };
 
     /// <summary>
-    /// 명령줄 인자(Arguments)에 쉘 인젝션 메타문자(&, |, ;, `, $, >, <) 포함 여부를 엄격히 차단할지 여부
+    /// 명령줄 인자(Arguments)에 쉘 인젝션 메타문자(&amp;, |, ;, `, $, &gt;, &lt;) 포함 여부를 엄격히 차단할지 여부
     /// </summary>
     public bool RestrictShellCharacters { get; init; } = true;
 }

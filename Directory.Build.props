@@ -3,9 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.10.1</Version>
+    <Version>1.11.0</Version>
     <PackageVersion>$(Version)</PackageVersion>
-    <PackageReleaseNotes>$(Version): Preserve FIFO safe-close and timeout errors when diagnostics fail; keep heartbeat monitoring active during stalled writes; validate binary outbound frame lengths.</PackageReleaseNotes>
+    <PackageReleaseNotes>$(Version): Harden shared memory bounds, launch guard fail-closed policy, incremental generator caching, IPC/Host/gRPC/MQTT/OPC UA lifecycles, WPF terminal reliability, and NuGet XML documentation and symbol packages.</PackageReleaseNotes>
     <Authors>Johnny</Authors>
     <Company>Smart LIMS</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -14,13 +14,20 @@
     <TieredPGO>true</TieredPGO>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
-  <!-- Release 빌드 최적화 및 디버그/XML 부가 산출물 제외 -->
+  <!-- 라이브러리(src/) XML 문서 및 심볼 패키지 기본 활성화 -->
+  <PropertyGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src'))">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <!-- Release 빌드 최적화, Portable PDB / 내장 SourceLink 설정 -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <Optimize>true</Optimize>
-    <DebugSymbols>false</DebugSymbols>
-    <DebugType>none</DebugType>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
     <Deterministic>true</Deterministic>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 </Project>

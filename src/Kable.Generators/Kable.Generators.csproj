@@ -12,6 +12,8 @@
     
     <!-- NuGet 패키징 시 Analyzer로 작동하도록 설정 -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IncludeSymbols>false</IncludeSymbols>
     <!-- Compiler dependencies are bundled under analyzers, not application dependencies. -->
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <DevelopmentDependency>true</DevelopmentDependency>
