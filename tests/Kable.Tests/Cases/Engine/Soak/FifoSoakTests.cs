@@ -199,6 +199,7 @@ public sealed class FifoSoakTests
         }
 
         cts.Cancel();
+        await session.StopAsync();
         try { await hardwareTask; } catch { }
         try { await consumerTask; } catch { }
 

@@ -2,8 +2,8 @@ namespace Kable.Tests.Cases.Engine;
 
 using Xunit;
 
-// Keep both load scenarios serialized, as they were in the original single class.
-[CollectionDefinition("SessionSoakTests")]
+// Serialize load/memory-delta tests and external benchmark adapters (e.g. DotNetty 16MB pooled arena).
+[CollectionDefinition("SessionSoakTests", DisableParallelization = true)]
 public sealed class SessionSoakCollection
 {
 }

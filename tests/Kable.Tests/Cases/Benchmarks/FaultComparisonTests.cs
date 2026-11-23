@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Kable.Tests.Cases.Benchmarks;
 
+[Collection("SessionSoakTests")]
 public class FaultComparisonTests
 {
     [Fact]
