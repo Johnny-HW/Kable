@@ -57,20 +57,25 @@ public struct WaveformBufferHeader
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
 {
+    private const int Disposing = int.MinValue;
     private readonly MemoryMappedFile _mmf;
     private readonly MemoryMappedViewAccessor _accessor;
     private readonly byte* _pointer;
     private readonly WaveformBufferHeader* _header;
     private readonly WaveformSample* _samples;
     private readonly EventWaitHandle _dataEvent;
-    private int _isDisposed;
-    private readonly object _lifetime = new();
+    private int _lifetimeState;
 
     public int Capacity { get; }
     public int Mask { get; }
     public bool IsClosed
     {
-        get { lock (_lifetime) { ThrowIfDisposed(); return Volatile.Read(ref _header->IsClosed) != 0; } }
+        get
+        {
+            EnterOrThrow();
+            try { return Volatile.Read(ref _header->IsClosed) != 0; }
+            finally { Exit(); }
+        }
     }
 
     private SharedMemoryWaveformBuffer(
@@ -117,13 +122,18 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryWrite(in WaveformSample sample)
     {
-        lock (_lifetime)
+        EnterOrThrow();
+        try
         {
-            ThrowIfDisposed();
             if (Volatile.Read(ref _header->IsClosed) != 0) return false;
 
             long head = Volatile.Read(ref _header->Head);
             long tail = Volatile.Read(ref _header->Tail);
+            if (!AreOffsetsValid(head, tail))
+            {
+                CloseCore();
+                return false;
+            }
 
             if (head - tail >= Capacity) return false; // Buffer full
 
@@ -132,18 +142,24 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
             _dataEvent.Set();
             return true;
         }
+        finally { Exit(); }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int WriteBatch(ReadOnlySpan<WaveformSample> samples)
     {
-        lock (_lifetime)
+        EnterOrThrow();
+        try
         {
-            ThrowIfDisposed();
             if (samples.IsEmpty || Volatile.Read(ref _header->IsClosed) != 0) return 0;
 
             long head = Volatile.Read(ref _header->Head);
             long tail = Volatile.Read(ref _header->Tail);
+            if (!AreOffsetsValid(head, tail))
+            {
+                CloseCore();
+                return 0;
+            }
 
             long available = Capacity - (head - tail);
             if (available <= 0) return 0;
@@ -158,16 +174,23 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
             _dataEvent.Set();
             return toWrite;
         }
+        finally { Exit(); }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryRead(out WaveformSample sample)
     {
-        lock (_lifetime)
+        EnterOrThrow();
+        try
         {
-            ThrowIfDisposed();
             long tail = Volatile.Read(ref _header->Tail);
             long head = Volatile.Read(ref _header->Head);
+            if (!AreOffsetsValid(head, tail))
+            {
+                CloseCore();
+                sample = default;
+                return false;
+            }
 
             if (tail >= head)
             {
@@ -179,18 +202,24 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
             Volatile.Write(ref _header->Tail, tail + 1);
             return true;
         }
+        finally { Exit(); }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ReadBatch(Span<WaveformSample> destination)
     {
-        lock (_lifetime)
+        EnterOrThrow();
+        try
         {
-            ThrowIfDisposed();
             if (destination.IsEmpty) return 0;
 
             long tail = Volatile.Read(ref _header->Tail);
             long head = Volatile.Read(ref _header->Head);
+            if (!AreOffsetsValid(head, tail))
+            {
+                CloseCore();
+                return 0;
+            }
 
             long available = head - tail;
             if (available <= 0) return 0;
@@ -204,51 +233,6 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
             Volatile.Write(ref _header->Tail, tail + toRead);
             return toRead;
         }
-    }
-
-    public bool WaitForData(int timeoutMs)
-    {
-        bool held = false;
-        var handle = _dataEvent.SafeWaitHandle;
-        lock (_lifetime)
-        {
-            ThrowIfDisposed();
-            if (Volatile.Read(ref _header->Head) > Volatile.Read(ref _header->Tail) ||
-                Volatile.Read(ref _header->IsClosed) != 0) return true;
-            handle.DangerousAddRef(ref held);
-        }
-        try { return _dataEvent.WaitOne(timeoutMs); }
-        finally { if (held) handle.DangerousRelease(); }
-    }
-
-    public void Close()
-    {
-        lock (_lifetime)
-        {
-            ThrowIfDisposed();
-            if (Interlocked.Exchange(ref _header->IsClosed, 1) == 0)
-            {
-                _dataEvent.Set();
-            }
-        }
-    }
-
-    private void ThrowIfDisposed()
-    {
-        if (_isDisposed != 0) throw new ObjectDisposedException(nameof(SharedMemoryWaveformBuffer));
-    }
-
-    public void Dispose()
-    {
-        lock (_lifetime)
-        {
-            if (_isDisposed != 0) return;
-            Close();
-            _isDisposed = 1;
-            _accessor.SafeMemoryMappedViewHandle.ReleasePointer();
-            _accessor.Dispose();
-            _mmf.Dispose();
-            _dataEvent.Dispose();
-        }
+        finally { Exit(); }
     }
 }
