@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- 고성능 전용 엔진: 최신 런타임 최적화 및 Unsafe 허용 -->
+    <!-- 怨좎꽦???꾩슜 ?붿쭊: 理쒖떊 ?고???理쒖쟻??諛?Unsafe ?덉슜 -->
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -9,7 +9,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <PackageId>Kable.Engine.Disruptor</PackageId>
-    <Authors>Johnny</Authors>
     <Description>Ultra-low-latency Lock-Free SPSC RingBuffer and CPU Affinity execution engine for Kable.</Description>
     <PackageTags>industrial;hardware;disruptor;lockfree;spsc;zerogc;highperformance</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

@@ -2,31 +2,23 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    
     <PackageId>Kable.Core</PackageId>
-    <Authors>Johnny</Authors>
     <Description>Pure zero-dependency abstractions and contracts for the Kable reactive communication engine.</Description>
     <PackageTags>industrial;hardware;serial;socket;namedpipe;pipelines;rsocket;reactive;zerogc;contracts</PackageTags>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
   </PropertyGroup>
 
   <!-- Pipelines Abstraction (Core Contracts) -->
   <ItemGroup>
-    <PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
-    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageReference Include="System.IO.Pipelines" />
   </ItemGroup>
 
   <!-- netstandard2.0 polyfills -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageReference Include="System.Memory" Version="4.5.5" />
-    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="System.Memory" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" />
   </ItemGroup>
 
 </Project>

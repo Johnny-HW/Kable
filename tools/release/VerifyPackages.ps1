@@ -14,6 +14,7 @@ function Invoke-DotNet([string[]]$Arguments) {
 # Stop inheritance from repository build customizations in the clean consumers.
 '<Project />' | Set-Content -LiteralPath (Join-Path $work 'Directory.Build.props') -Encoding utf8
 '<Project />' | Set-Content -LiteralPath (Join-Path $work 'Directory.Build.targets') -Encoding utf8
+'<Project><PropertyGroup><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup></Project>' | Set-Content -LiteralPath (Join-Path $work 'Directory.Packages.props') -Encoding utf8
 $version = (& dotnet msbuild (Join-Path $repo 'src/Kable/Kable.csproj') -getProperty:PackageVersion).Trim()
 if ($LASTEXITCODE -ne 0 -or !$version) { throw 'Could not resolve package version.' }
 $projects = Get-ChildItem -LiteralPath (Join-Path $repo 'src') -Directory | ForEach-Object {

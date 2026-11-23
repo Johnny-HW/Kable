@@ -3,19 +3,9 @@
   <PropertyGroup>
     <!-- 전천후 멀티 타겟팅: 구형 설비(netstandard2.0)부터 최신 고성능(.NET 8, 10)까지 완전 지원 -->
     <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    
-    <!-- NuGet 패키지 메타데이터 (글로벌 오픈소스 규격) -->
     <PackageId>Kable</PackageId>
-    <Authors>Johnny</Authors>
-    <Company>Smart LIMS</Company>
     <Description>Asynchronous hardware communication engine with reusable pipeline buffers, configurable request routing, and optional connection recovery.</Description>
     <PackageTags>industrial;hardware;serial;socket;namedpipe;pipelines;rsocket;reactive;zerogc</PackageTags>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
   </PropertyGroup>
 
   <!-- 프로젝트 참조 (Kable.Core 계약 계층) -->
@@ -23,12 +13,11 @@
     <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
   </ItemGroup>
 
-  <!-- 공통 종속성 (최신 System.Threading.Channels 포함) -->
+  <!-- 공통 종속성 -->
   <ItemGroup>
-    <PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
-    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageReference Include="System.IO.Pipelines" />
+    <PackageReference Include="System.IO.Ports" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,10 +28,11 @@
 
   <!-- netstandard2.0 구형 플랫폼용 폴리필 패키지 -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageReference Include="System.Memory" Version="4.5.5" />
-    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="System.Memory" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" />
   </ItemGroup>
 
 </Project>

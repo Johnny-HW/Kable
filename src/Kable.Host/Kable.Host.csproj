@@ -8,13 +8,11 @@
     <PublishAot>false</PublishAot>
 
     <PackageId>Kable.Host</PackageId>
-    <Authors>Johnny</Authors>
     <IsPackable>false</IsPackable>
     <Description>Out-of-Process Hardware Daemon Host for Kable reactive communication engine.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
     <ProjectReference Include="..\Kable.Transport.Ipc\Kable.Transport.Ipc.csproj" />
     <ProjectReference Include="..\Kable\Kable.csproj" />
   </ItemGroup>

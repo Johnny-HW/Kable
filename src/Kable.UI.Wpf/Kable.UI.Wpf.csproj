@@ -10,11 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
     <ProjectReference Include="..\Kable\Kable.csproj" />
   </ItemGroup>
 

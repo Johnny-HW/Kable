@@ -13,8 +13,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="System.IO.Ports" Version="10.0.0-preview.1.25080.5" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="System.IO.Ports" />
   </ItemGroup>
 
   <ItemGroup>

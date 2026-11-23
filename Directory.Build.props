@@ -13,6 +13,8 @@
     <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
     <TieredPGO>true</TieredPGO>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
   <!-- 라이브러리(src/) XML 문서 및 심볼 패키지 기본 활성화 -->
   <PropertyGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith('$(MSBuildThisFileDirectory)src'))">

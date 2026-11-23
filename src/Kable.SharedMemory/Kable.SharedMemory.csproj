@@ -7,12 +7,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <PackageId>Kable.SharedMemory</PackageId>
-    <Authors>Kable Authors</Authors>
     <Description>Ultra-low-latency Inter-Process Communication (IPC) and high-frequency waveform ring buffer over MemoryMappedFile for Kable.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
     <ProjectReference Include="..\Kable\Kable.csproj" />
   </ItemGroup>
 
