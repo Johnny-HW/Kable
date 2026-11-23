@@ -6,6 +6,8 @@
 # dotenv files
 .env
 .code_graph/
+.agents/
+.xray/
 
 # User-specific files
 *.rsuser

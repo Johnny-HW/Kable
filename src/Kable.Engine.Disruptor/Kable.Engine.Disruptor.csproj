@@ -17,12 +17,4 @@
     <RepositoryUrl>https://github.com/jaon13/Kable</RepositoryUrl>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Kable.Core\Kable.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
-  </ItemGroup>
-
 </Project>
