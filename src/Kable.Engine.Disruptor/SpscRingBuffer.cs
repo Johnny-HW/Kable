@@ -19,9 +19,9 @@ public sealed class SpscRingBuffer<T> where T : class
 
     public SpscRingBuffer(int capacityPowerOfTwo = 4096)
     {
-        if ((capacityPowerOfTwo & (capacityPowerOfTwo - 1)) != 0)
+        if (capacityPowerOfTwo <= 0 || (capacityPowerOfTwo & (capacityPowerOfTwo - 1)) != 0)
         {
-            throw new ArgumentException("Capacity must be a power of two.", nameof(capacityPowerOfTwo));
+            throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacityPowerOfTwo));
         }
 
         Capacity = capacityPowerOfTwo;

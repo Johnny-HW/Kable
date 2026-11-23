@@ -63,4 +63,16 @@ public sealed class KableMetricsCollectorTests
         meterListener.Dispose();
         collector.Dispose();
     }
+
+    [Fact]
+    public async Task Dispose_CompletesAllTraceChannels()
+    {
+        var collector = new KableMetricsCollector();
+        collector.Dispose();
+        collector.Dispose(); // idempotent
+
+        (await collector.PeriodicStream.WaitToReadAsync()).Should().BeFalse();
+        (await collector.CommandStream.WaitToReadAsync()).Should().BeFalse();
+        (await collector.AlarmStream.WaitToReadAsync()).Should().BeFalse();
+    }
 }

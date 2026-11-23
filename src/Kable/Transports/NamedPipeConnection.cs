@@ -55,13 +55,23 @@ public sealed class NamedPipeConnectionFactory : IConnectionFactory
             PipeDirection.InOut,
             System.IO.Pipes.PipeOptions.Asynchronous);
 
+        try
+        {
 #if NETSTANDARD2_0
-        pipeStream.Connect(_timeoutMs);
-        await Task.CompletedTask;
+            using (ct.Register(() => { try { pipeStream.Dispose(); } catch (ObjectDisposedException) { } }))
+            {
+                await Task.Run(() => pipeStream.Connect(_timeoutMs), ct).ConfigureAwait(false);
+            }
 #else
-        await pipeStream.ConnectAsync(_timeoutMs, ct).ConfigureAwait(false);
+            await pipeStream.ConnectAsync(_timeoutMs, ct).ConfigureAwait(false);
 #endif
 
-        return new NamedPipeConnectionContext(pipeStream, _pipeName);
+            return new NamedPipeConnectionContext(pipeStream, _pipeName);
+        }
+        catch
+        {
+            pipeStream.Dispose();
+            throw;
+        }
     }
 }

@@ -16,7 +16,8 @@ public sealed class TlsConnectionContext : IConnectionContext
     private readonly CancellationTokenSource _closed = new();
     private readonly object _sync = new();
     private Task? _disposal;
-    private int _aborted;
+    private bool _aborted;
+    private bool _ctsDisposed;
     public string ConnectionId { get; } = Guid.NewGuid().ToString("N");
     public string EndpointDescription { get; }
     public PipeReader Input { get; }
@@ -74,8 +75,15 @@ public sealed class TlsConnectionContext : IConnectionContext
 
     public void Abort(string reason)
     {
-        if (Interlocked.Exchange(ref _aborted, 1) != 0) return;
-        _closed.Cancel();
+        lock (_sync)
+        {
+            if (_aborted) return;
+            _aborted = true;
+            if (!_ctsDisposed)
+            {
+                _closed.Cancel();
+            }
+        }
         _client.Dispose();
         Input.CancelPendingRead();
         Output.CancelPendingFlush();
@@ -91,7 +99,15 @@ public sealed class TlsConnectionContext : IConnectionContext
         finally
         {
             try { await Output.CompleteAsync().ConfigureAwait(false); }
-            finally { _stream.Dispose(); _closed.Dispose(); }
+            finally
+            {
+                _stream.Dispose();
+                lock (_sync)
+                {
+                    _ctsDisposed = true;
+                    _closed.Dispose();
+                }
+            }
         }
     }
 }

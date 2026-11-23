@@ -1,7 +1,7 @@
 namespace Kable.Core.Security.Guards;
 
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Kable.Core.Security;
@@ -12,7 +12,8 @@ using Kable.Core.Security;
 public sealed class SingleFlightConcurrencyGuard : IConcurrencyGuard
 {
     private readonly ConcurrencyOptions _options;
-    private readonly ConcurrentDictionary<string, ResourceLockState> _locks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _tableSync = new();
+    private readonly Dictionary<string, ResourceLockState> _locks = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
     public SingleFlightConcurrencyGuard(ConcurrencyOptions? options = null)
@@ -23,12 +24,15 @@ public sealed class SingleFlightConcurrencyGuard : IConcurrencyGuard
     public bool IsBusy(string resourceKey)
     {
         if (string.IsNullOrEmpty(resourceKey)) return false;
-        return _locks.TryGetValue(resourceKey, out var state) && state.IsActive;
+        lock (_tableSync)
+        {
+            return _locks.TryGetValue(resourceKey, out var state) && state.IsActive;
+        }
     }
 
     public async ValueTask<IAsyncDisposable?> TryAcquireAsync(string resourceKey, CancellationToken ct = default)
     {
-        if (_disposed || !_options.PreventDuplicateExecution)
+        if (!_options.PreventDuplicateExecution)
         {
             return EmptyReleaser.Instance;
         }
@@ -38,45 +42,66 @@ public sealed class SingleFlightConcurrencyGuard : IConcurrencyGuard
             throw new ArgumentException("Resource key cannot be null or empty.", nameof(resourceKey));
         }
 
-        var state = _locks.GetOrAdd(resourceKey, static key => new ResourceLockState(key));
-
-        switch (_options.Mode)
+        ResourceLockState? state;
+        lock (_tableSync)
         {
-            case BusyHandlingMode.RejectImmediately:
-                if (Interlocked.CompareExchange(ref state.ActiveCount, 1, 0) == 0)
-                {
-                    return new ImmediateReleaser(this, state);
-                }
-                return null;
+            if (_disposed) return EmptyReleaser.Instance;
+            if (!_locks.TryGetValue(resourceKey, out state))
+            {
+                state = new ResourceLockState(resourceKey);
+                _locks[resourceKey] = state;
+            }
+            state.RefCount++;
+        }
 
-            case BusyHandlingMode.PreemptCurrent:
-                // 선행 작업 취소 신호 전달
-                state.SignalCancelCurrent();
-                await state.Semaphore.WaitAsync(ct).ConfigureAwait(false);
-                state.ResetCancellation();
-                return new SemaphoreReleaser(this, state);
-
-            case BusyHandlingMode.EnqueueFifo:
-            default:
-                if (state.WaitQueueCount >= _options.MaxQueueCapacity)
-                {
-                    return null; // 대기열 용량 초과로 거부
-                }
-
-                Interlocked.Increment(ref state.WaitQueueCount);
-                try
-                {
-                    var entered = await state.Semaphore.WaitAsync(_options.LockAcquisitionTimeout, ct).ConfigureAwait(false);
-                    if (!entered)
+        bool ownershipTransferred = false;
+        try
+        {
+            switch (_options.Mode)
+            {
+                case BusyHandlingMode.RejectImmediately:
+                    if (Interlocked.CompareExchange(ref state.ActiveCount, 1, 0) == 0)
                     {
-                        return null; // 타임아웃
+                        ownershipTransferred = true;
+                        return new ImmediateReleaser(this, state);
                     }
+                    return null;
+
+                case BusyHandlingMode.PreemptCurrent:
+                    await state.Semaphore.WaitAsync(ct).ConfigureAwait(false);
+                    ownershipTransferred = true;
                     return new SemaphoreReleaser(this, state);
-                }
-                finally
-                {
-                    Interlocked.Decrement(ref state.WaitQueueCount);
-                }
+
+                case BusyHandlingMode.EnqueueFifo:
+                default:
+                    if (Volatile.Read(ref state.WaitQueueCount) >= _options.MaxQueueCapacity)
+                    {
+                        return null;
+                    }
+
+                    Interlocked.Increment(ref state.WaitQueueCount);
+                    try
+                    {
+                        var entered = await state.Semaphore.WaitAsync(_options.LockAcquisitionTimeout, ct).ConfigureAwait(false);
+                        if (!entered)
+                        {
+                            return null;
+                        }
+                        ownershipTransferred = true;
+                        return new SemaphoreReleaser(this, state);
+                    }
+                    finally
+                    {
+                        Interlocked.Decrement(ref state.WaitQueueCount);
+                    }
+            }
+        }
+        finally
+        {
+            if (!ownershipTransferred)
+            {
+                ReleaseReference(state);
+            }
         }
     }
 
@@ -93,24 +118,63 @@ public sealed class SingleFlightConcurrencyGuard : IConcurrencyGuard
     private void ReleaseImmediate(ResourceLockState state)
     {
         Interlocked.Exchange(ref state.ActiveCount, 0);
+        ReleaseReference(state);
     }
 
     private void ReleaseSemaphore(ResourceLockState state)
     {
         state.Semaphore.Release();
+        ReleaseReference(state);
+    }
+
+    private void ReleaseReference(ResourceLockState state)
+    {
+        bool shouldDispose = false;
+        lock (_tableSync)
+        {
+            state.RefCount--;
+            if (state.RefCount <= 0)
+            {
+                if (_locks.TryGetValue(state.ResourceKey, out var current) && ReferenceEquals(current, state))
+                {
+                    _locks.Remove(state.ResourceKey);
+                }
+                shouldDispose = true;
+            }
+        }
+
+        if (shouldDispose)
+        {
+            state.Dispose();
+        }
     }
 
     public ValueTask DisposeAsync()
     {
-        if (!_disposed)
+        List<ResourceLockState>? idleToDispose = null;
+        lock (_tableSync)
         {
+            if (_disposed) return default;
             _disposed = true;
             foreach (var kvp in _locks)
             {
-                kvp.Value.Dispose();
+                if (kvp.Value.RefCount <= 0)
+                {
+                    idleToDispose ??= new List<ResourceLockState>();
+                    idleToDispose.Add(kvp.Value);
+                }
             }
             _locks.Clear();
         }
+
+        if (idleToDispose != null)
+        {
+            for (int i = 0; i < idleToDispose.Count; i++)
+            {
+                idleToDispose[i].Dispose();
+            }
+        }
+
         return default;
     }
 
@@ -120,32 +184,16 @@ public sealed class SingleFlightConcurrencyGuard : IConcurrencyGuard
         public readonly SemaphoreSlim Semaphore = new(1, 1);
         public int ActiveCount;
         public int WaitQueueCount;
-        private CancellationTokenSource? _currentCts;
+        public int RefCount;
 
-        public bool IsActive => ActiveCount > 0 || Semaphore.CurrentCount == 0;
+        public bool IsActive => Volatile.Read(ref ActiveCount) > 0 || Semaphore.CurrentCount == 0;
 
         public ResourceLockState(string resourceKey)
         {
             ResourceKey = resourceKey;
         }
 
-        public void SignalCancelCurrent()
-        {
-            var oldCts = Interlocked.Exchange(ref _currentCts, null);
-            oldCts?.Cancel();
-            oldCts?.Dispose();
-        }
-
-        public void ResetCancellation()
-        {
-            _currentCts = new CancellationTokenSource();
-        }
-
-        public void Dispose()
-        {
-            SignalCancelCurrent();
-            Semaphore.Dispose();
-        }
+        public void Dispose() => Semaphore.Dispose();
     }
 
     private sealed class ImmediateReleaser : IAsyncDisposable

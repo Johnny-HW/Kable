@@ -90,6 +90,7 @@ public sealed class KableModbusDeviceChannel : IKableModbusChannel
         ct.ThrowIfCancellationRequested();
         lock (_stateSync)
         {
+            if (_disposed && !disposing) return;
             if (disposing) _disposed = true;
             _closing++;
             _active?.Cancel();
@@ -130,6 +131,11 @@ public sealed class KableModbusDeviceChannel : IKableModbusChannel
             var operation = BeginOperation(wait.Token);
             var context = _context ?? throw new InvalidOperationException(
                 $"Channel is not open for unit '{_unitId}'. Call OpenAsync() first.");
+            if (context.ConnectionClosed.IsCancellationRequested)
+            {
+                await ReleaseContextAsync(true).ConfigureAwait(false);
+                throw new DeviceDisconnectedException("Modbus connection was closed.");
+            }
             using var io = CancellationTokenSource.CreateLinkedTokenSource(operation.Token, context.ConnectionClosed);
             io.Token.ThrowIfCancellationRequested();
             started = true;
@@ -200,6 +206,18 @@ public sealed class KableModbusDeviceChannel : IKableModbusChannel
     public ValueTask DisposeAsync()
     {
         lock (_stateSync)
-            return new ValueTask(_disposeTask ??= CloseCoreAsync(CancellationToken.None, true));
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        try
+        {
+            await CloseCoreAsync(CancellationToken.None, true).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Dispose();
+        }
     }
 }

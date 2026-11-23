@@ -1,8 +1,8 @@
 namespace Kable.Observability;
 
 using System;
+using System.Buffers.Binary;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,11 +12,14 @@ using System.Threading.Tasks;
 /// </summary>
 public sealed class PcapWriter : IAsyncDisposable
 {
-    private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly Stream _stream;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly byte[] _globalHeader = new byte[24];
+    private readonly byte[] _packetHeader = new byte[16];
     private bool _headerWritten;
+    private int _disposed;
 
     // PCAP Magic Number: 0xA1B2C3D4 (Standard Microsecond resolution)
     private const uint PCAP_MAGIC = 0xA1B2C3D4;
@@ -35,25 +38,15 @@ public sealed class PcapWriter : IAsyncDisposable
     /// </summary>
     public async ValueTask EnsureHeaderWrittenAsync(CancellationToken ct = default)
     {
-        if (_headerWritten) return;
+        ThrowIfDisposed();
+        if (Volatile.Read(ref _headerWritten)) return;
 
-        await _lock.WaitAsync(ct);
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            ThrowIfDisposed();
             if (_headerWritten) return;
-
-            byte[] header = new byte[24];
-            BitConverter.GetBytes(PCAP_MAGIC).CopyTo(header, 0);
-            BitConverter.GetBytes(VERSION_MAJOR).CopyTo(header, 4);
-            BitConverter.GetBytes(VERSION_MINOR).CopyTo(header, 6);
-            BitConverter.GetBytes((int)0).CopyTo(header, 8);  // thiszone
-            BitConverter.GetBytes((uint)0).CopyTo(header, 12); // sigfigs
-            BitConverter.GetBytes(SNAPLEN).CopyTo(header, 16); // snaplen
-            BitConverter.GetBytes(LINKTYPE_RAW).CopyTo(header, 20); // network
-
-            await _stream.WriteAsync(header, 0, header.Length, ct);
-            await _stream.FlushAsync(ct);
-            _headerWritten = true;
+            await WriteGlobalHeaderCoreAsync(ct).ConfigureAwait(false);
         }
         finally
         {
@@ -66,53 +59,132 @@ public sealed class PcapWriter : IAsyncDisposable
     /// </summary>
     public ValueTask WritePacketAsync(ReadOnlyMemory<byte> payload, DateTime timestampUtc, CancellationToken ct = default)
     {
-        var captured = payload.Slice(0, Math.Min(payload.Length, (int)SNAPLEN)).ToArray();
+        ThrowIfDisposed();
+        int capLen = Math.Min(payload.Length, (int)SNAPLEN);
+#if NET6_0_OR_GREATER
+        return WriteCapturedMemoryAsync(payload.Slice(0, capLen), payload.Length, timestampUtc, ct);
+#else
+        var captured = payload.Slice(0, capLen).ToArray();
         return WriteCapturedPacketAsync(captured, payload.Length, timestampUtc, ct);
+#endif
     }
 
-    internal async ValueTask WriteCapturedPacketAsync(byte[] payload, int originalLength,
+    internal ValueTask WriteCapturedPacketAsync(byte[] payload, int originalLength,
         DateTime timestampUtc, CancellationToken ct = default)
     {
-        if (!_headerWritten)
-        {
-            await EnsureHeaderWrittenAsync(ct);
-        }
+        ThrowIfDisposed();
+        int capLen = Math.Min(payload.Length, (int)SNAPLEN);
+#if NET6_0_OR_GREATER
+        return WriteCapturedMemoryAsync(payload.AsMemory(0, capLen), originalLength, timestampUtc, ct);
+#else
+        return WriteCapturedArrayAsync(payload, capLen, originalLength, timestampUtc, ct);
+#endif
+    }
 
-        long unixMicro = (timestampUtc.Ticks - UnixEpoch.Ticks) / 10;
-        uint tsSec = (uint)(unixMicro / 1_000_000);
-        uint tsUsec = (uint)(unixMicro % 1_000_000);
-        uint capLen = (uint)Math.Min(payload.Length, (int)SNAPLEN);
-        uint origLen = (uint)originalLength;
-
-        byte[] pktHeader = new byte[16];
-        BitConverter.GetBytes(tsSec).CopyTo(pktHeader, 0);
-        BitConverter.GetBytes(tsUsec).CopyTo(pktHeader, 4);
-        BitConverter.GetBytes(capLen).CopyTo(pktHeader, 8);
-        BitConverter.GetBytes(origLen).CopyTo(pktHeader, 12);
-
-        await _lock.WaitAsync(ct);
+#if NET6_0_OR_GREATER
+    private async ValueTask WriteCapturedMemoryAsync(ReadOnlyMemory<byte> captured, int originalLength,
+        DateTime timestampUtc, CancellationToken ct)
+    {
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await _stream.WriteAsync(pktHeader, 0, pktHeader.Length, ct);
-            if (capLen > 0)
+            ThrowIfDisposed();
+            if (!_headerWritten)
             {
-                await _stream.WriteAsync(payload, 0, (int)capLen, ct);
+                await WriteGlobalHeaderCoreAsync(ct).ConfigureAwait(false);
             }
-            await _stream.FlushAsync(ct);
+
+            WritePacketHeader(_packetHeader, captured.Length, originalLength, timestampUtc);
+            await _stream.WriteAsync(_packetHeader.AsMemory(), ct).ConfigureAwait(false);
+            if (!captured.IsEmpty)
+            {
+                await _stream.WriteAsync(captured, ct).ConfigureAwait(false);
+            }
+            await _stream.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
         {
             _lock.Release();
         }
     }
+#else
+    private async ValueTask WriteCapturedArrayAsync(byte[] payload, int capLen, int originalLength,
+        DateTime timestampUtc, CancellationToken ct)
+    {
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            ThrowIfDisposed();
+            if (!_headerWritten)
+            {
+                await WriteGlobalHeaderCoreAsync(ct).ConfigureAwait(false);
+            }
+
+            WritePacketHeader(_packetHeader, capLen, originalLength, timestampUtc);
+            await _stream.WriteAsync(_packetHeader, 0, _packetHeader.Length, ct).ConfigureAwait(false);
+            if (capLen > 0)
+            {
+                await _stream.WriteAsync(payload, 0, capLen, ct).ConfigureAwait(false);
+            }
+            await _stream.FlushAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+#endif
+
+    private async ValueTask WriteGlobalHeaderCoreAsync(CancellationToken ct)
+    {
+        BinaryPrimitives.WriteUInt32LittleEndian(_globalHeader.AsSpan(0, 4), PCAP_MAGIC);
+        BinaryPrimitives.WriteUInt16LittleEndian(_globalHeader.AsSpan(4, 2), VERSION_MAJOR);
+        BinaryPrimitives.WriteUInt16LittleEndian(_globalHeader.AsSpan(6, 2), VERSION_MINOR);
+        BinaryPrimitives.WriteInt32LittleEndian(_globalHeader.AsSpan(8, 4), 0);
+        BinaryPrimitives.WriteUInt32LittleEndian(_globalHeader.AsSpan(12, 4), 0);
+        BinaryPrimitives.WriteUInt32LittleEndian(_globalHeader.AsSpan(16, 4), SNAPLEN);
+        BinaryPrimitives.WriteUInt32LittleEndian(_globalHeader.AsSpan(20, 4), LINKTYPE_RAW);
+
+        await _stream.WriteAsync(_globalHeader, 0, _globalHeader.Length, ct).ConfigureAwait(false);
+        await _stream.FlushAsync(ct).ConfigureAwait(false);
+        Volatile.Write(ref _headerWritten, true);
+    }
+
+    private static void WritePacketHeader(byte[] buffer, int capLen, int originalLength, DateTime timestamp)
+    {
+        var utc = timestamp.Kind == DateTimeKind.Utc ? timestamp : timestamp.ToUniversalTime();
+        long unixMicro = Math.Max(0, (utc.Ticks - UnixEpoch.Ticks) / 10);
+        uint tsSec = (uint)(unixMicro / 1_000_000);
+        uint tsUsec = (uint)(unixMicro % 1_000_000);
+
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(0, 4), tsSec);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(4, 4), tsUsec);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(8, 4), (uint)capLen);
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.AsSpan(12, 4), (uint)originalLength);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            throw new ObjectDisposedException(nameof(PcapWriter));
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
-        try { await _stream.FlushAsync().ConfigureAwait(false); }
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        await _lock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        try
+        {
+            try { await _stream.FlushAsync().ConfigureAwait(false); }
+            finally { _stream.Dispose(); }
+        }
         finally
         {
-            try { _stream.Dispose(); }
-            finally { _lock.Dispose(); }
+            _lock.Release();
+            _lock.Dispose();
         }
     }
 }

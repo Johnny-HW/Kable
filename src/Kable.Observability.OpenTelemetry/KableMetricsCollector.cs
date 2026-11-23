@@ -1,10 +1,11 @@
 namespace Kable.Observability.OpenTelemetry;
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Threading;
 using System.Threading.Channels;
+using Kable.Core;
 using Kable.Observability;
 
 public sealed class KableMetricsCollector : ICommObserver, IDisposable
@@ -13,10 +14,11 @@ public sealed class KableMetricsCollector : ICommObserver, IDisposable
     private readonly Counter<long> _packetCounter;
     private readonly Counter<long> _errorCounter;
     private readonly Histogram<double> _latencyHistogram;
+    private int _disposed;
 
-    private readonly Channel<PacketTraceRecord> _periodicChannel = Channel.CreateBounded<PacketTraceRecord>(1000);
-    private readonly Channel<PacketTraceRecord> _commandChannel = Channel.CreateBounded<PacketTraceRecord>(1000);
-    private readonly Channel<PacketTraceRecord> _alarmChannel = Channel.CreateBounded<PacketTraceRecord>(1000);
+    private readonly Channel<PacketTraceRecord> _periodicChannel = CreateChannel();
+    private readonly Channel<PacketTraceRecord> _commandChannel = CreateChannel();
+    private readonly Channel<PacketTraceRecord> _alarmChannel = CreateChannel();
 
     public ChannelReader<PacketTraceRecord> PeriodicStream => _periodicChannel.Reader;
     public ChannelReader<PacketTraceRecord> CommandStream => _commandChannel.Reader;
@@ -50,7 +52,7 @@ public sealed class KableMetricsCollector : ICommObserver, IDisposable
         var tags = new TagList
         {
             { "device_id", deviceId },
-            { "state", metrics.State.ToString() }
+            { "state", FormatState(metrics.State) }
         };
 
         if (metrics.LastRttMs > 0)
@@ -64,8 +66,8 @@ public sealed class KableMetricsCollector : ICommObserver, IDisposable
         var tags = new TagList
         {
             { "direction", trace.Direction == PacketDirection.Tx ? "tx" : "rx" },
-            { "kind", trace.Kind.ToString() },
-            { "level", trace.Level.ToString() },
+            { "kind", FormatKind(trace.Kind) },
+            { "level", FormatLevel(trace.Level) },
             { "tag", trace.Tag }
         };
 
@@ -98,6 +100,47 @@ public sealed class KableMetricsCollector : ICommObserver, IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _periodicChannel.Writer.TryComplete();
+        _commandChannel.Writer.TryComplete();
+        _alarmChannel.Writer.TryComplete();
         _meter.Dispose();
     }
+
+    private static Channel<PacketTraceRecord> CreateChannel() => Channel.CreateBounded<PacketTraceRecord>(
+        new BoundedChannelOptions(1000)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleReader = false,
+            SingleWriter = false
+        });
+
+    private static string FormatKind(TrafficKind kind) => kind switch
+    {
+        TrafficKind.AperiodicCommand => nameof(TrafficKind.AperiodicCommand),
+        TrafficKind.PeriodicTelemetry => nameof(TrafficKind.PeriodicTelemetry),
+        TrafficKind.SpontaneousAlarm => nameof(TrafficKind.SpontaneousAlarm),
+        _ => kind.ToString()
+    };
+
+    private static string FormatLevel(LogLevel level) => level switch
+    {
+        LogLevel.Trace => nameof(LogLevel.Trace),
+        LogLevel.Debug => nameof(LogLevel.Debug),
+        LogLevel.Information => nameof(LogLevel.Information),
+        LogLevel.Warning => nameof(LogLevel.Warning),
+        LogLevel.Error => nameof(LogLevel.Error),
+        LogLevel.Critical => nameof(LogLevel.Critical),
+        _ => level.ToString()
+    };
+
+    private static string FormatState(DeviceConnectionState state) => state switch
+    {
+        DeviceConnectionState.Disconnected => nameof(DeviceConnectionState.Disconnected),
+        DeviceConnectionState.Connecting => nameof(DeviceConnectionState.Connecting),
+        DeviceConnectionState.Connected => nameof(DeviceConnectionState.Connected),
+        DeviceConnectionState.Simulated => nameof(DeviceConnectionState.Simulated),
+        DeviceConnectionState.Faulted => nameof(DeviceConnectionState.Faulted),
+        _ => state.ToString()
+    };
 }

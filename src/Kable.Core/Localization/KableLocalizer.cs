@@ -11,9 +11,10 @@ public sealed partial class KableLocalizer : IKableLocalizer
 {
     public static KableLocalizer Instance { get; } = new();
 
+    private readonly object _sync = new();
     private CultureInfo _currentCulture = CultureInfo.GetCultureInfo("en-US");
 
-    public CultureInfo CurrentCulture => _currentCulture;
+    public CultureInfo CurrentCulture => Volatile.Read(ref _currentCulture);
 
     public event EventHandler<CultureInfo>? CultureChanged;
 
@@ -28,25 +29,40 @@ public sealed partial class KableLocalizer : IKableLocalizer
     public void SetCulture(CultureInfo culture)
     {
         if (culture == null) throw new ArgumentNullException(nameof(culture));
-        if (!Equals(_currentCulture, culture))
+        bool changed = false;
+        lock (_sync)
         {
-            _currentCulture = culture;
+            if (!Equals(_currentCulture, culture))
+            {
+                Volatile.Write(ref _currentCulture, culture);
+                changed = true;
+            }
+        }
+        if (changed)
+        {
             CultureChanged?.Invoke(this, culture);
         }
     }
 
     public string GetErrorMessage(KableErrorCode code, params object[] args)
     {
-        string cultureKey = GetMatchingCultureKey(_currentCulture);
-        if (_errorDictionary.TryGetValue(cultureKey, out var langDict) && langDict.TryGetValue(code, out var template))
+        string? template = null;
+        lock (_sync)
         {
-            return args.Length > 0 ? string.Format(template, args) : template;
+            string cultureKey = GetMatchingCultureKey(_currentCulture);
+            if (_errorDictionary.TryGetValue(cultureKey, out var langDict) && langDict.TryGetValue(code, out var found))
+            {
+                template = found;
+            }
+            else if (_errorDictionary.TryGetValue("en", out var enDict) && enDict.TryGetValue(code, out var enTemplate))
+            {
+                template = enTemplate;
+            }
         }
 
-        // Fallback to English
-        if (_errorDictionary.TryGetValue("en", out var enDict) && enDict.TryGetValue(code, out var enTemplate))
+        if (template != null)
         {
-            return args.Length > 0 ? string.Format(enTemplate, args) : enTemplate;
+            return args.Length > 0 ? string.Format(template, args) : template;
         }
 
         return $"[Error {code}]";
@@ -54,15 +70,23 @@ public sealed partial class KableLocalizer : IKableLocalizer
 
     public string GetString(string key, params object[] args)
     {
-        string cultureKey = GetMatchingCultureKey(_currentCulture);
-        if (_stringDictionary.TryGetValue(cultureKey, out var langDict) && langDict.TryGetValue(key, out var template))
+        string? template = null;
+        lock (_sync)
         {
-            return args.Length > 0 ? string.Format(template, args) : template;
+            string cultureKey = GetMatchingCultureKey(_currentCulture);
+            if (_stringDictionary.TryGetValue(cultureKey, out var langDict) && langDict.TryGetValue(key, out var found))
+            {
+                template = found;
+            }
+            else if (_stringDictionary.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var enTemplate))
+            {
+                template = enTemplate;
+            }
         }
 
-        if (_stringDictionary.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var enTemplate))
+        if (template != null)
         {
-            return args.Length > 0 ? string.Format(enTemplate, args) : enTemplate;
+            return args.Length > 0 ? string.Format(template, args) : template;
         }
 
         return key;
@@ -73,12 +97,15 @@ public sealed partial class KableLocalizer : IKableLocalizer
         if (string.IsNullOrWhiteSpace(cultureCode)) throw new ArgumentNullException(nameof(cultureCode));
         if (string.IsNullOrWhiteSpace(messageTemplate)) throw new ArgumentNullException(nameof(messageTemplate));
 
-        if (!_errorDictionary.TryGetValue(cultureCode, out var dict))
+        lock (_sync)
         {
-            dict = new Dictionary<KableErrorCode, string>();
-            _errorDictionary[cultureCode] = dict;
+            if (!_errorDictionary.TryGetValue(cultureCode, out var dict))
+            {
+                dict = new Dictionary<KableErrorCode, string>();
+                _errorDictionary[cultureCode] = dict;
+            }
+            dict[code] = messageTemplate;
         }
-        dict[code] = messageTemplate;
     }
 
     public void RegisterCustomString(string cultureCode, string key, string valueTemplate)
@@ -87,12 +114,15 @@ public sealed partial class KableLocalizer : IKableLocalizer
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentNullException(nameof(key));
         if (string.IsNullOrWhiteSpace(valueTemplate)) throw new ArgumentNullException(nameof(valueTemplate));
 
-        if (!_stringDictionary.TryGetValue(cultureCode, out var dict))
+        lock (_sync)
         {
-            dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            _stringDictionary[cultureCode] = dict;
+            if (!_stringDictionary.TryGetValue(cultureCode, out var dict))
+            {
+                dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                _stringDictionary[cultureCode] = dict;
+            }
+            dict[key] = valueTemplate;
         }
-        dict[key] = valueTemplate;
     }
 
     private string GetMatchingCultureKey(CultureInfo culture)

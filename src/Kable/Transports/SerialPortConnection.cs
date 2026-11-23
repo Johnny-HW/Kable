@@ -11,7 +11,8 @@ public sealed class SerialPortConnectionContext : IConnectionContext
 {
     private readonly SerialPort _port;
     private readonly CancellationTokenSource _cts = new();
-    private int _aborted;
+    private bool _aborted;
+    private bool _ctsDisposed;
     private Task? _disposeTask;
     private readonly object _lifetime = new();
     private readonly System.IO.Stream _stream;
@@ -43,11 +44,18 @@ public sealed class SerialPortConnectionContext : IConnectionContext
 
     public void Abort(string reason)
     {
-        if (Interlocked.Exchange(ref _aborted, 1) == 0)
+        lock (_lifetime)
         {
-            _cts.Cancel();
-            try { _port.Close(); } catch (Exception) { /* Serial port already closed or physical cable unplugged */ }
+            if (_aborted) return;
+            _aborted = true;
+            if (!_ctsDisposed)
+            {
+                _cts.Cancel();
+            }
         }
+        try { _port.Close(); } catch (Exception) { /* Serial port already closed or physical cable unplugged */ }
+        Input.CancelPendingRead();
+        Output.CancelPendingFlush();
     }
 
     public ValueTask DisposeAsync()
@@ -68,7 +76,15 @@ public sealed class SerialPortConnectionContext : IConnectionContext
             finally
             {
                 try { if (_ownsStream) _stream.Dispose(); }
-                finally { _port.Dispose(); _cts.Dispose(); }
+                finally
+                {
+                    _port.Dispose();
+                    lock (_lifetime)
+                    {
+                        _ctsDisposed = true;
+                        _cts.Dispose();
+                    }
+                }
             }
         }
     }

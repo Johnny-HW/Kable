@@ -76,4 +76,15 @@ public sealed class SpscRingBufferTests
         await Task.WhenAll(producer, consumer);
         receivedCount.Should().Be(count);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-4)]
+    [InlineData(int.MinValue)]
+    [InlineData(3)]
+    public void SpscRingBuffer_InvalidCapacity_ThrowsArgumentException(int invalidCapacity)
+    {
+        Action act = () => _ = new SpscRingBuffer<TestItem>(invalidCapacity);
+        act.Should().Throw<ArgumentException>();
+    }
 }
