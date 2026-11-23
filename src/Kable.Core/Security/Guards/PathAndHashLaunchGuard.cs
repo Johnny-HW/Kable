@@ -62,6 +62,14 @@ public sealed class PathAndHashLaunchGuard : ILaunchGuard
             return fullPath;
         }
 
+        if (_options.AllowedDirectories.Count == 0 &&
+            _options.AllowedExecutableNames.Count == 0 &&
+            _options.AllowedSha256Hashes.Count == 0)
+        {
+            throw new SecurityValidationException(fullPath,
+                "Allowlist-only mode is enabled, but no allowed directories, executable names, or SHA-256 hashes are configured.");
+        }
+
         // 4. 허용 디렉터리(AllowedDirectories) 검사
         if (_options.AllowedDirectories.Count > 0)
         {
@@ -100,27 +108,30 @@ public sealed class PathAndHashLaunchGuard : ILaunchGuard
         if (_options.AllowedSha256Hashes.Count > 0)
         {
             string? expectedHash = null;
-            if (_options.AllowedSha256Hashes.TryGetValue(fileName, out var hashByName))
-            {
-                expectedHash = hashByName;
-            }
-            else if (_options.AllowedSha256Hashes.TryGetValue(fullPath, out var hashByFullPath))
+            if (_options.AllowedSha256Hashes.TryGetValue(fullPath, out var hashByFullPath))
             {
                 expectedHash = hashByFullPath;
             }
-
-            if (!string.IsNullOrEmpty(expectedHash))
+            else if (_options.AllowedSha256Hashes.TryGetValue(fileName, out var hashByName))
             {
-                if (!File.Exists(fullPath))
-                {
-                    throw new SecurityValidationException(fullPath, $"Target executable file '{fullPath}' does not exist on disk for hash verification.");
-                }
+                expectedHash = hashByName;
+            }
 
-                var actualHash = await ComputeSha256Async(fullPath, ct).ConfigureAwait(false);
-                if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new SecurityValidationException(fullPath, $"Binary hash mismatch for '{fullPath}'. Expected: {expectedHash}, Actual: {actualHash}");
-                }
+            if (string.IsNullOrWhiteSpace(expectedHash))
+            {
+                throw new SecurityValidationException(fullPath,
+                    $"Executable '{fileName}' does not have an approved SHA-256 hash entry.");
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new SecurityValidationException(fullPath, $"Target executable file '{fullPath}' does not exist on disk for hash verification.");
+            }
+
+            var actualHash = await ComputeSha256Async(fullPath, ct).ConfigureAwait(false);
+            if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new SecurityValidationException(fullPath, $"Binary hash mismatch for '{fullPath}'. Expected: {expectedHash}, Actual: {actualHash}");
             }
         }
 

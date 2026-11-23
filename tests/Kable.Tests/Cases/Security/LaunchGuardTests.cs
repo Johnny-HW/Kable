@@ -166,4 +166,54 @@ public sealed class LaunchGuardTests : IDisposable
 
         Assert.Contains("Binary hash mismatch", ex.Message);
     }
+
+    [Fact]
+    public async Task Validate_DefaultAllowlistOnlyWithNoRules_FailsClosed()
+    {
+        var guard = new PathAndHashLaunchGuard();
+        var exePath = Path.Combine(_tempDirectory, "any_tool.exe");
+
+        var ex = await Assert.ThrowsAsync<SecurityValidationException>(async () =>
+        {
+            await guard.ValidateAndNormalizeAsync(exePath);
+        });
+
+        Assert.Contains("no allowed directories", ex.Message);
+    }
+
+    [Fact]
+    public async Task Validate_AllowedSha256Hashes_RejectsUnpinnedExecutableAndPrefersFullPath()
+    {
+        var pinnedPath = Path.Combine(_tempDirectory, "pinned.exe");
+        var unpinnedPath = Path.Combine(_tempDirectory, "unpinned.exe");
+        var bytes = new byte[] { 10, 20, 30, 40 };
+        await File.WriteAllBytesAsync(pinnedPath, bytes);
+        await File.WriteAllBytesAsync(unpinnedPath, bytes);
+
+        using var sha256 = SHA256.Create();
+        var expectedHash = Convert.ToHexString(sha256.ComputeHash(bytes)).ToLowerInvariant();
+        var fullPinnedPath = Path.GetFullPath(pinnedPath);
+
+        var guard = new PathAndHashLaunchGuard(new LaunchGuardOptions
+        {
+            EnableAllowlistOnly = true,
+            AllowedDirectories = { _tempDirectory },
+            AllowedSha256Hashes =
+            {
+                ["pinned.exe"] = new string('0', 64),
+                [fullPinnedPath] = expectedHash
+            }
+        });
+
+        // Full path entry takes precedence over filename entry
+        var validated = await guard.ValidateAndNormalizeAsync(pinnedPath);
+        Assert.Equal(fullPinnedPath, validated);
+
+        // Unpinned binary in allowed directory must be rejected when AllowedSha256Hashes is configured
+        var ex = await Assert.ThrowsAsync<SecurityValidationException>(async () =>
+        {
+            await guard.ValidateAndNormalizeAsync(unpinnedPath);
+        });
+        Assert.Contains("approved SHA-256 hash", ex.Message);
+    }
 }
