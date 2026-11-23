@@ -46,6 +46,7 @@ public unsafe sealed partial class SharedMemoryRingBuffer
             return true;
         long head = Volatile.Read(ref _header->Head);
         long tail = Volatile.Read(ref _header->Tail);
+        if (head < 0 || tail < 0 || head < tail || head - tail > Capacity) return true;
         return space ? head - tail < Capacity : head > tail;
     }
 

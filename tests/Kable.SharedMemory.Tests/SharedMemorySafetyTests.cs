@@ -139,4 +139,31 @@ public class SharedMemorySafetyTests
             Assert.Equal(0, clientBuffer.Read(new byte[10]));
         }
     }
+
+    [Theory]
+    [InlineData(0L, 100L)]
+    [InlineData(4096L, 0L)]
+    [InlineData(long.MinValue, long.MaxValue)]
+    public void SharedMemoryRingBuffer_CorruptedHeadTail_ReturnsZeroAndClosesWithoutOob(long corruptHead, long corruptTail)
+    {
+        string channel = "test_corrupt_" + Guid.NewGuid().ToString("N")[..8];
+        const int capacity = 1024;
+
+        using var serverBuffer = SharedMemoryRingBuffer.Create(channel, capacity);
+        using var clientBuffer = SharedMemoryRingBuffer.Open(channel);
+
+        using (var mmf = System.IO.MemoryMappedFiles.MemoryMappedFile.OpenExisting(channel + "_mmf",
+            System.IO.MemoryMappedFiles.MemoryMappedFileRights.ReadWrite))
+        using (var accessor = mmf.CreateViewAccessor(0, 256))
+        {
+            accessor.Write(64, corruptHead);
+            accessor.Write(128, corruptTail);
+        }
+
+        byte[] oversized = new byte[capacity * 2];
+        Assert.Equal(0, serverBuffer.Write(oversized));
+        Assert.True(serverBuffer.IsClosed);
+        Assert.Equal(0, clientBuffer.Read(oversized));
+        Assert.True(clientBuffer.IsClosed);
+    }
 }

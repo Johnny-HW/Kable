@@ -24,10 +24,16 @@ public unsafe sealed partial class SharedMemoryRingBuffer
             long head = Volatile.Read(ref _header->Head);
             long tail = Volatile.Read(ref _header->Tail);
 
-            long availableSpace = Capacity - (head - tail);
+            if (head < 0 || tail < 0 || head < tail || head - tail > Capacity)
+            {
+                CloseCore();
+                return 0;
+            }
+
+            int availableSpace = Capacity - (int)(head - tail);
             if (availableSpace <= 0) return 0;
 
-            int bytesToWrite = (int)Math.Min(source.Length, availableSpace);
+            int bytesToWrite = Math.Min(source.Length, availableSpace);
             int headIndex = (int)(head & Mask);
 
             // 원형 버퍼 랩어라운드(Wrap-around) 복사 처리
@@ -69,10 +75,16 @@ public unsafe sealed partial class SharedMemoryRingBuffer
             long tail = Volatile.Read(ref _header->Tail);
             long head = Volatile.Read(ref _header->Head);
 
-            long availableData = head - tail;
+            if (head < 0 || tail < 0 || head < tail || head - tail > Capacity)
+            {
+                CloseCore();
+                return 0;
+            }
+
+            int availableData = (int)(head - tail);
             if (availableData <= 0) return 0;
 
-            int bytesToRead = (int)Math.Min(destination.Length, availableData);
+            int bytesToRead = Math.Min(destination.Length, availableData);
             int tailIndex = (int)(tail & Mask);
 
             int firstChunk = Math.Min(bytesToRead, Capacity - tailIndex);
