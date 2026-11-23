@@ -9,7 +9,9 @@ public sealed class OpcUaShutdownFaultTests
     public async Task Faulted_recovery_still_closes_subscription_session_and_identity()
     {
         await using var server = await LocalOpcUaServer.OpenAsync();
+#pragma warning disable CS0618
         var bridge = new OpcUaClientBridge(server.Endpoint);
+#pragma warning restore CS0618
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var subscription = await bridge.SubscribeAsync(new[] { server.Node }, ct: timeout.Token);
         var recoveryField = Field("_recovery");

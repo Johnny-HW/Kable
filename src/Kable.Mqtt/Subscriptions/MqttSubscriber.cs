@@ -52,11 +52,11 @@ public sealed class MqttSubscriber : IAsyncDisposable
 
     public async Task StartAsync(CancellationToken ct = default)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _stop.Token);
+        using var linked = LinkStopToken(ct);
         await _gate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
             if (_worker != null) return;
             await ConnectAndSubscribeAsync(linked.Token).ConfigureAwait(false);
             _worker = RunAsync(_stop.Token);
@@ -96,24 +96,36 @@ public sealed class MqttSubscriber : IAsyncDisposable
 
     public async Task UnsubscribeAsync(string topicFilter, CancellationToken ct = default)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _stop.Token);
+        using var linked = LinkStopToken(ct);
         await _gate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
             if (_client.IsConnected) await _client.UnsubscribeAsync(new MqttClientUnsubscribeOptions { TopicFilters = [topicFilter] }, linked.Token).ConfigureAwait(false);
             _filters.Remove(topicFilter);
         }
         finally { _gate.Release(); }
     }
 
+    private CancellationTokenSource LinkStopToken(CancellationToken ct)
+    {
+        lock (_lifetime)
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+            return CancellationTokenSource.CreateLinkedTokenSource(ct, _stop.Token);
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
-        lock (_lifetime) return new(_disposal ??= DisposeCoreAsync());
+        lock (_lifetime)
+        {
+            Interlocked.Exchange(ref _disposed, 1);
+            return new(_disposal ??= DisposeCoreAsync());
+        }
     }
     private async Task DisposeCoreAsync()
     {
-        Interlocked.Exchange(ref _disposed, 1);
         var errors = new List<Exception>();
         try { _stop.Cancel(); } catch (Exception error) { errors.Add(error); }
         try { if (_worker != null) await _worker.ConfigureAwait(false); }
@@ -133,7 +145,7 @@ public sealed class MqttSubscriber : IAsyncDisposable
         finally
         {
             _messages.Writer.TryComplete();
-            _stop.Dispose();
+            lock (_lifetime) { _stop.Dispose(); }
             _gate.Release();
         }
         if (errors.Count > 0) throw new AggregateException("MQTT shutdown failed after resource cleanup.", errors);

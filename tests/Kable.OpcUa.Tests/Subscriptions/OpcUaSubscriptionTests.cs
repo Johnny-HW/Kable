@@ -11,7 +11,9 @@ public sealed class OpcUaSubscriptionTests
     {
         var server = await LocalOpcUaServer.OpenAsync();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+#pragma warning disable CS0618
         await using var bridge = new OpcUaClientBridge(server.Endpoint);
+#pragma warning restore CS0618
         try
         {
             await bridge.ConnectAsync(timeout.Token);

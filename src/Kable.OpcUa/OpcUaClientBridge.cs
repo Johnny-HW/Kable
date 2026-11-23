@@ -26,6 +26,7 @@ public sealed partial class OpcUaClientBridge : IOpcUaClientBridge
     public string EndpointUrl => _endpointUrl;
 
     /// <summary>Legacy anonymous/unsecured path. Prefer the Options constructor for secure defaults.</summary>
+    [Obsolete("Prefer the OpcUaOptions constructor for explicit security policy and certificate trust settings.")]
     public OpcUaClientBridge(string endpointUrl, bool autoAcceptUntrustedCertificates = true,
         uint sessionTimeoutMs = 60000, ILogger<OpcUaClientBridge>? logger = null)
         : this(new OpcUaOptions
@@ -51,10 +52,13 @@ public sealed partial class OpcUaClientBridge : IOpcUaClientBridge
     /// </summary>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
+        using var linked = LinkShutdownToken(ct);
         await _sessionGate.WaitAsync(linked.Token).ConfigureAwait(false);
-        try { await ConnectAndRestoreAsync(linked.Token).ConfigureAwait(false); }
+        try
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+            await ConnectAndRestoreAsync(linked.Token).ConfigureAwait(false);
+        }
         finally { _sessionGate.Release(); }
     }
 
@@ -76,6 +80,10 @@ public sealed partial class OpcUaClientBridge : IOpcUaClientBridge
 
     public ValueTask DisposeAsync()
     {
-        lock (_lifetime) return new ValueTask(_disposal ??= DisposeCoreAsync());
+        lock (_lifetime)
+        {
+            Interlocked.Exchange(ref _isDisposed, 1);
+            return new ValueTask(_disposal ??= DisposeCoreAsync());
+        }
     }
 }

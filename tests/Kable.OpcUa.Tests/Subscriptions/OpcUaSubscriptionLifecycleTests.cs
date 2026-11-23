@@ -10,7 +10,9 @@ public sealed class OpcUaSubscriptionLifecycleTests
     public async Task InvalidNodesCancellationAndBoundedQueue()
     {
         await using var server = await LocalOpcUaServer.OpenAsync();
+#pragma warning disable CS0618
         await using var bridge = new OpcUaClientBridge(server.Endpoint);
+#pragma warning restore CS0618
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         await bridge.ConnectAsync(timeout.Token);
         await Assert.ThrowsAsync<InvalidOperationException>(() => bridge.SubscribeAsync(new[] { "ns=2;s=missing" }, ct: timeout.Token));

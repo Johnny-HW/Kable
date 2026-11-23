@@ -23,7 +23,7 @@ public static class MqttServiceCollectionExtensions
             var factory = new MqttFactory();
             var client = factory.CreateMqttClient();
 
-            return new MqttTelemetryPublisher(client, options, logger);
+            return new MqttTelemetryPublisher(client, options, logger, ownsClient: true);
         });
 
         return services;

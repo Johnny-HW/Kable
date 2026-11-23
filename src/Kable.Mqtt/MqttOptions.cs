@@ -8,4 +8,8 @@ public sealed class MqttOptions
     public int Port { get; set; } = 1883;
     public string ClientId { get; set; } = "KablePublisher";
     public string TopicPrefix { get; set; } = "kable/telemetry";
+    public string? Username { get; set; }
+    public string? Password { get; set; }
+    public bool UseTls { get; set; }
+    public bool AllowUntrustedCertificates { get; set; }
 }

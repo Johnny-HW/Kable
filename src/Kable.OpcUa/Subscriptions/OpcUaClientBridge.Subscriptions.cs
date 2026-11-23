@@ -17,12 +17,12 @@ public sealed partial class OpcUaClientBridge
 
     public async Task<OpcUaValueSubscription> SubscribeAsync(IEnumerable<string> nodes, OpcUaSubscriptionOptions? options = null, CancellationToken ct = default)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+        using var linked = LinkShutdownToken(ct);
         var handle = new OpcUaValueSubscription(nodes.ToArray(), options ?? new(), RemoveSubscriptionAsync);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
         await _sessionGate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
             await ConnectAndRestoreAsync(linked.Token).ConfigureAwait(false);
             await handle.AttachAsync(_session!, linked.Token).ConfigureAwait(false);
             _subscriptions.Add(handle);
@@ -55,11 +55,38 @@ public sealed partial class OpcUaClientBridge
         finally { _sessionGate.Release(); }
     }
 
+    private CancellationTokenSource LinkShutdownToken(CancellationToken ct)
+    {
+        lock (_lifetime)
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
+            return CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
+        }
+    }
+
     private async Task ConnectAndRestoreAsync(CancellationToken ct)
     {
         if (IsConnected) return;
-        _session?.Dispose();
+        var previous = _session;
         _session = null;
+        if (previous != null)
+        {
+            previous.KeepAlive -= OnKeepAlive;
+            try
+            {
+                using var closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                await previous.CloseAsync(closeTimeout.Token).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[OpcUaClientBridge] Previous session close ignored during reconnect: {ex.Message}");
+            }
+            try { previous.Dispose(); }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[OpcUaClientBridge] Previous session dispose ignored during reconnect: {ex.Message}");
+            }
+        }
         DisposeIdentity();
         _configuration ??= await CreateSecurityConfigurationAsync(_security).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
@@ -118,7 +145,6 @@ public sealed partial class OpcUaClientBridge
     }
     private async Task DisposeCoreAsync()
     {
-        Interlocked.Exchange(ref _isDisposed, 1);
         var errors = new List<Exception>();
         try { _shutdown.Cancel(); } catch (Exception error) { errors.Add(error); }
         try { if (_recovery != null) await _recovery.ConfigureAwait(false); }
@@ -135,6 +161,7 @@ public sealed partial class OpcUaClientBridge
             _session = null;
             if (session != null)
             {
+                session.KeepAlive -= OnKeepAlive;
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 try { await session.CloseAsync(timeout.Token).ConfigureAwait(false); }
                 catch (Exception error) { errors.Add(error); }
@@ -144,7 +171,11 @@ public sealed partial class OpcUaClientBridge
         finally
         {
             try { DisposeIdentity(); }
-            finally { _shutdown.Dispose(); _sessionGate.Release(); }
+            finally
+            {
+                lock (_lifetime) { _shutdown.Dispose(); }
+                _sessionGate.Release();
+            }
         }
         if (errors.Count > 0) throw new AggregateException("OPC UA shutdown failed after resource cleanup.", errors);
     }

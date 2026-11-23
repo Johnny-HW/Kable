@@ -8,12 +8,12 @@ public sealed partial class OpcUaClientBridge
     /// <summary>Returns per-node quality, including bad node IDs; never silently drops partial results.</summary>
     public async Task<IReadOnlyList<OpcUaDataValue>> ReadNodesAsync(IReadOnlyList<string> nodes, CancellationToken ct = default)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
+        using var linked = LinkShutdownToken(ct);
         ct = linked.Token;
         await _sessionGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
             if (!IsConnected) throw new InvalidOperationException("OPC UA session is not connected.");
             if (nodes.Count == 0) return Array.Empty<OpcUaDataValue>();
             var request = new ReadValueIdCollection(nodes.Select(node => new ReadValueId { NodeId = NodeId.Parse(node), AttributeId = Attributes.Value }));
@@ -27,12 +27,12 @@ public sealed partial class OpcUaClientBridge
     /// <summary>Returns individual write status codes. Failed writes are never automatically retried.</summary>
     public async Task<IReadOnlyList<uint>> WriteNodesAsync(IReadOnlyList<KeyValuePair<string, object>> values, CancellationToken ct = default)
     {
-        ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
+        using var linked = LinkShutdownToken(ct);
         ct = linked.Token;
         await _sessionGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) != 0, this);
             if (!IsConnected) throw new InvalidOperationException("OPC UA session is not connected.");
             if (values.Count == 0) return Array.Empty<uint>();
             var request = new WriteValueCollection(values.Select(value => new WriteValue
