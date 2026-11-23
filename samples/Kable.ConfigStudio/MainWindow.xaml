@@ -18,9 +18,9 @@
     </Window.DataContext>
 
     <!-- Outer Window Drop Shadow & Rounded Border -->
-    <Border Margin="8" Background="#F8FAFC" CornerRadius="14" BorderBrush="#E2E8F0" BorderThickness="1">
+    <Border Margin="8" Background="{StaticResource KableBgDark}" CornerRadius="14" BorderBrush="{StaticResource KableBorderColor}" BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="20" ShadowDepth="6" Opacity="0.10" Color="#000000"/>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="6" Opacity="0.10" Color="{StaticResource KableShadowColor}"/>
         </Border.Effect>
 
         <Grid>
@@ -31,7 +31,7 @@
             </Grid.RowDefinitions>
 
             <!-- 1. Custom Apple macOS/iOS Style Title Bar -->
-            <Border Grid.Row="0" Background="#FFFFFF" CornerRadius="14,14,0,0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" 
+            <Border Grid.Row="0" Background="{StaticResource KableBgCard}" CornerRadius="14,14,0,0" BorderBrush="{StaticResource KableBorderColor}" BorderThickness="0,0,0,1" 
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <DockPanel LastChildFill="True" Margin="14,0">
                     <!-- Left: Traffic Light Window Buttons (Red Close, Yellow Min, Green Max) -->
@@ -84,30 +84,30 @@
                             </Button.Template>
                         </Button>
 
-                        <TextBlock Text="🔌 DEMO" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
-                        <TextBlock Text=" — Kable Hardware Communication Studio" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="6,1,0,0"/>
+                        <TextBlock Text="🔌 DEMO" FontWeight="Bold" FontSize="13" Foreground="{StaticResource KableTextPrimary}" VerticalAlignment="Center"/>
+                        <TextBlock Text=" — Kable Hardware Communication Studio" FontSize="11" Foreground="{StaticResource KableTextSecondary}" VerticalAlignment="Center" Margin="6,1,0,0"/>
                     </StackPanel>
 
                     <!-- Right Status Tags in Titlebar (Sequoia HIG Chip Style) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
+                        <Border Background="{StaticResource KableBgCard}" BorderBrush="{StaticResource KableBorderColor}" BorderThickness="1" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34C759" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="COM4 @ 115,200" Foreground="#0F172A" FontWeight="SemiBold" FontSize="10" FontFamily="Consolas, -apple-system"/>
+                                <Ellipse Width="6" Height="6" Fill="{StaticResource KableAccentGreen}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="COM4 @ 115,200" Foreground="{StaticResource KableTextPrimary}" FontWeight="SemiBold" FontSize="10" FontFamily="Consolas, -apple-system"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#F1F5F9" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
-                            <TextBlock Text="v2.4-Hotpath" Foreground="#0071E3" FontWeight="SemiBold" FontSize="10"/>
+                        <Border Background="{StaticResource KableBgInput}" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
+                            <TextBlock Text="v2.4-Hotpath" Foreground="{StaticResource KableAccentBlue}" FontWeight="SemiBold" FontSize="10"/>
                         </Border>
                     </StackPanel>
                 </DockPanel>
             </Border>
 
             <!-- 2. Streamlined Combined Navigation & Control Bar -->
-            <Border Grid.Row="1" Background="#FFFFFF" Padding="14,8" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+            <Border Grid.Row="1" Background="{StaticResource KableBgCard}" Padding="14,8" BorderBrush="{StaticResource KableBorderColor}" BorderThickness="0,0,0,1">
                 <DockPanel LastChildFill="False">
                     <!-- Left: Navigation Segments -->
-                    <Border DockPanel.Dock="Left" Background="#F1F5F9" CornerRadius="12" Padding="3" VerticalAlignment="Center">
+                    <Border DockPanel.Dock="Left" Background="{StaticResource KableBgInput}" CornerRadius="12" Padding="3" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <!-- 0. 통신 설정 -->
                             <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Config}" Style="{StaticResource IosNavRadioBtn}"

@@ -1,24 +1,27 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.Colors.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
 
     <!-- Premium Apple Clean DataGrid Styles -->
     <Style x:Key="IosDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
-        <Setter Property="Background" Value="#F8FAFC"/>
-        <Setter Property="Foreground" Value="#475569"/>
+        <Setter Property="Background" Value="{StaticResource KableBgDark}"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextMuted}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Padding" Value="14,10"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+        <Setter Property="BorderBrush" Value="{StaticResource KableBorderColor}"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridColumnHeader">
-                    <Border Background="{TemplateBinding Background}" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
-                            BorderThickness="{TemplateBinding BorderThickness}" 
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
@@ -30,7 +33,7 @@
         <Setter Property="Padding" Value="14,8"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#0F172A"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -44,38 +47,38 @@
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="#0F172A"/>
+                <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
 
     <Style x:Key="IosDataGridRowStyle" TargetType="DataGridRow">
-        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="Background" Value="{StaticResource KableBgCard}"/>
         <Setter Property="MinHeight" Value="38"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="BorderBrush" Value="#F1F5F9"/>
+        <Setter Property="BorderBrush" Value="{StaticResource KableBgInput}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="DataGridRow">
-                    <Border x:Name="DGR_Border" 
-                            Background="{TemplateBinding Background}" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
-                            BorderThickness="{TemplateBinding BorderThickness}" 
-                            CornerRadius="6" 
+                    <Border x:Name="DGR_Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
                             Margin="4,1">
-                        <DataGridCellsPresenter ItemsPanel="{TemplateBinding ItemsPanel}" 
+                        <DataGridCellsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"
                                                 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
                                                 VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="DGR_Border" Property="Background" Value="#F8FAFC"/>
-                            <Setter TargetName="DGR_Border" Property="BorderBrush" Value="#E2E8F0"/>
+                            <Setter TargetName="DGR_Border" Property="Background" Value="{StaticResource KableBgDark}"/>
+                            <Setter TargetName="DGR_Border" Property="BorderBrush" Value="{StaticResource KableBorderColor}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="DGR_Border" Property="Background" Value="#EFF6FF"/>
-                            <Setter TargetName="DGR_Border" Property="BorderBrush" Value="#BFDBFE"/>
+                            <Setter TargetName="DGR_Border" Property="Background" Value="{StaticResource KableAccentBlueSoft}"/>
+                            <Setter TargetName="DGR_Border" Property="BorderBrush" Value="{StaticResource KableAccentBlueSoftBorder}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -84,9 +87,9 @@
     </Style>
 
     <Style x:Key="IosDataGridStyle" TargetType="DataGrid">
-        <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="RowBackground" Value="#FFFFFF"/>
-        <Setter Property="AlternatingRowBackground" Value="#FAFAFA"/>
+        <Setter Property="Background" Value="{StaticResource KableBgCard}"/>
+        <Setter Property="RowBackground" Value="{StaticResource KableBgCard}"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource KableBgAltRow}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="GridLinesVisibility" Value="None"/>
         <Setter Property="AutoGenerateColumns" Value="False"/>
@@ -101,6 +104,56 @@
         <Setter Property="ColumnHeaderStyle" Value="{StaticResource IosDataGridColumnHeaderStyle}"/>
         <Setter Property="RowStyle" Value="{StaticResource IosDataGridRowStyle}"/>
         <Setter Property="CellStyle" Value="{StaticResource IosDataGridCellStyle}"/>
+    </Style>
+
+    <!-- Shared DataGrid Cell TextBlock Styles (BasedOn Hierarchy — zero inline style duplication) -->
+    <Style x:Key="KableCellTextBaseStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="KableCellMediumTextStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellTextBaseStyle}">
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextBody}"/>
+    </Style>
+
+    <Style x:Key="KableCellMonoBaseStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellTextBaseStyle}">
+        <Setter Property="FontFamily" Value="Consolas, Courier New"/>
+    </Style>
+
+    <Style x:Key="KableCellMonoSecondaryStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellMonoBaseStyle}">
+        <Setter Property="Foreground" Value="{StaticResource KableTextSecondary}"/>
+    </Style>
+
+    <Style x:Key="KableCellMonoCenteredStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellMonoSecondaryStyle}">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="KableCellMonoMutedStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellMonoBaseStyle}">
+        <Setter Property="Foreground" Value="{StaticResource KableTextMuted}"/>
+    </Style>
+
+    <Style x:Key="KableCellMonoBytesStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellMonoSecondaryStyle}">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+
+    <Style x:Key="KableCellMonoLatencyStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellMonoBaseStyle}">
+        <Setter Property="Foreground" Value="{StaticResource KableAccentAmber}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+
+    <Style x:Key="KableCellDirectionStyle" TargetType="TextBlock" BasedOn="{StaticResource KableCellTextBaseStyle}">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Style.Triggers>
+            <Trigger Property="Text" Value="TX ➡">
+                <Setter Property="Foreground" Value="{StaticResource KableAccentBlue}"/>
+            </Trigger>
+            <Trigger Property="Text" Value="RX ⬅">
+                <Setter Property="Foreground" Value="{StaticResource KableAccentGreen}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

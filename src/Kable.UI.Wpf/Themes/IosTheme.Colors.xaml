@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    mc:Ignorable="po">
+
+    <!-- Apple Clean Light Theme Colors (Frozen for zero cross-thread / GC overhead) -->
+    <Color x:Key="KableShadowColor">#000000</Color>
+
+    <SolidColorBrush x:Key="KableWhite" Color="#FFFFFF" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBgDark" Color="#F8FAFC" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBgCard" Color="#FFFFFF" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBgAltRow" Color="#FAFAFA" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBgInput" Color="#F1F5F9" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBgHover" Color="#E2E8F0" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBorderColor" Color="#E2E8F0" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableBorderHighlight" Color="#CBD5E1" po:Freeze="True"/>
+
+    <SolidColorBrush x:Key="KableTextPrimary" Color="#0F172A" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableTextBody" Color="#1E293B" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableTextDark" Color="#334155" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableTextMuted" Color="#475569" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableTextSecondary" Color="#64748B" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableTextDim" Color="#94A3B8" po:Freeze="True"/>
+
+    <SolidColorBrush x:Key="KableAccentBlue" Color="#0071E3" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentBlueHover" Color="#0077ED" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentBluePressed" Color="#005BB5" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentBlueSoft" Color="#EFF6FF" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentBlueSoftBorder" Color="#BFDBFE" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentSkySoft" Color="#E0F2FE" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentSkyText" Color="#0369A1" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentGreen" Color="#34C759" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentYellow" Color="#FF9F0A" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentOrange" Color="#FF9500" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentAmber" Color="#D97706" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentRed" Color="#FF3B30" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentDanger" Color="#DC2626" po:Freeze="True"/>
+    <SolidColorBrush x:Key="KableAccentRose" Color="#E11D48" po:Freeze="True"/>
+
+    <!-- BooleanToVisibilityConverter -->
+    <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+</ResourceDictionary>

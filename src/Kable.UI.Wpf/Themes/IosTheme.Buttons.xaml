@@ -1,0 +1,137 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.Colors.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- iOS Style Segment Navigation RadioButton (Apple Pill) -->
+    <Style x:Key="IosNavRadioBtn" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource KableTextSecondary}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="PillBorder"
+                            Background="Transparent"
+                            CornerRadius="14"
+                            Padding="16,8"
+                            Margin="2,0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PillBorder" Property="Background" Value="{StaticResource KableBgInput}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="PillBorder" Property="Background" Value="{StaticResource KableBgCard}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableAccentBlue}"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="PillBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.10" Color="{StaticResource KableShadowColor}"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Transport Selection RadioButton (Apple Pill Chip) -->
+    <Style x:Key="TransportRadioBtn" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource KableTextSecondary}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="PillBorder"
+                            Background="{StaticResource KableBgDark}"
+                            BorderBrush="{StaticResource KableBorderColor}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="14,8"
+                            Margin="0,0,8,8">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PillBorder" Property="Background" Value="{StaticResource KableBgInput}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="PillBorder" Property="Background" Value="{StaticResource KableAccentBlue}"/>
+                            <Setter TargetName="PillBorder" Property="BorderBrush" Value="{StaticResource KableAccentBlue}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableWhite}"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- iOS Pill Action Button (Primary) -->
+    <Style x:Key="IosPrimaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource KableAccentBlue}"/>
+        <Setter Property="Foreground" Value="{StaticResource KableWhite}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="18,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource KableAccentBlueHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource KableAccentBluePressed}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- iOS Pill Action Button (Secondary / Clean Light) -->
+    <Style x:Key="IosSecondaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource KableBgInput}"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextDark}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource KableBorderColor}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource KableBgHover}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource KableBorderHighlight}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

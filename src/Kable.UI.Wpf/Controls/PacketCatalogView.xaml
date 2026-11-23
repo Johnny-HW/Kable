@@ -78,15 +78,8 @@
                     <DataGridCheckBoxColumn Header="{loc:Loc Col_Active}" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
 
                     <!-- Packet ID (Read Only Key) -->
-                    <DataGridTextColumn Header="{loc:Loc Col_PacketId}" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold" IsReadOnly="True">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                                <Setter Property="Foreground" Value="#0F172A"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="{loc:Loc Col_PacketId}" Binding="{Binding Id, UpdateSourceTrigger=PropertyChanged}" Width="140" FontWeight="Bold" IsReadOnly="True"
+                                        ElementStyle="{StaticResource KableCellMonoBaseStyle}"/>
 
                     <!-- Name -->
                     <DataGridTextColumn Header="{loc:Loc Col_PacketName}" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="160">
@@ -150,15 +143,8 @@
                     </DataGridTextColumn>
 
                     <!-- Command Payload / Template -->
-                    <DataGridTextColumn Header="{loc:Loc Col_PayloadFormat}" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                                <Setter Property="Foreground" Value="#475569"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="{loc:Loc Col_PayloadFormat}" Binding="{Binding CommandPayload, UpdateSourceTrigger=PropertyChanged}" Width="*"
+                                        ElementStyle="{StaticResource KableCellMonoMutedStyle}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

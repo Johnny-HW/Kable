@@ -1,66 +1,47 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.Colors.xaml"/>
+        <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.Buttons.xaml"/>
         <ResourceDictionary Source="/Kable.UI.Wpf;component/Themes/IosTheme.DataGrid.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Apple Clean Light Theme Colors -->
-    <SolidColorBrush x:Key="KableBgDark" Color="#F8FAFC"/>
-    <SolidColorBrush x:Key="KableBgCard" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="KableBgInput" Color="#F1F5F9"/>
-    <SolidColorBrush x:Key="KableBgHover" Color="#E2E8F0"/>
-    <SolidColorBrush x:Key="KableBorderColor" Color="#E2E8F0"/>
-    <SolidColorBrush x:Key="KableBorderHighlight" Color="#CBD5E1"/>
-    
-    <SolidColorBrush x:Key="KableTextPrimary" Color="#0F172A"/>
-    <SolidColorBrush x:Key="KableTextSecondary" Color="#64748B"/>
-    <SolidColorBrush x:Key="KableTextDim" Color="#94A3B8"/>
-    
-    <SolidColorBrush x:Key="KableAccentBlue" Color="#0071E3"/>
-    <SolidColorBrush x:Key="KableAccentGreen" Color="#34C759"/>
-    <SolidColorBrush x:Key="KableAccentYellow" Color="#FF9F0A"/>
-    <SolidColorBrush x:Key="KableAccentOrange" Color="#FF9500"/>
-    <SolidColorBrush x:Key="KableAccentRed" Color="#FF3B30"/>
-
-    <!-- BooleanToVisibilityConverter -->
-    <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-
     <!-- iOS Style Card Border (Clean White Elevation) -->
     <Style x:Key="IosCardBorderStyle" TargetType="Border">
-        <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+        <Setter Property="Background" Value="{StaticResource KableBgCard}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource KableBorderColor}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="16"/>
         <Setter Property="Padding" Value="20"/>
         <Setter Property="Effect">
             <Setter.Value>
-                <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.06" Color="{StaticResource KableShadowColor}"/>
             </Setter.Value>
         </Setter>
     </Style>
 
     <!-- iOS Style Input TextBox (Light White) -->
     <Style x:Key="IosTextBoxStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="#F1F5F9"/>
-        <Setter Property="Foreground" Value="#0F172A"/>
-        <Setter Property="CaretBrush" Value="#0071E3"/>
-        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+        <Setter Property="Background" Value="{StaticResource KableBgInput}"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource KableAccentBlue}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource KableBorderColor}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,8"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" 
-                            CornerRadius="10" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
+                    <Border x:Name="border" Background="{TemplateBinding Background}"
+                            CornerRadius="10"
+                            BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
                         <ScrollViewer x:Name="PART_ContentHost" Margin="0" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="#FFFFFF"/>
-                            <Setter TargetName="border" Property="BorderBrush" Value="#0071E3"/>
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource KableBgCard}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource KableAccentBlue}"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -76,27 +57,27 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="28" />
             </Grid.ColumnDefinitions>
-            <Border x:Name="Border" Grid.ColumnSpan="2" 
-                    Background="#FFFFFF" CornerRadius="16" 
-                    BorderBrush="#E2E8F0" BorderThickness="1">
+            <Border x:Name="Border" Grid.ColumnSpan="2"
+                    Background="{StaticResource KableBgCard}" CornerRadius="16"
+                    BorderBrush="{StaticResource KableBorderColor}" BorderThickness="1">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.05" Color="#000000"/>
+                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.05" Color="{StaticResource KableShadowColor}"/>
                 </Border.Effect>
             </Border>
             <Border Grid.Column="0" Background="Transparent" Margin="1" />
-            <Path x:Name="Arrow" Grid.Column="1" 
-                  HorizontalAlignment="Center" VerticalAlignment="Center" 
-                  Data="M 0 0 L 4 4 L 8 0 Z" Fill="#64748B" Margin="0,1,6,0"/>
+            <Path x:Name="Arrow" Grid.Column="1"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Data="M 0 0 L 4 4 L 8 0 Z" Fill="{StaticResource KableTextSecondary}" Margin="0,1,6,0"/>
         </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="#F8FAFC"/>
-                <Setter TargetName="Border" Property="BorderBrush" Value="#CBD5E1"/>
-                <Setter TargetName="Arrow" Property="Fill" Value="#0071E3"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource KableBgDark}"/>
+                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource KableBorderHighlight}"/>
+                <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource KableAccentBlue}"/>
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Border" Property="Background" Value="#F8FAFC"/>
-                <Setter TargetName="Border" Property="BorderBrush" Value="#0071E3"/>
+                <Setter TargetName="Border" Property="Background" Value="{StaticResource KableBgDark}"/>
+                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource KableAccentBlue}"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
@@ -108,7 +89,7 @@
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
         <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
-        <Setter Property="Foreground" Value="#0F172A"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextPrimary}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Height" Value="34"/>
@@ -116,38 +97,38 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
                     <Grid>
-                        <ToggleButton x:Name="ToggleButton" 
-                                      Template="{StaticResource IosComboBoxToggleButton}" 
-                                      Focusable="False" 
-                                      IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                        <ToggleButton x:Name="ToggleButton"
+                                      Template="{StaticResource IosComboBoxToggleButton}"
+                                      Focusable="False"
+                                      IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                       ClickMode="Press"/>
-                        <ContentPresenter x:Name="ContentSite" 
-                                          IsHitTestVisible="False" 
-                                          Content="{TemplateBinding SelectionBoxItem}" 
-                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" 
-                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" 
-                                          Margin="14,0,28,0" 
-                                          VerticalAlignment="Center" 
+                        <ContentPresenter x:Name="ContentSite"
+                                          IsHitTestVisible="False"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          Margin="14,0,28,0"
+                                          VerticalAlignment="Center"
                                           HorizontalAlignment="Left"/>
-                        <Popup x:Name="Popup" 
-                               Placement="Bottom" 
-                               IsOpen="{TemplateBinding IsDropDownOpen}" 
-                               AllowsTransparency="True" 
-                               Focusable="False" 
+                        <Popup x:Name="Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
                                PopupAnimation="Slide"
                                VerticalOffset="4">
-                            <Grid x:Name="DropDown" 
-                                  SnapsToDevicePixels="True" 
-                                  MinWidth="{TemplateBinding ActualWidth}" 
+                            <Grid x:Name="DropDown"
+                                  SnapsToDevicePixels="True"
+                                  MinWidth="{TemplateBinding ActualWidth}"
                                   MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                <Border x:Name="DropDownBorder" 
-                                        Background="#FFFFFF" 
-                                        BorderThickness="1" 
-                                        BorderBrush="#E2E8F0" 
-                                        CornerRadius="14" 
+                                <Border x:Name="DropDownBorder"
+                                        Background="{StaticResource KableBgCard}"
+                                        BorderThickness="1"
+                                        BorderBrush="{StaticResource KableBorderColor}"
+                                        CornerRadius="14"
                                         Padding="4">
                                     <Border.Effect>
-                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.12" Color="#000000"/>
+                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.12" Color="{StaticResource KableShadowColor}"/>
                                     </Border.Effect>
                                     <ScrollViewer Margin="0" SnapsToDevicePixels="True">
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -165,7 +146,7 @@
     <Style x:Key="IosComboBoxItemStyle" TargetType="ComboBoxItem">
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
-        <Setter Property="Foreground" Value="#1E293B"/>
+        <Setter Property="Foreground" Value="{StaticResource KableTextBody}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Padding" Value="12,8"/>
@@ -173,21 +154,21 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
-                    <Border x:Name="ItemBorder" 
-                            Background="Transparent" 
-                            CornerRadius="10" 
-                            Padding="{TemplateBinding Padding}" 
+                    <Border x:Name="ItemBorder"
+                            Background="Transparent"
+                            CornerRadius="10"
+                            Padding="{TemplateBinding Padding}"
                             Margin="0,1">
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="ItemBorder" Property="Background" Value="#F1F5F9"/>
-                            <Setter Property="Foreground" Value="#0071E3"/>
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource KableBgInput}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableAccentBlue}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ItemBorder" Property="Background" Value="#E0F2FE"/>
-                            <Setter Property="Foreground" Value="#0071E3"/>
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource KableAccentSkySoft}"/>
+                            <Setter Property="Foreground" Value="{StaticResource KableAccentBlue}"/>
                             <Setter Property="FontWeight" Value="Bold"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -196,135 +177,5 @@
         </Setter>
     </Style>
     <Style TargetType="ComboBoxItem" BasedOn="{StaticResource IosComboBoxItemStyle}"/>
-
-    <!-- iOS Style Segment Navigation RadioButton (Apple Pill) -->
-    <Style x:Key="IosNavRadioBtn" TargetType="RadioButton">
-        <Setter Property="Foreground" Value="#64748B"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="PillBorder" 
-                            Background="Transparent" 
-                            CornerRadius="14" 
-                            Padding="16,8" 
-                            Margin="2,0">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="PillBorder" Property="Background" Value="#F1F5F9"/>
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="PillBorder" Property="Background" Value="#FFFFFF"/>
-                            <Setter Property="Foreground" Value="#0071E3"/>
-                            <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter TargetName="PillBorder" Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.10" Color="#000000"/>
-                                </Setter.Value>
-                            </Setter>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- Transport Selection RadioButton (Apple Pill Chip) -->
-    <Style x:Key="TransportRadioBtn" TargetType="RadioButton">
-        <Setter Property="Foreground" Value="#64748B"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="PillBorder" 
-                            Background="#F8FAFC" 
-                            BorderBrush="#E2E8F0" 
-                            BorderThickness="1" 
-                            CornerRadius="12" 
-                            Padding="14,8" 
-                            Margin="0,0,8,8">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="PillBorder" Property="Background" Value="#F1F5F9"/>
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="PillBorder" Property="Background" Value="#0071E3"/>
-                            <Setter TargetName="PillBorder" Property="BorderBrush" Value="#0071E3"/>
-                            <Setter Property="Foreground" Value="#FFFFFF"/>
-                            <Setter Property="FontWeight" Value="Bold"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- iOS Pill Action Button (Primary) -->
-    <Style x:Key="IosPrimaryButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="#0071E3"/>
-        <Setter Property="Foreground" Value="#FFFFFF"/>
-        <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="18,8"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="btnBorder" Property="Background" Value="#0077ED"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="btnBorder" Property="Background" Value="#005BB5"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- iOS Pill Action Button (Secondary / Clean Light) -->
-    <Style x:Key="IosSecondaryButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="#F1F5F9"/>
-        <Setter Property="Foreground" Value="#334155"/>
-        <Setter Property="BorderBrush" Value="#E2E8F0"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Padding" Value="14,8"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="btnBorder" Property="Background" Value="#E2E8F0"/>
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="btnBorder" Property="Background" Value="#CBD5E1"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 
 </ResourceDictionary>

@@ -49,56 +49,32 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{loc:Loc Col_AlarmCode}" Binding="{Binding AlarmCode}" Width="150" FontWeight="Bold">
                     <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#DC2626"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource KableCellMonoBaseStyle}">
+                            <Setter Property="Foreground" Value="{StaticResource KableAccentDanger}"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="{loc:Loc Col_Severity}" Binding="{Binding Severity}" Width="100">
                     <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource KableCellTextBaseStyle}">
                             <Setter Property="Foreground" Value="{Binding SeverityColor}"/>
                             <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="110">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontFamily" Value="Consolas, Courier New"/>
-                            <Setter Property="Foreground" Value="#64748B"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="110">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontWeight" Value="Medium"/>
-                            <Setter Property="Foreground" Value="#1E293B"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_Time}" Binding="{Binding Timestamp}" Width="110"
+                                    ElementStyle="{StaticResource KableCellMonoSecondaryStyle}"/>
+                <DataGridTextColumn Header="{loc:Loc Col_Device}" Binding="{Binding DeviceId}" Width="110"
+                                    ElementStyle="{StaticResource KableCellMediumTextStyle}"/>
                 <DataGridTextColumn Header="{loc:Loc Col_State}" Binding="{Binding State}" Width="85">
                     <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#475569"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource KableCellTextBaseStyle}">
+                            <Setter Property="Foreground" Value="{StaticResource KableTextMuted}"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="{loc:Loc Col_AlarmMessage}" Binding="{Binding Message}" Width="*">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#0F172A"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                <DataGridTextColumn Header="{loc:Loc Col_AlarmMessage}" Binding="{Binding Message}" Width="*"
+                                    ElementStyle="{StaticResource KableCellTextBaseStyle}"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

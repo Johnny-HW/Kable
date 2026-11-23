@@ -208,4 +208,22 @@ public sealed class WpfViewModelTests
             Assert.False(vm.IsSimulatorRunning);
         });
     }
+
+    [Fact]
+    public void IosTheme_LoadsCleanly_AndAllBrushesAreFrozen()
+    {
+        StaTestHelper.Run(_ =>
+        {
+            var dict = new System.Windows.ResourceDictionary
+            {
+                Source = new Uri("pack://application:,,,/Kable.UI.Wpf;component/Themes/IosTheme.xaml", UriKind.Absolute)
+            };
+
+            Assert.True(dict.Contains("IosDataGridStyle") || dict.MergedDictionaries.Any(m => m.Contains("IosDataGridStyle")));
+            var colors = dict.MergedDictionaries.First(m => m.Source?.OriginalString.EndsWith("IosTheme.Colors.xaml", StringComparison.OrdinalIgnoreCase) == true);
+            var brushes = colors.Values.OfType<System.Windows.Media.SolidColorBrush>().ToList();
+            Assert.NotEmpty(brushes);
+            Assert.All(brushes, b => Assert.True(b.IsFrozen));
+        });
+    }
 }
