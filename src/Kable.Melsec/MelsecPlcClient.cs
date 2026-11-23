@@ -83,14 +83,16 @@ public sealed class MelsecPlcClient : IMelsecPlcClient
         return words;
     }
 
+    private const int MaxSlmp3EWriteWords = (ushort.MaxValue - 12) / 2;
+
     /// <summary>
     /// 지정된 워드 디바이스(D, W, R 등)에 values 배열을 일괄 기록합니다.
     /// </summary>
     public async Task WriteWordsAsync(MelsecDeviceCode device, int headDeviceNo, ushort[] values, CancellationToken ct = default)
     {
         if (values == null) throw new ArgumentNullException(nameof(values));
-        if (values.Length == 0 || values.Length > ushort.MaxValue)
-            throw new ArgumentOutOfRangeException(nameof(values));
+        if (values.Length == 0 || values.Length > MaxSlmp3EWriteWords)
+            throw new ArgumentOutOfRangeException(nameof(values), $"Word count must be between 1 and {MaxSlmp3EWriteWords}.");
         var request = Slmp3EFrame.CreateWriteWordsRequest(
             device: device,
             headDeviceNo: headDeviceNo,

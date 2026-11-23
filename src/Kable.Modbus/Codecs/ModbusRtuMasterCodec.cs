@@ -6,7 +6,7 @@ using Kable.Codecs;
 using Kable.Core.Checksums;
 using Kable.Modbus.Messages;
 
-/// <summary>Response-only RTU framing. Reuses Modbus message fields, but never transmits MBAP headers.</summary>
+/// <summary>Strict fail-fast response-only RTU framing. Rejects malformed or mismatched bytes immediately via InvalidDataException; never transmits MBAP headers.</summary>
 public sealed class ModbusRtuMasterCodec : IProtocolCodec<ModbusTcpMessage>
 {
     private ModbusTcpMessage? _request;

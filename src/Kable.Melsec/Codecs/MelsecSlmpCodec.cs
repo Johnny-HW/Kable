@@ -26,6 +26,11 @@ public sealed class MelsecSlmpCodec : IProtocolCodec<Slmp3EFrame>
 
     public MelsecSlmpCodec(int maxFrameSize = 4096)
     {
+        if (maxFrameSize < AccessRouteLength + RequestCommandHeaderLength)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxFrameSize),
+                $"MaxFrameSize must be at least {AccessRouteLength + RequestCommandHeaderLength} bytes.");
+        }
         _maxFrameSize = maxFrameSize;
     }
 
@@ -102,11 +107,16 @@ public sealed class MelsecSlmpCodec : IProtocolCodec<Slmp3EFrame>
     public string? ExtractCorrelationId(Slmp3EFrame message) => null;
     public bool IsAutonomousMessage(Slmp3EFrame message) => false;
 
-    private static void EncodeRequest(Slmp3EFrame message, IBufferWriter<byte> output)
+    private void EncodeRequest(Slmp3EFrame message, IBufferWriter<byte> output)
     {
         // 3E Request: Subheader(2)+Net(1)+Pc(1)+DestIo(2)+Station(1)+Len(2)+Timer(2)+Command(2)+Subcommand(2)+Data(N)
         int reqDataLen = RequestCommandHeaderLength + message.Data.Length;
         int totalLength = AccessRouteLength + reqDataLen;
+        if (reqDataLen > ushort.MaxValue || totalLength > _maxFrameSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(message),
+                $"SLMP 3E request length ({totalLength} bytes, data length {reqDataLen}) exceeds limit (maxFrameSize={_maxFrameSize}, max16Bit={ushort.MaxValue}).");
+        }
         var span = output.GetSpan(totalLength);
 
         WriteAccessRoute(span, message, (ushort)reqDataLen);
@@ -122,11 +132,16 @@ public sealed class MelsecSlmpCodec : IProtocolCodec<Slmp3EFrame>
         output.Advance(totalLength);
     }
 
-    private static void EncodeResponse(Slmp3EFrame message, IBufferWriter<byte> output)
+    private void EncodeResponse(Slmp3EFrame message, IBufferWriter<byte> output)
     {
         // 3E Response: Subheader(2)+Net(1)+Pc(1)+DestIo(2)+Station(1)+Len(2)+EndCode(2)+Data(N)
         int respDataLen = ResponseEndCodeLength + message.Data.Length;
         int totalLength = AccessRouteLength + respDataLen;
+        if (respDataLen > ushort.MaxValue || totalLength > _maxFrameSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(message),
+                $"SLMP 3E response length ({totalLength} bytes, data length {respDataLen}) exceeds limit (maxFrameSize={_maxFrameSize}, max16Bit={ushort.MaxValue}).");
+        }
         var span = output.GetSpan(totalLength);
 
         WriteAccessRoute(span, message, (ushort)respDataLen);

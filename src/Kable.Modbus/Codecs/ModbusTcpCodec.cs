@@ -20,6 +20,10 @@ public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>
 
     public ModbusTcpCodec(int maxFrameSize = 260)
     {
+        if (maxFrameSize < 8)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxFrameSize), "MaxFrameSize must be at least 8 bytes.");
+        }
         _maxFrameSize = maxFrameSize;
     }
 
@@ -31,6 +35,11 @@ public sealed class ModbusTcpCodec : IProtocolCodec<ModbusTcpMessage>
         int pduLength = 1 + message.Payload.Length; // FC(1) + Payload
         int mbapLength = 1 + pduLength;            // UnitId(1) + PDU
         int totalLength = 6 + mbapLength;          // TransId(2) + ProtoId(2) + Length(2) + UnitId(1) + PDU
+        if (mbapLength > ushort.MaxValue || totalLength > _maxFrameSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(message),
+                $"Modbus TCP frame length ({totalLength} bytes, MBAP length {mbapLength}) exceeds limit (maxFrameSize={_maxFrameSize}, max16Bit={ushort.MaxValue}).");
+        }
 
         var span = output.GetSpan(totalLength);
 
