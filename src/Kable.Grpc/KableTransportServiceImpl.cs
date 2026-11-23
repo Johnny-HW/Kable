@@ -15,6 +15,9 @@ public sealed class KableTransportServiceImpl : KableTransportService.KableTrans
 {
     private readonly Channel<IConnectionContext> _acceptedChannel;
     private readonly CancellationTokenSource _cts = new();
+    private readonly object _sync = new();
+    private bool _stopped;
+    private int _disposed;
 
     public KableTransportServiceImpl(int channelCapacity = 64)
     {
@@ -31,45 +34,87 @@ public sealed class KableTransportServiceImpl : KableTransportService.KableTrans
         IServerStreamWriter<KablePacket> responseStream,
         ServerCallContext context)
     {
+        CancellationToken serverToken;
+        lock (_sync)
+        {
+            if (_stopped) return;
+            serverToken = _cts.Token;
+        }
+
         var peer = context.Peer ?? "unknown-peer";
         var connectionCtx = new GrpcConnectionContext(requestStream, responseStream, $"grpc-server://{peer}");
+        try
+        {
+            using var acceptCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serverToken);
+            if (!await _acceptedChannel.Writer.WaitToWriteAsync(acceptCts.Token).ConfigureAwait(false))
+            {
+                connectionCtx.Abort("Server listener shut down.");
+                return;
+            }
 
-        // 리스너 채널로 연결 컨텍스트 전달
-        if (!await _acceptedChannel.Writer.WaitToWriteAsync(context.CancellationToken).ConfigureAwait(false))
+            await _acceptedChannel.Writer.WriteAsync(connectionCtx, acceptCts.Token).ConfigureAwait(false);
+
+            // 클라이언트 연결이 닫히거나 서버가 취소될 때까지 대기
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, serverToken, connectionCtx.ConnectionClosed);
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            using (linkedCts.Token.Register(() => tcs.TrySetResult(true)))
+            {
+                await tcs.Task.ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            connectionCtx.Abort("Stream tunnel cancelled.");
+        }
+        catch (ChannelClosedException)
         {
             connectionCtx.Abort("Server listener shut down.");
-            return;
         }
-
-        await _acceptedChannel.Writer.WriteAsync(connectionCtx, context.CancellationToken).ConfigureAwait(false);
-
-        // 클라이언트 연결이 닫히거나 서버가 취소될 때까지 대기
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, _cts.Token, connectionCtx.ConnectionClosed);
-        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        using (linkedCts.Token.Register(() => tcs.TrySetResult(true)))
+        finally
         {
-            await tcs.Task.ConfigureAwait(false);
+            await connectionCtx.DisposeAsync().ConfigureAwait(false);
         }
-
-        await connectionCtx.DisposeAsync().ConfigureAwait(false);
     }
 
     public async ValueTask<IConnectionContext> AcceptAsync(CancellationToken ct = default)
     {
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _cts.Token);
+        CancellationToken serverToken;
+        lock (_sync)
+        {
+            if (_stopped) throw new OperationCanceledException("Listener stopped.");
+            serverToken = _cts.Token;
+        }
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, serverToken);
         return await _acceptedChannel.Reader.ReadAsync(linkedCts.Token).ConfigureAwait(false);
     }
 
     public void Stop()
     {
-        _cts.Cancel();
-        _acceptedChannel.Writer.TryComplete();
+        lock (_sync)
+        {
+            if (_stopped) return;
+            _stopped = true;
+            _cts.Cancel();
+            _acceptedChannel.Writer.TryComplete();
+        }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         Stop();
-        return default;
+        while (_acceptedChannel.Reader.TryRead(out var unaccepted))
+        {
+            try { await unaccepted.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[KableTransportServiceImpl] Unaccepted context dispose failed: {ex.Message}");
+            }
+        }
+        lock (_sync)
+        {
+            _cts.Dispose();
+        }
     }
 }

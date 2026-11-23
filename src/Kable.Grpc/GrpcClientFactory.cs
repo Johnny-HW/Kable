@@ -23,20 +23,34 @@ public sealed class GrpcClientFactory : IConnectionFactory
 
     public ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+
         var channel = _channelOptions != null
             ? GrpcChannel.ForAddress(_serverAddress, _channelOptions)
             : GrpcChannel.ForAddress(_serverAddress);
 
-        var client = new KableTransportService.KableTransportServiceClient(channel);
-        var call = client.StreamTunnel(cancellationToken: ct);
+        IDisposable? callDisposable = null;
+        try
+        {
+            var client = new KableTransportService.KableTransportServiceClient(channel);
+            // Stream lifetime is owned by GrpcConnectionContext/ChannelCallScope, not the transient connect token.
+            var call = client.StreamTunnel(cancellationToken: CancellationToken.None);
+            callDisposable = call;
 
-        var ctx = new GrpcConnectionContext(
-            call.ResponseStream,
-            call.RequestStream,
-            $"grpc://{_serverAddress}",
-            new ChannelCallScope(channel, call));
+            var ctx = new GrpcConnectionContext(
+                call.ResponseStream,
+                call.RequestStream,
+                $"grpc://{_serverAddress}",
+                new ChannelCallScope(channel, call));
 
-        return new ValueTask<IConnectionContext>(ctx);
+            return new ValueTask<IConnectionContext>(ctx);
+        }
+        catch
+        {
+            callDisposable?.Dispose();
+            channel.Dispose();
+            throw;
+        }
     }
 
     private sealed class ChannelCallScope : IDisposable
