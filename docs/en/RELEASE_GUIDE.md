@@ -1,8 +1,8 @@
-> Latest release: **1.11.0** (2026-11-23). [Release notes](../releases/1.11.0.md) · [Changelog](../../CHANGELOG.md).
+> Latest release: **1.11.0** (2026-11-23). [Release notes](../releases/1.11.0.md) · [Publication verification](https://github.com/Johnny-HW/Kable/actions/runs/45117487005).
 
 # Kable releases and installation
 
-1.11.0 was verified and prepared for release on 2026-11-23. See the [official package](https://www.nuget.org/packages/Kable/1.11.0) and [release notes](../releases/1.11.0.md).
+1.11.0 was published on NuGet on 2026-11-23. See the [official package](https://www.nuget.org/packages/Kable/1.11.0) and [publication verification](https://github.com/Johnny-HW/Kable/actions/runs/45117487005).
 Read the [Korean release guide](../ko/RELEASE_GUIDE.md) for the complete procedure and
 [validation report](../development/2026-10-28-server-release/walkthrough.md) for measured results.
 

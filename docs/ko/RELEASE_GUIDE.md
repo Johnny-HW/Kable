@@ -1,8 +1,8 @@
-> 최신 버전: **1.11.0** (2026-11-23). [릴리즈 노트](../releases/1.11.0.ko.md) · [변경 이력](../../CHANGELOG.md).
+> 최신 버전: **1.11.0** (2026-11-23). [릴리즈 노트](../releases/1.11.0.ko.md) · [게시 검증](https://github.com/Johnny-HW/Kable/actions/runs/45117487005).
 
 # Kable 설치·보안·업그레이드·배포 안내
 
-상태: **1.11.0 릴리즈 준비 및 로컬 검증 완료 (2026-11-23)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.11.0)와 [릴리즈 노트](../releases/1.11.0.ko.md)를 참고한다.
+상태: **1.11.0 NuGet 게시 완료 (2026-11-23)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.11.0)와 [게시 검증 결과](https://github.com/Johnny-HW/Kable/actions/runs/45117487005)를 참고한다.
 1.11.0의 보안 기본값 변경과 호환성 안내도 [릴리즈 노트](../releases/1.11.0.ko.md)에 기록한다.
 
 ## 환경과 패키지 선택
