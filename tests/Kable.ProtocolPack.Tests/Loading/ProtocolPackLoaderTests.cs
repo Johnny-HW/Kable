@@ -85,9 +85,15 @@ public sealed class ProtocolPackLoaderTests
     {
         var folder = Path.Combine(Path.GetTempPath(), "KableProtocolPackTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
-
-        var ex = Assert.Throws<ProtocolPackException>(() => ProtocolPackLoader.Load(folder));
-        Assert.Contains("protocol.kable.yaml", ex.Message, StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            var ex = Assert.Throws<ProtocolPackException>(() => ProtocolPackLoader.Load(folder));
+            Assert.Contains("protocol.kable.yaml", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            PackTestFolder.TryDelete(folder);
+        }
     }
 
     private static int ToInt32(object value) => Convert.ToInt32(value, CultureInfo.InvariantCulture);

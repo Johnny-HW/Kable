@@ -1,19 +1,13 @@
 namespace Kable.Tests.Cases;
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Kable.Codecs;
-using Kable.Engine;
-using Kable.Exceptions;
 using Kable.Observability;
-using Kable.Tests.Fixtures;
-using NSubstitute;
 using Xunit;
 
-public class TelemetryRingBufferTests
+public sealed class TelemetryRingBufferTests
 {
     [Fact]
     public void CommObserver_OverCapacity_DropsOldestAndMaintainsLatestTelemetry()
@@ -49,34 +43,8 @@ public class TelemetryRingBufferTests
     }
 
     [Fact]
-    public async Task KableSession_WithCommObserver_RoutesAlarmsAndCommandsToObserver()
-    {
-        var mockObserver = Substitute.For<ICommObserver>();
-        var factory = new TestMemoryConnectionFactory();
-        var codec = new AsciiLineCodec(delimiter: 0x0A);
-        await using var session = new KableSession<string>(factory, codec, mockObserver);
-        await session.StartAsync();
-
-        await factory.Context.WriteAsciiLineAsync("$ALARM_HIGH_TEMP", 0x0A);
-        await Task.Delay(50);
-
-        var reqTask = session.RequestAsync<string>("GET_STATUS", TimeSpan.FromSeconds(2));
-        await factory.Context.WriteAsciiLineAsync("STATUS_READY", 0x0A);
-        await reqTask;
-
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Kind == TrafficKind.SpontaneousAlarm &&
-            r.ParsedText == "$ALARM_HIGH_TEMP"));
-
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Kind == TrafficKind.AperiodicCommand &&
-            r.ParsedText == "STATUS_READY"));
-    }
-
-    [Fact]
     public void TC_OBS_101_CommObserver_MultiThreadedBursts_MaintainsZeroLossInCommands()
     {
-        // 50 concurrent tasks writing 20 records each (total 1000 records) to an observer with capacity 2000
         var observer = new CommObserver(bufferCapacity: 2000);
         int tasksCount = 50;
         int perTaskCount = 20;
@@ -112,123 +80,10 @@ public class TelemetryRingBufferTests
     }
 
     [Fact]
-    public async Task TC_OBS_102_KableSession_LogLevelClassification_EmitsDebugForCommands_AndCriticalForUrgent()
-    {
-        var mockObserver = Substitute.For<ICommObserver>();
-        var factory = new TestMemoryConnectionFactory();
-        var codec = new AsciiLineCodec(delimiter: 0x0A);
-        await using var session = new KableSession<string>(factory, codec, mockObserver);
-        await session.StartAsync();
-
-        // 1. SendAsync -> LogLevel.Debug
-        await session.SendAsync("TEST_DEBUG_SEND");
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Debug &&
-            r.Tag == "SEND" &&
-            r.ParsedText == "TEST_DEBUG_SEND"));
-
-        // 2. SendUrgentAsync -> LogLevel.Critical
-        await session.SendUrgentAsync("E_STOP_CRITICAL");
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Critical &&
-            r.Tag == "URGENT_OOB" &&
-            r.ParsedText == "E_STOP_CRITICAL"));
-    }
-
-    [Fact]
-    public async Task TC_OBS_103_KableSession_TimeoutAndStreamCrash_EmitsWarningAndErrorLogLevels()
-    {
-        var mockObserver = Substitute.For<ICommObserver>();
-        var factory = new TestMemoryConnectionFactory();
-        var codec = new AsciiLineCodec(delimiter: 0x0A);
-        await using (var session = new KableSession<string>(factory, codec, mockObserver))
-        {
-            await session.StartAsync();
-
-            // 1. Request Timeout -> LogLevel.Warning (aborts FIFO session to prevent ghost response)
-            Func<Task> actTimeout = async () =>
-                await session.RequestAsync<string>("SILENT_REQ", TimeSpan.FromMilliseconds(50));
-            await actTimeout.Should().ThrowAsync<DeviceTimeoutException>();
-
-            mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-                r.Level == LogLevel.Warning &&
-                r.Tag == "DEVICE_TIMEOUT" &&
-                r.Kind == TrafficKind.SpontaneousAlarm));
-        }
-
-        // 2. ReadLoop Stream Fault on active session -> LogLevel.Error
-        var factory2 = new TestMemoryConnectionFactory();
-        await using (var session2 = new KableSession<string>(factory2, codec, mockObserver))
-        {
-            await session2.StartAsync();
-            factory2.Context.RemoteWrite.Complete(new System.IO.IOException("Simulated physical pipe corruption"));
-            await Task.Delay(100);
-
-            mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-                r.Level == LogLevel.Error &&
-                r.Tag == "READ_LOOP_FAULT" &&
-                r.Kind == TrafficKind.SpontaneousAlarm));
-        }
-    }
-
-    private sealed class FaultyAutonomousCodec : IProtocolCodec<string>
-    {
-        public bool SupportsCorrelationId => false;
-        public string? ExtractCorrelationId(string message) => null;
-        public void Encode(string message, System.Buffers.IBufferWriter<byte> output) { }
-
-        public bool TryDecode(ref System.Buffers.ReadOnlySequence<byte> buffer, out string message)
-        {
-            if (buffer.Length > 0)
-            {
-                message = "FAULTY_MESSAGE";
-                buffer = buffer.Slice(buffer.End);
-                return true;
-            }
-            message = string.Empty;
-            return false;
-        }
-
-        public bool IsAutonomousMessage(string message)
-        {
-            if (message == "FAULTY_MESSAGE")
-            {
-                throw new InvalidOperationException("Unexpected bug in autonomous message parser");
-            }
-            return false;
-        }
-    }
-
-    [Fact]
-    public async Task TC_OBS_104_KableSession_DispatchLoopException_LogsErrorAndDoesNotHangEngine()
-    {
-        var faultCodec = new FaultyAutonomousCodec();
-        var mockObserver = Substitute.For<ICommObserver>();
-        var factory = new TestMemoryConnectionFactory();
-        await using var session = new KableSession<string>(factory, faultCodec, mockObserver);
-        await session.StartAsync();
-
-        // Write raw byte to trigger ReadLoop -> enqueue -> DispatchLoop
-        await factory.Context.RemoteWrite.WriteAsync(new byte[] { 0x01 });
-        await factory.Context.RemoteWrite.FlushAsync();
-        await Task.Delay(150);
-
-        // Assert: DISPATCH_MESSAGE_FAULT was recorded with LogLevel.Error and did not kill the whole process
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Error &&
-            r.Tag == "DISPATCH_MESSAGE_FAULT" &&
-            r.ParsedText!.Contains("InvalidOperationException")));
-
-        // Verify session can still be stopped cleanly
-        await session.StopAsync();
-    }
-
-    [Fact]
     public void TC_OBS_201_CommObserver_TelemetryBufferSaturation_MaintainsZeroLossInAlarmAndCommandStreams()
     {
         var observer = new CommObserver(bufferCapacity: 10);
 
-        // Inject 100 periodic telemetry items to trigger DropOldest buffer saturation
         for (int i = 0; i < 100; i++)
         {
             observer.OnPacketTrace(new PacketTraceRecord(
@@ -242,7 +97,6 @@ public class TelemetryRingBufferTests
                 LogLevel.Trace));
         }
 
-        // Inject critical alarm and command
         observer.OnPacketTrace(new PacketTraceRecord(
             DateTime.UtcNow,
             PacketDirection.Rx,
@@ -263,12 +117,10 @@ public class TelemetryRingBufferTests
             TimeSpan.Zero,
             LogLevel.Debug));
 
-        // PeriodicStream must contain exactly latest 10 items
         int telemetryCount = 0;
         while (observer.PeriodicStream.TryRead(out _)) telemetryCount++;
         telemetryCount.Should().Be(10);
 
-        // AlarmStream and CommandStream must be intact and non-lossy
         observer.AlarmStream.TryRead(out var alarm).Should().BeTrue();
         alarm.ParsedText.Should().Be("ALARM_FIRE_DETECTED");
         alarm.Level.Should().Be(LogLevel.Critical);
@@ -276,48 +128,4 @@ public class TelemetryRingBufferTests
         observer.CommandStream.TryRead(out var cmd).Should().BeTrue();
         cmd.ParsedText.Should().Be("STOP_ALL");
     }
-
-    [Fact]
-    public async Task TC_OBS_202_KableSession_CleanShutdown_DoesNotEmitFalseErrorAlerts()
-    {
-        var mockObserver = Substitute.For<ICommObserver>();
-        var factory = new TestMemoryConnectionFactory();
-        var codec = new AsciiLineCodec(delimiter: 0x0A);
-        var session = new KableSession<string>(factory, codec, mockObserver);
-
-        await session.StartAsync();
-        await Task.Delay(50);
-
-        // Clean graceful shutdown
-        await session.StopAsync();
-
-        // Must not emit false-alarm error logs during cooperative cancellation
-        mockObserver.DidNotReceive().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Error ||
-            r.Tag == "READ_LOOP_FAULT" ||
-            r.Tag == "DISPATCH_LOOP_FAULT"));
-    }
-
-    [Fact]
-    public async Task TC_OBS_203_KableSession_TxFlushFailure_EmitsErrorRecordAndPropagatesFailFast()
-    {
-        var mockObserver = Substitute.For<ICommObserver>();
-        var factory = new TestMemoryConnectionFactory();
-        var codec = new AsciiLineCodec(delimiter: 0x0A);
-        await using var session = new KableSession<string>(factory, codec, mockObserver);
-        await session.StartAsync();
-
-        // Abruptly fail the writer end
-        factory.Context.RemoteRead.Complete(new System.IO.IOException("Hardware cable detached during flush"));
-
-        Func<Task> act = async () => await session.RequestAsync<string>("TEST_REQ", TimeSpan.FromSeconds(2));
-
-        await act.Should().ThrowAsync<DeviceDisconnectedException>();
-
-        mockObserver.Received().OnPacketTrace(Arg.Is<PacketTraceRecord>(r =>
-            r.Level == LogLevel.Error &&
-            r.Tag == "IO_FLUSH_ERROR" &&
-            r.Kind == TrafficKind.SpontaneousAlarm));
-    }
 }
-

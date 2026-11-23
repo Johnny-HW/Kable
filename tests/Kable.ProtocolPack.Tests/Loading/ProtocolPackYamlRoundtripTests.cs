@@ -54,8 +54,15 @@ public sealed class ProtocolPackYamlRoundtripTests
     private static ProtocolPackDocument ReloadToTemp(ProtocolPackDocument original)
     {
         var folder = Path.Combine(Path.GetTempPath(), "KableProtocolPackTests", Guid.NewGuid().ToString("N"));
-        ProtocolPackLoader.Save(folder, original);
-        return ProtocolPackLoader.Load(folder);
+        try
+        {
+            ProtocolPackLoader.Save(folder, original);
+            return ProtocolPackLoader.Load(folder);
+        }
+        finally
+        {
+            PackTestFolder.TryDelete(folder);
+        }
     }
 
     private static void AssertMapsEquivalent(IList<MapSpec> expected, IList<MapSpec> actual)

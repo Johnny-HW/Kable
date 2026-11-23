@@ -9,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using Kable.Transports.Tls;
 using Xunit;
 
+[Collection("HardwareTransportTests")]
 public sealed class TlsTransportTests
 {
     [Theory]
@@ -24,7 +25,7 @@ public sealed class TlsTransportTests
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         var server = Task.Run(async () =>
         {
-            var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
+            using var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
             await using var connection = await TlsConnectionContext.AcceptAsync(tcp, new TlsServerOptions(certificate)
             {
                 RequireClientCertificate = mutual,
@@ -35,20 +36,29 @@ public sealed class TlsTransportTests
             connection.Input.AdvanceTo(read.Buffer.End);
             await connection.Output.WriteAsync(new byte[] { 99 }, timeout.Token);
         });
-        var options = new TlsClientOptions("localhost")
+        try
         {
-            RemoteCertificateValidation = (_, cert, _, errors) => cert?.GetCertHashString() == certificate.GetCertHashString()
-                && (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) == 0
-        };
-        if (mutual) options.ClientCertificates.Add(clientCertificate);
-        await using var client = await new TlsTcpConnectionFactory("127.0.0.1", port, options).ConnectAsync(timeout.Token);
-        await client.Output.WriteAsync(new byte[] { 42 }, timeout.Token);
-        var reply = await client.Input.ReadAsync(timeout.Token);
-        Assert.Equal(99, reply.Buffer.FirstSpan[0]);
-        client.Input.AdvanceTo(reply.Buffer.End);
-        client.Abort("done");
-        await client.DisposeAsync();
-        await server;
+            var options = new TlsClientOptions("localhost")
+            {
+                RemoteCertificateValidation = (_, cert, _, errors) => cert?.GetCertHashString() == certificate.GetCertHashString()
+                    && (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) == 0
+            };
+            if (mutual) options.ClientCertificates.Add(clientCertificate);
+            await using var client = await new TlsTcpConnectionFactory("127.0.0.1", port, options).ConnectAsync(timeout.Token);
+            await client.Output.WriteAsync(new byte[] { 42 }, timeout.Token);
+            var reply = await client.Input.ReadAsync(timeout.Token);
+            Assert.Equal(99, reply.Buffer.FirstSpan[0]);
+            client.Input.AdvanceTo(reply.Buffer.End);
+            client.Abort("done");
+            await client.DisposeAsync();
+            await server;
+        }
+        finally
+        {
+            timeout.Cancel();
+            listener.Stop();
+            await AwaitServerCleanupAsync(server);
+        }
     }
 
     [Theory]
@@ -62,19 +72,28 @@ public sealed class TlsTransportTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var server = Task.Run(async () =>
         {
-            var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
+            using var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
             var error = await Record.ExceptionAsync(async () =>
             {
                 await using var connection = await TlsConnectionContext.AcceptAsync(tcp, new TlsServerOptions(certificate), timeout.Token);
             });
             Assert.True(error == null || error is AuthenticationException or IOException);
         });
-        var options = new TlsClientOptions(wrongHost ? "wrong.example" : "localhost");
-        if (wrongHost) options.RemoteCertificateValidation = (_, _, _, errors) =>
-            (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) == 0;
-        var factory = new TlsTcpConnectionFactory("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, options);
-        await Assert.ThrowsAsync<AuthenticationException>(() => factory.ConnectAsync(timeout.Token).AsTask());
-        await server;
+        try
+        {
+            var options = new TlsClientOptions(wrongHost ? "wrong.example" : "localhost");
+            if (wrongHost) options.RemoteCertificateValidation = (_, _, _, errors) =>
+                (errors & ~SslPolicyErrors.RemoteCertificateChainErrors) == 0;
+            var factory = new TlsTcpConnectionFactory("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, options);
+            await Assert.ThrowsAsync<AuthenticationException>(() => factory.ConnectAsync(timeout.Token).AsTask());
+            await server;
+        }
+        finally
+        {
+            timeout.Cancel();
+            listener.Stop();
+            await AwaitServerCleanupAsync(server);
+        }
     }
 
     [Fact]
@@ -86,7 +105,7 @@ public sealed class TlsTransportTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var server = Task.Run(async () =>
         {
-            var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
+            using var tcp = await listener.AcceptTcpClientAsync(timeout.Token);
             return await Record.ExceptionAsync(async () =>
             {
                 await using var connection = await TlsConnectionContext.AcceptAsync(tcp, new TlsServerOptions(certificate)
@@ -96,18 +115,27 @@ public sealed class TlsTransportTests
                 }, timeout.Token);
             });
         });
-        var options = new TlsClientOptions("localhost")
+        try
         {
-            Protocols = SslProtocols.Tls12,
-            RemoteCertificateValidation = (_, cert, _, _) => cert?.GetCertHashString() == certificate.GetCertHashString()
-        };
-        var clientError = await Record.ExceptionAsync(async () =>
+            var options = new TlsClientOptions("localhost")
+            {
+                Protocols = SslProtocols.Tls12,
+                RemoteCertificateValidation = (_, cert, _, _) => cert?.GetCertHashString() == certificate.GetCertHashString()
+            };
+            var clientError = await Record.ExceptionAsync(async () =>
+            {
+                await using var client = await new TlsTcpConnectionFactory("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, options).ConnectAsync(timeout.Token);
+                await client.Input.ReadAsync(timeout.Token);
+            });
+            Assert.True((await server) is AuthenticationException or IOException);
+            Assert.True(clientError is AuthenticationException or IOException);
+        }
+        finally
         {
-            await using var client = await new TlsTcpConnectionFactory("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port, options).ConnectAsync(timeout.Token);
-            await client.Input.ReadAsync(timeout.Token);
-        });
-        Assert.True((await server) is AuthenticationException or IOException);
-        Assert.True(clientError is AuthenticationException or IOException);
+            timeout.Cancel();
+            listener.Stop();
+            await AwaitServerCleanupAsync(server);
+        }
     }
 
     [Fact]
@@ -121,6 +149,16 @@ public sealed class TlsTransportTests
         using var peer = await listener.AcceptTcpClientAsync();
         cancel.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => connecting.WaitAsync(TimeSpan.FromSeconds(3)));
+    }
+
+    private static async Task AwaitServerCleanupAsync(Task server)
+    {
+        if (server.IsCompleted) return;
+        try { await server.WaitAsync(TimeSpan.FromSeconds(3)); }
+        catch (Exception ex) when (ex is OperationCanceledException or SocketException or ObjectDisposedException or TimeoutException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TlsTransportTests] Server cleanup observed expected shutdown error: {ex.Message}");
+        }
     }
 
     private static X509Certificate2 Certificate(string name)

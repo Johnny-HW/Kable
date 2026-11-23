@@ -25,6 +25,43 @@ internal static class PackTestFolder
         return destination;
     }
 
+    public static TempPackScope CloneScoped(string fixtureName)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "KableProtocolPackTests", Guid.NewGuid().ToString("N"));
+        var destination = Path.Combine(root, fixtureName);
+        CopyDirectory(Get(fixtureName), destination);
+        return new TempPackScope(root, destination);
+    }
+
+    public static void TryDelete(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PackTestFolder] Temp cleanup skipped for '{path}': {ex.Message}");
+        }
+    }
+
+    internal sealed class TempPackScope : IDisposable
+    {
+        private readonly string _root;
+        public string Folder { get; }
+
+        public TempPackScope(string root, string folder)
+        {
+            _root = root;
+            Folder = folder;
+        }
+
+        public void Dispose() => TryDelete(_root);
+    }
+
     public static void WriteAllText(string folder, string relativePath, string contents)
     {
         var path = Path.Combine(folder, relativePath);

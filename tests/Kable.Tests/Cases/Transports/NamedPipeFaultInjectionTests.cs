@@ -1,24 +1,30 @@
 namespace Kable.Tests.Cases;
 
 using System;
+using System.Diagnostics;
 using System.IO.Pipes;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Kable.Codecs;
-using Kable.Core;
 using Kable.Engine;
 using Kable.Exceptions;
 using Kable.Extensions;
-using Kable.Tests.Fixtures;
 using Kable.Transports;
 using Xunit;
 
 [Collection("HardwareTransportTests")]
 public sealed class NamedPipeFaultInjectionTests
 {
+    private static async Task WaitUntilDisconnectedAsync(IDeviceSession<string> session, TimeSpan timeout)
+    {
+        var deadline = Stopwatch.StartNew();
+        while (session.IsConnected && deadline.Elapsed < timeout)
+        {
+            await Task.Delay(5);
+        }
+    }
+
     [Fact]
     public async Task TC_TRN_01_NamedPipe_ServerCrash_TriggersConnectionClosedInstantly()
     {
@@ -45,11 +51,9 @@ public sealed class NamedPipeFaultInjectionTests
 
             session.IsConnected.Should().BeTrue();
 
-            // Server process crash simulation (dispose stream abruptly)
             serverPipe.Dispose();
 
-            // Wait for EOF detection on ReadLoop
-            await Task.Delay(100);
+            await WaitUntilDisconnectedAsync(session, TimeSpan.FromSeconds(3));
             var pendingReq = session.RequestAsync<string>("PING_CRASH", TimeSpan.FromSeconds(3)).AsTask();
 
             Func<Task> act = async () => await pendingReq;
@@ -98,10 +102,9 @@ public sealed class NamedPipeFaultInjectionTests
 
             session.IsConnected.Should().BeTrue();
 
-            // Abrupt server crash simulation
             serverPipe.Dispose();
 
-            await Task.Delay(100);
+            await WaitUntilDisconnectedAsync(session, TimeSpan.FromSeconds(3));
             var pendingReq = session.RequestAsync<string>("SHOULD_FAIL", TimeSpan.FromSeconds(3)).AsTask();
             Func<Task> act = async () => await pendingReq;
             await act.Should().ThrowAsync<DeviceDisconnectedException>();
@@ -120,7 +123,7 @@ public sealed class NamedPipeFaultInjectionTests
         string nonExistentPipe = "non_existent_pipe_" + Guid.NewGuid().ToString("N");
         var factory = new NamedPipeConnectionFactory(nonExistentPipe, timeoutMs: 300);
 
-        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         Func<Task> act = async () => await factory.ConnectAsync(cts.Token);
 
         await act.Should().ThrowAsync<TimeoutException>();

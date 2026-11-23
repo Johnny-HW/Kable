@@ -12,20 +12,56 @@ internal sealed class LocalOpcUaServer : IAsyncDisposable
 {
     private readonly ApplicationInstance _application;
     private readonly TestServer _server;
+    private readonly string _rootDirectory;
     public string Endpoint { get; }
     public string Node => _server.Manager!.ValueNode.NodeId.ToString();
     public X509Certificate2 Certificate => _application.ApplicationConfiguration.SecurityConfiguration.ApplicationCertificate.Certificate;
-    private LocalOpcUaServer(string endpoint, ApplicationInstance application, bool requireUser)
-    { Endpoint = endpoint; _application = application; _server = new TestServer(requireUser); }
+
+    private LocalOpcUaServer(string endpoint, ApplicationInstance application, string rootDirectory, bool requireUser)
+    {
+        Endpoint = endpoint;
+        _application = application;
+        _rootDirectory = rootDirectory;
+        _server = new TestServer(requireUser);
+    }
+
     internal static async Task<LocalOpcUaServer> OpenAsync(string? endpoint = null, bool secure = false, bool requireUser = false,
         string? certificateError = null)
     {
-        if (endpoint == null)
+        int attempts = endpoint == null ? 5 : 1;
+        for (int attempt = 0; attempt < attempts; attempt++)
         {
-            using var picker = new TcpListener(IPAddress.Loopback, 0); picker.Start();
-            endpoint = $"opc.tcp://localhost:{((IPEndPoint)picker.LocalEndpoint).Port}/KableTest";
+            string resolvedEndpoint = endpoint ?? AllocateDynamicEndpoint();
+            string root = Path.Combine(Path.GetTempPath(), "Kable-OpcUa-Tests", Guid.NewGuid().ToString("N"));
+            try
+            {
+                return await StartOnEndpointAsync(resolvedEndpoint, root, secure, requireUser, certificateError).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt < attempts - 1 && (ex is SocketException or ServiceResultException))
+            {
+                TryDeleteDirectory(root);
+            }
+            catch
+            {
+                TryDeleteDirectory(root);
+                throw;
+            }
         }
-        string root = Path.Combine(Path.GetTempPath(), "Kable-OpcUa-Tests", Guid.NewGuid().ToString("N"));
+
+        throw new InvalidOperationException("Failed to start local OPC UA test server.");
+    }
+
+    private static string AllocateDynamicEndpoint()
+    {
+        using var picker = new TcpListener(IPAddress.Loopback, 0);
+        picker.Start();
+        int port = ((IPEndPoint)picker.LocalEndpoint).Port;
+        picker.Stop();
+        return $"opc.tcp://localhost:{port}/KableTest";
+    }
+
+    private static async Task<LocalOpcUaServer> StartOnEndpointAsync(string endpoint, string root, bool secure, bool requireUser, string? certificateError)
+    {
         var config = new ApplicationConfiguration
         {
             ApplicationName = "KableTestServer", ApplicationUri = "urn:localhost:KableTestServer", ApplicationType = ApplicationType.Server,
@@ -54,18 +90,42 @@ internal sealed class LocalOpcUaServer : IAsyncDisposable
         await application.CheckApplicationInstanceCertificatesAsync(true);
         if (certificateError != null)
         {
-            var names = certificateError == "host" ? new[] { "unrelated.invalid" } : new[] { "localhost", System.Net.Dns.GetHostName() };
+            var names = certificateError == "host" ? new[] { "unrelated.invalid" } : new[] { "localhost", Dns.GetHostName() };
             var certificate = CertificateFactory.CreateCertificate(config.ApplicationUri, config.ApplicationName,
                 "CN=KableTestServer", names).SetNotBefore(DateTime.UtcNow.AddDays(-3))
                 .SetNotAfter(DateTime.UtcNow.AddDays(certificateError == "expired" ? -1 : 1)).CreateForRSA();
             config.SecurityConfiguration.ApplicationCertificate.Certificate = certificate;
         }
-        var result = new LocalOpcUaServer(endpoint, application, requireUser);
+        var result = new LocalOpcUaServer(endpoint, application, root, requireUser);
         result._server.TrustedUserCertificate = result.Certificate.RawData;
         await application.StartAsync(result._server);
         return result;
     }
-    public async ValueTask DisposeAsync() { await _application.StopAsync(); _server.Dispose(); }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await _application.StopAsync();
+        }
+        finally
+        {
+            _server.Dispose();
+            TryDeleteDirectory(_rootDirectory);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LocalOpcUaServer] Temp cleanup deferred for '{path}': {ex.Message}");
+        }
+    }
 
     private sealed class TestServer(bool requireUser) : StandardServer
     {
@@ -94,6 +154,7 @@ internal sealed class LocalOpcUaServer : IAsyncDisposable
             };
         }
     }
+
     private sealed class TestNodeManager(IServerInternal server, ApplicationConfiguration configuration)
         : CustomNodeManager2(server, configuration, "urn:Kable:Tests")
     {

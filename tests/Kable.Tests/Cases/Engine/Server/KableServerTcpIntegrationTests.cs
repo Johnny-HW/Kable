@@ -5,14 +5,15 @@ using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Kable.Builder;
 using Kable.Codecs;
 using Kable.Core;
+using Kable.Transports;
 using Xunit;
 
+[Collection("HardwareTransportTests")]
 public sealed class KableServerTcpIntegrationTests
 {
     private sealed class EchoAsciiCodec : IProtocolCodec<string>
@@ -42,22 +43,14 @@ public sealed class KableServerTcpIntegrationTests
         public bool IsAutonomousMessage(string message) => true;
     }
 
-    private static int GetAvailablePort()
-    {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        return port;
-    }
-
     [Fact]
     public async Task RealTcp_ClientsConnect_SendAndReceiveMessages_AndDisconnect()
     {
-        int port = GetAvailablePort();
+        var listener = new TcpConnectionListener(IPAddress.Loopback, 0);
+        int port = ((IPEndPoint)listener.LocalEndPoint).Port;
 
         await using var server = new KableServerBuilder<string>()
-            .ListenTcp(IPAddress.Loopback, port)
+            .WithListener(listener)
             .UseCodec(() => new EchoAsciiCodec())
             .ConfigureOptions(opt => opt.SessionQueueCapacity = 500)
             .Build();
@@ -67,12 +60,10 @@ public sealed class KableServerTcpIntegrationTests
 
         await server.StartAsync();
 
-        // Connect real TCP client
         using var tcpClient = new TcpClient();
         await tcpClient.ConnectAsync(IPAddress.Loopback, port);
         using var networkStream = tcpClient.GetStream();
 
-        // Send line
         var payload = Encoding.UTF8.GetBytes("PING_TCP\n");
         await networkStream.WriteAsync(payload);
         await networkStream.FlushAsync();
@@ -81,12 +72,10 @@ public sealed class KableServerTcpIntegrationTests
         connId.Should().NotBeNullOrEmpty();
         text.Should().Be("PING_TCP");
 
-        // Server replies
         await server.SendAsync(connId, "PONG_TCP");
 
-        // Client reads reply
         var buffer = new byte[256];
-        int readBytes = await networkStream.ReadAsync(buffer, 0, buffer.Length);
+        int readBytes = await networkStream.ReadAsync(buffer);
         var reply = Encoding.UTF8.GetString(buffer, 0, readBytes);
         reply.Should().Be("PONG_TCP\n");
 

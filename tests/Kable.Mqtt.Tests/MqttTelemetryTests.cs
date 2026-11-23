@@ -1,6 +1,8 @@
 namespace Kable.Mqtt.Tests;
 
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,31 +15,49 @@ using Xunit;
 
 public class MqttTelemetryTests
 {
+    internal static async Task<(MqttServer Server, int Port)> StartBrokerOnDynamicPortAsync(MqttFactory factory)
+    {
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            int port;
+            using (var probe = new TcpListener(IPAddress.Loopback, 0))
+            {
+                probe.Start();
+                port = ((IPEndPoint)probe.LocalEndpoint).Port;
+                probe.Stop();
+            }
+
+            var options = new MqttServerOptionsBuilder()
+                .WithDefaultEndpoint()
+                .WithDefaultEndpointBoundIPAddress(IPAddress.Loopback)
+                .WithDefaultEndpointPort(port)
+                .Build();
+            var server = factory.CreateMqttServer(options);
+            try
+            {
+                await server.StartAsync();
+                return (server, port);
+            }
+            catch (SocketException) when (attempt < 4)
+            {
+                server.Dispose();
+            }
+        }
+
+        throw new InvalidOperationException("Could not allocate a free loopback port for test MQTT broker.");
+    }
+
     [Fact]
     public async Task MqttTelemetryPublisher_PublishMetric_BrokerReceivesValidJson()
     {
-        // 1. 임베디드 인메모리 MQTT 서버 기동 (동적 포트 할당)
-        int testPort;
-        using (var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0))
-        {
-            l.Start();
-            testPort = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-        }
         var mqttFactory = new MqttFactory();
-        var serverOptions = new MqttServerOptionsBuilder()
-            .WithDefaultEndpoint()
-            .WithDefaultEndpointPort(testPort)
-            .Build();
-
-        using var mqttServer = mqttFactory.CreateMqttServer(serverOptions);
-        await mqttServer.StartAsync();
+        var (mqttServer, testPort) = await StartBrokerOnDynamicPortAsync(mqttFactory);
+        using var serverScope = mqttServer;
 
         try
         {
-            var receivedTcs = new TaskCompletionSource<string>();
+            var receivedTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            // 2. 수신용 테스트 클라이언트 (Subscriber)
             using var subscriberClient = mqttFactory.CreateMqttClient();
             var subOptions = new MqttClientOptionsBuilder()
                 .WithTcpServer("127.0.0.1", testPort)
@@ -54,8 +74,7 @@ public class MqttTelemetryTests
             await subscriberClient.ConnectAsync(subOptions);
             await subscriberClient.SubscribeAsync("kable/telemetry/#");
 
-            // 3. Kable MqttTelemetryPublisher 발행 (Publisher)
-            var publisher = MqttTelemetryPublisher.CreateTcp(
+            await using var publisher = MqttTelemetryPublisher.CreateTcp(
                 host: "127.0.0.1",
                 port: testPort,
                 clientId: "KableTestPublisher",
@@ -68,9 +87,8 @@ public class MqttTelemetryTests
                 var metric = new TelemetryMetric("pump_pressure", 4.25);
                 await publisher.PublishMetricAsync(metric);
 
-                // 4. 수신 검증
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                timeoutCts.Token.Register(() => receivedTcs.TrySetCanceled());
+                using var registration = timeoutCts.Token.Register(() => receivedTcs.TrySetCanceled(timeoutCts.Token));
 
                 string receivedJson = await receivedTcs.Task;
                 Assert.NotNull(receivedJson);
@@ -81,8 +99,10 @@ public class MqttTelemetryTests
             }
             finally
             {
-                await publisher.DisposeAsync();
-                await subscriberClient.DisconnectAsync();
+                if (subscriberClient.IsConnected)
+                {
+                    await subscriberClient.DisconnectAsync();
+                }
             }
         }
         finally

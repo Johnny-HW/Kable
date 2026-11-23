@@ -1,24 +1,40 @@
 namespace Kable.Tests.Cases;
 
 using System;
-using System.IO.Pipes;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Kable.Codecs;
-using Kable.Core;
 using Kable.Engine;
 using Kable.Exceptions;
 using Kable.Extensions;
-using Kable.Tests.Fixtures;
 using Kable.Transports;
 using Xunit;
 
 [Collection("HardwareTransportTests")]
 public sealed class TcpFaultInjectionTests
 {
+    private static async Task WaitUntilDisconnectedAsync(IDeviceSession<string> session, TimeSpan timeout)
+    {
+        var deadline = Stopwatch.StartNew();
+        while (session.IsConnected && deadline.Elapsed < timeout)
+        {
+            await Task.Delay(5);
+        }
+    }
+
+    private static async Task AwaitCleanupAsync(Task task)
+    {
+        try { await task.WaitAsync(TimeSpan.FromSeconds(3)); }
+        catch (Exception ex) when (ex is SocketException or ObjectDisposedException or OperationCanceledException or TimeoutException)
+        {
+            Debug.WriteLine($"[TcpFaultInjectionTests] Cleanup observed expected error: {ex.Message}");
+        }
+    }
+
     [Fact]
     public async Task TC_TRN_03_TcpConnection_RemoteRstReceived_TriggersAbortAndFailsPendingRequests()
     {
@@ -44,11 +60,10 @@ public sealed class TcpFaultInjectionTests
 
             session.IsConnected.Should().BeTrue();
 
-            // Force TCP RST: LingerState enabled with Timeout = 0
             serverSocket!.LingerState = new LingerOption(true, 0);
             serverSocket.Close();
 
-            await Task.Delay(100);
+            await WaitUntilDisconnectedAsync(session, TimeSpan.FromSeconds(3));
             var pendingReq = session.RequestAsync<string>("PING_AFTER_RST", TimeSpan.FromSeconds(3)).AsTask();
 
             Func<Task> act = async () => await pendingReq;
@@ -59,14 +74,13 @@ public sealed class TcpFaultInjectionTests
         finally
         {
             listener.Stop();
-            try { await serverTask; } catch { }
+            await AwaitCleanupAsync(serverTask);
         }
     }
 
     [Fact]
     public async Task TC_TRN_04_TcpConnection_UnreachableHost_ThrowsSocketExceptionQuickly()
     {
-        // 127.0.0.1 on closed port
         var factory = new TcpConnectionFactory("127.0.0.1", 54321);
 
         Func<Task> act = async () => await factory.ConnectAsync();
@@ -98,11 +112,10 @@ public sealed class TcpFaultInjectionTests
 
             session.IsConnected.Should().BeTrue();
 
-            // Enforce hard RST via socket linger
             acceptedSocket!.LingerState = new LingerOption(true, 0);
             acceptedSocket.Close();
 
-            await Task.Delay(100);
+            await WaitUntilDisconnectedAsync(session, TimeSpan.FromSeconds(3));
             var pendingReq = session.RequestAsync<string>("TEST_RST_RECOVERY", TimeSpan.FromSeconds(3)).AsTask();
 
             Func<Task> act = async () => await pendingReq;
@@ -113,16 +126,15 @@ public sealed class TcpFaultInjectionTests
         finally
         {
             listener.Stop();
-            try { await acceptTask; } catch { }
+            await AwaitCleanupAsync(acceptTask);
         }
     }
 
     [Fact]
     public async Task TC_TRN_106_Tcp_ConnectionTimeoutToNonRoutableIp_ThrowsCleanTimeoutException()
     {
-        // 127.0.0.1 on an unlistened port triggers immediate failure
         var factory = new TcpConnectionFactory("127.0.0.1", 59999);
-        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
         Func<Task> act = async () => await factory.ConnectAsync(cts.Token);
         await act.Should().ThrowAsync<Exception>()
@@ -135,13 +147,12 @@ public sealed class TcpFaultInjectionTests
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        using var serverStop = new CancellationTokenSource();
 
-        // Server accepts but never reads to force OS TCP send buffer saturation
         var acceptTask = Task.Run(async () =>
         {
-            using var accepted = await listener.AcceptTcpClientAsync();
-            // Wait without reading anything
-            await Task.Delay(2000);
+            using var accepted = await listener.AcceptTcpClientAsync(serverStop.Token);
+            await Task.Delay(Timeout.InfiniteTimeSpan, serverStop.Token);
         });
 
         try
@@ -149,9 +160,8 @@ public sealed class TcpFaultInjectionTests
             var factory = new TcpConnectionFactory("127.0.0.1", port);
             await using var ctx = await factory.ConnectAsync();
 
-            // Write massive buffer to exhaust TCP send window
-            byte[] largeChunk = new byte[64 * 1024]; // 64KB
-            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            byte[] largeChunk = new byte[64 * 1024];
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
             Func<Task> act = async () =>
             {
@@ -167,8 +177,9 @@ public sealed class TcpFaultInjectionTests
         }
         finally
         {
+            serverStop.Cancel();
             listener.Stop();
-            try { await acceptTask; } catch { }
+            await AwaitCleanupAsync(acceptTask);
         }
     }
 }
