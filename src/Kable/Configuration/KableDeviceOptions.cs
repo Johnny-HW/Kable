@@ -20,6 +20,11 @@ public record KableDeviceOptions
     /// </summary>
     public string Transport { get; init; } = "Tcp";
 
+    /// <summary>
+    /// 문자열 전송 계층 설정을 강타입 열거형으로 변환합니다.
+    /// </summary>
+    public KableTransportKind GetTransportKind() => KableTransportKindParser.Parse(Transport);
+
     #region TCP Settings
     public string Host { get; init; } = "127.0.0.1";
     public int Port { get; init; } = 9000;

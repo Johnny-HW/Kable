@@ -139,9 +139,9 @@ public sealed class GrpcConnectionContext : IConnectionContext
             {
                 await stream.CompleteAsync().ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception completeEx) when (completeEx is RpcException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
             {
-                // Call might already be cancelled or closed
+                System.Diagnostics.Debug.WriteLine($"[GrpcConnectionContext] Outbound stream already closed: {completeEx.Message}");
             }
 
             await reader.CompleteAsync().ConfigureAwait(false);
@@ -244,16 +244,18 @@ public sealed class GrpcConnectionContext : IConnectionContext
         try
         {
 
-            try { await _inboundPipe.Reader.CompleteAsync().ConfigureAwait(false); } catch { }
-            try { await _outboundPipe.Writer.CompleteAsync().ConfigureAwait(false); } catch { }
+            try { await _inboundPipe.Reader.CompleteAsync().ConfigureAwait(false); }
+            catch (Exception pipeEx) when (pipeEx is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"[GrpcConnectionContext] Inbound pipe complete error: {pipeEx.Message}"); }
+            try { await _outboundPipe.Writer.CompleteAsync().ConfigureAwait(false); }
+            catch (Exception pipeEx) when (pipeEx is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"[GrpcConnectionContext] Outbound pipe complete error: {pipeEx.Message}"); }
 
             try
             {
                 await Task.WhenAll(_pumpInboundTask, _pumpOutboundTask).ConfigureAwait(false);
             }
-            catch
+            catch (Exception pumpEx) when (pumpEx is not OutOfMemoryException)
             {
-                // Background pump exceptions during shutdown are expected
+                System.Diagnostics.Debug.WriteLine($"[GrpcConnectionContext] Pump shutdown observed: {pumpEx.Message}");
             }
 
         }

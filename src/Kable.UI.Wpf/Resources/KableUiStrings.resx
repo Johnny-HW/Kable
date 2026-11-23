@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Lbl_FramingCodec" xml:space="preserve"><value>Framing Codec:</value></data>
+  <data name="Lbl_TransactionRouter" xml:space="preserve"><value>Transaction Router:</value></data>
+  <data name="Transport_Serial" xml:space="preserve"><value>Serial</value></data>
+  <data name="Transport_Tcp" xml:space="preserve"><value>TCP/IP</value></data>
+  <data name="Transport_NamedPipe" xml:space="preserve"><value>Named Pipe</value></data>
+  <data name="Transport_ModbusTcp" xml:space="preserve"><value>Modbus-TCP</value></data>
+  <data name="Transport_MelsecSlmp" xml:space="preserve"><value>Melsec SLMP</value></data>
+  <data name="Transport_Mqtt" xml:space="preserve"><value>MQTT</value></data>
+  <data name="Transport_OpcUa" xml:space="preserve"><value>OPC UA</value></data>
+  <data name="Lbl_ModbusServerIp" xml:space="preserve"><value>Modbus Server IP:</value></data>
+  <data name="Lbl_ModbusTcpPort" xml:space="preserve"><value>TCP Port (Default 502):</value></data>
+  <data name="Lbl_ModbusUnitId" xml:space="preserve"><value>Unit ID (Slave ID):</value></data>
+  <data name="Lbl_ModbusTestRegister" xml:space="preserve"><value>Test Register Address:</value></data>
+  <data name="Lbl_MelsecHostIp" xml:space="preserve"><value>PLC Host IP (Q/iQ-R):</value></data>
+  <data name="Lbl_MelsecPort" xml:space="preserve"><value>SLMP Port (Default 5000):</value></data>
+  <data name="Lbl_MelsecNetworkNo" xml:space="preserve"><value>Network No:</value></data>
+  <data name="Lbl_MelsecPcNo" xml:space="preserve"><value>PC No (Default 255):</value></data>
+  <data name="Lbl_MelsecTargetDevice" xml:space="preserve"><value>Target Device (e.g. D1000):</value></data>
+  <data name="Lbl_MqttBrokerHost" xml:space="preserve"><value>MQTT Broker Host:</value></data>
+  <data name="Lbl_MqttPort" xml:space="preserve"><value>Port (Default 1883):</value></data>
+  <data name="Lbl_MqttClientId" xml:space="preserve"><value>Client ID:</value></data>
+  <data name="Lbl_MqttTopicPrefix" xml:space="preserve"><value>Topic Prefix:</value></data>
+  <data name="Lbl_OpcEndpointUrl" xml:space="preserve"><value>OPC UA Endpoint URL:</value></data>
+  <data name="Lbl_OpcTargetNodeId" xml:space="preserve"><value>Target NodeId (e.g. ns=2;s=Device.Status):</value></data>
+  <data name="CodeGen_BreadcrumbPrefix" xml:space="preserve"><value>⚡ Kable Zero-GC Engine / </value></data>
+  <data name="CodeGen_TitleBadge" xml:space="preserve"><value>Immutable Struct CodeGen</value></data>
+  <data name="CodeGen_PackBadge" xml:space="preserve"><value>Pack = 1 Sequential</value></data>
+  <data name="CodeGen_ZeroAllocBadge" xml:space="preserve"><value>0 Allocs (Hotpath Span&lt;byte&gt;)</value></data>
+  <data name="CodeGen_LangBadge" xml:space="preserve"><value>C# 13 / .NET 10</value></data>
+  <data name="CodeGen_MemoryMapHeader" xml:space="preserve"><value>🔬 STRUCT MEMORY MAP</value></data>
+  <data name="CodeGen_TotalBytes" xml:space="preserve"><value>Total: 19 Bytes</value></data>
+  <data name="CodeGen_Field0_Offset" xml:space="preserve"><value>Offset +0 (2 Bytes)</value></data>
+  <data name="CodeGen_Field0_Name" xml:space="preserve"><value>Preamble (ushort)</value></data>
+  <data name="CodeGen_Field0_Tag" xml:space="preserve"><value>0xAA55</value></data>
+  <data name="CodeGen_Field1_Offset" xml:space="preserve"><value>Offset +2 (1 Byte)</value></data>
+  <data name="CodeGen_Field1_Name" xml:space="preserve"><value>Sequence (byte)</value></data>
+  <data name="CodeGen_Field1_Tag" xml:space="preserve"><value>0..255</value></data>
+  <data name="CodeGen_Field2_Offset" xml:space="preserve"><value>Offset +3 (4 Bytes)</value></data>
+  <data name="CodeGen_Field2_Name" xml:space="preserve"><value>ChamberTemp (float)</value></data>
+  <data name="CodeGen_Field_Ieee754" xml:space="preserve"><value>IEEE 754</value></data>
+  <data name="CodeGen_Field3_Offset" xml:space="preserve"><value>Offset +7 (4 Bytes)</value></data>
+  <data name="CodeGen_Field3_Name" xml:space="preserve"><value>LinePressure (float)</value></data>
+  <data name="CodeGen_Field4_Offset" xml:space="preserve"><value>Offset +11 (4 Bytes)</value></data>
+  <data name="CodeGen_Field4_Name" xml:space="preserve"><value>FlowRate (float)</value></data>
+  <data name="CodeGen_Field5_Offset" xml:space="preserve"><value>Offset +15 (2 Bytes)</value></data>
+  <data name="CodeGen_Field5_Name" xml:space="preserve"><value>Crc16 (ushort)</value></data>
+  <data name="CodeGen_Field5_Tag" xml:space="preserve"><value>CCITT-16</value></data>
+  <data name="CodeGen_ZeroAllocFootnote" xml:space="preserve"><value>✓ Guaranteed Zero-Allocation with MemoryMarshal.Read&lt;T&gt;</value></data>
+  <data name="CodeGen_DriverHeader" xml:space="preserve"><value>⚡ C# ZERO-GC STRUCT DRIVER</value></data>
+  <data name="CodeGen_SpanInliningBadge" xml:space="preserve"><value>ReadOnlySpan&lt;byte&gt; Inlining</value></data>
+  <data name="CodeGen_FooterDesc" xml:space="preserve"><value>Kable Zero-GC High Performance Driver Generator • Pure C# Immutable Structs</value></data>
+  <data name="Btn_SaveDriverCs" xml:space="preserve"><value>💾 Save Driver (.cs)</value></data>
+</root>

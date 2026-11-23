@@ -52,8 +52,23 @@ public sealed class GrpcClientFactory : IConnectionFactory
 
         public void Dispose()
         {
-            try { _call.Dispose(); } catch { }
-            try { _channel.Dispose(); } catch { }
+            try
+            {
+                _call.Dispose();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[GrpcClientFactory] Call dispose error: {ex.Message}");
+            }
+
+            try
+            {
+                _channel.Dispose();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[GrpcClientFactory] Channel dispose error: {ex.Message}");
+            }
         }
     }
 }

@@ -1,10 +1,12 @@
 namespace Kable.UI.Wpf.Localization;
 
 using System;
-using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Resources;
 using System.Windows.Data;
 using System.Windows.Markup;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Kable.Localization;
 
 /// <summary>
@@ -35,11 +37,9 @@ public sealed class LocExtension : MarkupExtension
 /// <summary>
 /// 런타임 다국어 변경 이벤트를 감지하여 바인딩을 리프레시하는 싱글톤 매니저입니다.
 /// </summary>
-public sealed class TranslationManager : INotifyPropertyChanged
+public sealed class TranslationManager : ObservableObject
 {
     public static TranslationManager Instance { get; } = new();
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public CultureInfo CurrentCulture => KableLocalizer.Instance.CurrentCulture;
 
@@ -47,7 +47,7 @@ public sealed class TranslationManager : INotifyPropertyChanged
     {
         KableLocalizer.Instance.CultureChanged += (s, culture) =>
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentCulture)));
+            OnPropertyChanged(nameof(CurrentCulture));
         };
     }
 
@@ -58,10 +58,13 @@ public sealed class TranslationManager : INotifyPropertyChanged
 }
 
 /// <summary>
-/// CultureInfo 변경 신호를 받아 KableLocalizer에서 키에 맞는 번역 문자열을 반환하는 컨버터
+/// CultureInfo 변경 신호를 받아 KableLocalizer 또는 KableUiStrings(.resx)에서 키에 맞는 번역 문자열을 반환하는 컨버터
 /// </summary>
 public sealed class LocKeyConverter : IValueConverter
 {
+    private static readonly ResourceManager UiResourceManager =
+        new("Kable.UI.Wpf.Resources.KableUiStrings", typeof(LocKeyConverter).Assembly);
+
     private readonly string _key;
 
     public LocKeyConverter(string key)
@@ -71,11 +74,30 @@ public sealed class LocKeyConverter : IValueConverter
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return KableLocalizer.Instance.GetString(_key);
+        string resolved = KableLocalizer.Instance.GetString(_key);
+        if (!string.Equals(resolved, _key, StringComparison.Ordinal))
+        {
+            return resolved;
+        }
+
+        try
+        {
+            string? resxValue = UiResourceManager.GetString(_key, KableLocalizer.Instance.CurrentCulture);
+            if (!string.IsNullOrEmpty(resxValue))
+            {
+                return resxValue;
+            }
+        }
+        catch (MissingManifestResourceException ex)
+        {
+            Debug.WriteLine($"[LocKeyConverter] Missing resource '{_key}': {ex.Message}");
+        }
+
+        return resolved;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotSupportedException();
+        return Binding.DoNothing;
     }
 }

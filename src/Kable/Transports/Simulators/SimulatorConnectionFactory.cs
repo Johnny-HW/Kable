@@ -21,8 +21,9 @@ internal sealed class SimulatorConnectionFactory(Action<MockHardwareSimulator> c
             simulator.Start();
             return new OwnedContext(client, simulator);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[SimulatorConnectionFactory] ConnectAsync failed: {ex.Message}");
             await simulator.DisposeAsync().ConfigureAwait(false);
             await client.DisposeAsync().ConfigureAwait(false);
             throw;

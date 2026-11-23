@@ -28,8 +28,9 @@ public static partial class KableSimple
             await client.InitializeAsync(ct).ConfigureAwait(false);
             return client;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[KableSimple] OpenAsync failed: {ex.Message}");
             await client.DisposeAsync().ConfigureAwait(false);
             throw;
         }

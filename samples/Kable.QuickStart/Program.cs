@@ -113,7 +113,13 @@ public static class Program
                 }
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine("[QuickStart] Mock server cancelled.");
+        }
+        catch (Exception ex) when (ex is IOException or SocketException or ObjectDisposedException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[QuickStart] Mock server stopped: {ex.Message}");
+        }
     }
 }

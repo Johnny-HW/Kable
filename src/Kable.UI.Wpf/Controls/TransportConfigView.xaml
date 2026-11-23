@@ -21,13 +21,13 @@
             <!-- Transport Segmented Pill Radio Group -->
             <Border Background="#F8FAFC" CornerRadius="14" Padding="6" Margin="0,0,0,16">
                 <WrapPanel Orientation="Horizontal">
-                    <RadioButton Content="Serial" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
-                    <RadioButton Content="TCP/IP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
-                    <RadioButton Content="Named Pipe" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
-                    <RadioButton Content="Modbus-TCP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsModbusTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.ModbusTcp}"/>
-                    <RadioButton Content="Melsec SLMP" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMelsecSlmp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.MelsecSlmp}"/>
-                    <RadioButton Content="MQTT" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMqtt, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Mqtt}"/>
-                    <RadioButton Content="OPC UA" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsOpcUa, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.OpcUa}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_Serial}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsSerial, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Serial}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_Tcp}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Tcp}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_NamedPipe}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsNamedPipe, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.NamedPipe}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_ModbusTcp}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsModbusTcp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.ModbusTcp}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_MelsecSlmp}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMelsecSlmp, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.MelsecSlmp}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_Mqtt}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsMqtt, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.Mqtt}"/>
+                    <RadioButton GroupName="TransportSelection" Content="{loc:Loc Transport_OpcUa}" Style="{StaticResource TransportRadioBtn}" IsChecked="{Binding IsOpcUa, Mode=OneWay}" Command="{Binding SelectTransportCommand}" CommandParameter="{x:Static models:TransportType.OpcUa}"/>
                 </WrapPanel>
             </Border>
 
@@ -72,21 +72,21 @@
                 <StackPanel>
                     <UniformGrid Columns="2" Margin="0,0,0,10">
                         <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="Modbus Server IP:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_ModbusServerIp}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="TCP Port (Default 502):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_ModbusTcpPort}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                     </UniformGrid>
                     <UniformGrid Columns="2">
                         <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="Unit ID (Slave ID):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_ModbusUnitId}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.ModbusUnitId, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="Test Register Address:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_ModbusTestRegister}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.ModbusTestRegister, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                     </UniformGrid>
@@ -98,25 +98,25 @@
                 <StackPanel>
                     <UniformGrid Columns="2" Margin="0,0,0,10">
                         <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="PLC Host IP (Q/iQ-R):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MelsecHostIp}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="SLMP Port (Default 5000):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MelsecPort}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                     </UniformGrid>
                     <UniformGrid Columns="3">
                         <StackPanel Margin="0,0,6,0">
-                            <TextBlock Text="Network No:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MelsecNetworkNo}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.MelsecNetworkNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="4,0,4,0">
-                            <TextBlock Text="PC No (Default 255):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MelsecPcNo}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.MelsecPcNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="6,0,0,0">
-                            <TextBlock Text="Target Device (e.g. D1000):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MelsecTargetDevice}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.MelsecDevice, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                     </UniformGrid>
@@ -128,21 +128,21 @@
                 <StackPanel>
                     <UniformGrid Columns="2" Margin="0,0,0,10">
                         <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="MQTT Broker Host:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MqttBrokerHost}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.HostIp, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="Port (Default 1883):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MqttPort}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.TcpPort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                     </UniformGrid>
                     <UniformGrid Columns="2">
                         <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="Client ID:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MqttClientId}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.MqttClientId, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                         <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="Topic Prefix:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{loc:Loc Lbl_MqttTopicPrefix}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                             <TextBox Text="{Binding Profile.MqttTopicPrefix, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                         </StackPanel>
                     </UniformGrid>
@@ -152,9 +152,9 @@
             <!-- OPC UA Settings -->
             <Border Background="#F8FAFC" CornerRadius="12" Padding="16" Visibility="{Binding IsOpcUa, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="OPC UA Endpoint URL:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{loc:Loc Lbl_OpcEndpointUrl}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                     <TextBox Text="{Binding Profile.OpcEndpointUrl, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}" Margin="0,0,0,10"/>
-                    <TextBlock Text="Target NodeId (e.g. ns=2;s=Device.Status):" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{loc:Loc Lbl_OpcTargetNodeId}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                     <TextBox Text="{Binding Profile.OpcNodeId, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource IosTextBoxStyle}"/>
                 </StackPanel>
             </Border>
@@ -169,4 +169,3 @@
         </StackPanel>
     </Border>
 </UserControl>
-

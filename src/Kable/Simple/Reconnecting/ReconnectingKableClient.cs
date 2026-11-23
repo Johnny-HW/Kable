@@ -52,8 +52,9 @@ public sealed class ReconnectingKableClient : IAsyncDisposable
             wrapper.RecoveryTask = Task.Run(wrapper.RecoverAsync);
             return wrapper;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[ReconnectingKableClient] OpenAsync failed: {ex.Message}");
             await wrapper.DisposeAsync().ConfigureAwait(false);
             throw;
         }

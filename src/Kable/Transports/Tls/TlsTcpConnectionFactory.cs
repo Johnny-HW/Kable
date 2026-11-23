@@ -61,6 +61,12 @@ public sealed class TlsTcpConnectionFactory : IConnectionFactory
             if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
             throw new TimeoutException("TCP/TLS connection or handshake timed out.");
         }
-        catch { stream?.Dispose(); client.Dispose(); throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TlsTcpConnectionFactory] ConnectAsync failed: {ex.Message}");
+            stream?.Dispose();
+            client.Dispose();
+            throw;
+        }
     }
 }

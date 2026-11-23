@@ -17,7 +17,7 @@
         <Border Grid.Row="0" Background="#F8FAFC" Padding="10,6" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
             <DockPanel LastChildFill="False">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <TextBlock Text="📡 Raw Packet Stream Log" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="{loc:Loc Header_RawPacketStream}" FontWeight="Bold" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     
                     <!-- Health & Metrics Badge Strip -->
                     <Border Background="{Binding StateBadgeColor}" CornerRadius="10" Padding="8,3" Margin="0,0,8,0" VerticalAlignment="Center">
@@ -51,7 +51,7 @@
                         </Button.Resources>
                     </Button>
                     <!-- Save to File (History Export) -->
-                    <Button Content="💾 Export Log File" Command="{Binding ExportToFileCommand}" 
+                    <Button Content="{loc:Loc Btn_ExportLog}" Command="{Binding ExportToFileCommand}" 
                             Padding="10,4" Margin="0,0,6,0" Background="#EFF6FF" Foreground="#0071E3" FontWeight="Bold" FontSize="11" BorderThickness="0" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">

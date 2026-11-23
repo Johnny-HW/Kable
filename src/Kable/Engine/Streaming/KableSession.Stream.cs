@@ -174,11 +174,25 @@ public sealed partial class KableSession<TMessage>
             // 남은 대기 Task 예외 관찰 및 완료 대기
             if (pendingAlarmTask != null && !pendingAlarmTask.IsCompleted)
             {
-                try { await pendingAlarmTask.ConfigureAwait(false); } catch { }
+                try
+                {
+                    await pendingAlarmTask.ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[KableSession.Stream] Pending alarm task cancelled/faulted: {ex.Message}");
+                }
             }
             if (pendingTelemTask != null && !pendingTelemTask.IsCompleted)
             {
-                try { await pendingTelemTask.ConfigureAwait(false); } catch { }
+                try
+                {
+                    await pendingTelemTask.ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[KableSession.Stream] Pending telemetry task cancelled/faulted: {ex.Message}");
+                }
             }
 
             streamCts.Dispose();

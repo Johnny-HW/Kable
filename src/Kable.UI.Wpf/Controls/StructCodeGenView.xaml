@@ -16,11 +16,8 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- 1. Apple Context Sub-header: Zero-GC Engine Info & Architecture Chips -->
             <RowDefinition Height="Auto"/>
-            <!-- 2. Dual Pane: Left Struct Layout & Memory Map | Right Generated C# Code -->
             <RowDefinition Height="*"/>
-            <!-- 3. Bottom Action Bar (Copy Code, Export C# File) -->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -31,21 +28,21 @@
             </Border.Effect>
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="⚡ Kable Zero-GC Engine / " FontSize="11" Foreground="#64748B"/>
+                    <TextBlock Text="{loc:Loc CodeGen_BreadcrumbPrefix}" FontSize="11" Foreground="#64748B"/>
                     <Border Background="#F1F5F9" CornerRadius="6" Padding="6,2" Margin="0,0,8,0">
-                        <TextBlock Text="Immutable Struct CodeGen" FontSize="11" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="{loc:Loc CodeGen_TitleBadge}" FontSize="11" FontWeight="Bold" Foreground="#0F172A"/>
                     </Border>
                     <Border Background="#EFF6FF" CornerRadius="6" Padding="6,2" Margin="0,0,6,0">
-                        <TextBlock Text="Pack = 1 Sequential" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                        <TextBlock Text="{loc:Loc CodeGen_PackBadge}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
                     </Border>
                     <Border Background="#F0FDF4" CornerRadius="6" Padding="6,2">
-                        <TextBlock Text="0 Allocs (Hotpath Span&lt;byte&gt;)" FontSize="10" FontWeight="SemiBold" Foreground="#34C759"/>
+                        <TextBlock Text="{loc:Loc CodeGen_ZeroAllocBadge}" FontSize="10" FontWeight="SemiBold" Foreground="#34C759"/>
                     </Border>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="8,3" Margin="0,0,8,0">
-                        <TextBlock Text="C# 13 / .NET 10" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
+                        <TextBlock Text="{loc:Loc CodeGen_LangBadge}" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
                     </Border>
                     <Button Content="{loc:Loc Btn_Refresh}" Command="{Binding UpdateStructCodePreviewCommand}" 
                             Style="{StaticResource IosSecondaryButtonStyle}" Padding="12,4"/>
@@ -75,9 +72,9 @@
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,10">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="🔬 STRUCT MEMORY MAP" FontSize="11" FontWeight="Bold" Foreground="#1E40AF"/>
+                            <TextBlock Text="{loc:Loc CodeGen_MemoryMapHeader}" FontSize="11" FontWeight="Bold" Foreground="#1E40AF"/>
                             <Border Background="#EFF6FF" CornerRadius="6" Padding="6,2" Margin="8,0,0,0">
-                                <TextBlock Text="Total: 19 Bytes" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                                <TextBlock Text="{loc:Loc CodeGen_TotalBytes}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
                             </Border>
                         </StackPanel>
                     </DockPanel>
@@ -85,89 +82,82 @@
                     <!-- Memory Layout Card Deck -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <!-- Field 0: Preamble -->
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="Offset +0 (2 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                        <TextBlock Text="Preamble (ushort)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field0_Offset}" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field0_Name}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
                                     </StackPanel>
                                     <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="0xAA55" FontSize="10" FontWeight="Bold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field0_Tag}" FontSize="10" FontWeight="Bold" Foreground="#0071E3" FontFamily="Consolas"/>
                                     </Border>
                                 </DockPanel>
                             </Border>
 
-                            <!-- Field 1: Sequence -->
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="Offset +2 (1 Byte)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                        <TextBlock Text="Sequence (byte)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field1_Offset}" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field1_Name}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
                                     </StackPanel>
                                     <Border DockPanel.Dock="Right" Background="#F1F5F9" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="0..255" FontSize="10" FontWeight="SemiBold" Foreground="#64748B" FontFamily="Consolas"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field1_Tag}" FontSize="10" FontWeight="SemiBold" Foreground="#64748B" FontFamily="Consolas"/>
                                     </Border>
                                 </DockPanel>
                             </Border>
 
-                            <!-- Field 2: ChamberTemp -->
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="Offset +3 (4 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                        <TextBlock Text="ChamberTemp (float)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field2_Offset}" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field2_Name}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
                                     </StackPanel>
                                     <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="IEEE 754" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field_Ieee754}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
                                     </Border>
                                 </DockPanel>
                             </Border>
 
-                            <!-- Field 3: LinePressure -->
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="Offset +7 (4 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                        <TextBlock Text="LinePressure (float)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field3_Offset}" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field3_Name}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
                                     </StackPanel>
                                     <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="IEEE 754" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field_Ieee754}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
                                     </Border>
                                 </DockPanel>
                             </Border>
 
-                            <!-- Field 4: FlowRate -->
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,6">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="Offset +11 (4 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                        <TextBlock Text="FlowRate (float)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field4_Offset}" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field4_Name}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
                                     </StackPanel>
                                     <Border DockPanel.Dock="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="IEEE 754" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field_Ieee754}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3" FontFamily="Consolas"/>
                                     </Border>
                                 </DockPanel>
                             </Border>
 
-                            <!-- Field 5: CRC-16 -->
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="10">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="Offset +15 (2 Bytes)" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
-                                        <TextBlock Text="Crc16 (ushort)" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field5_Offset}" FontSize="9" FontWeight="Bold" Foreground="#64748B"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field5_Name}" FontSize="12" FontWeight="Bold" Foreground="#0F172A" FontFamily="Consolas, -apple-system"/>
                                     </StackPanel>
                                     <Border DockPanel.Dock="Right" Background="#F0FDF4" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="CCITT-16" FontSize="10" FontWeight="Bold" Foreground="#166534" FontFamily="Consolas"/>
+                                        <TextBlock Text="{loc:Loc CodeGen_Field5_Tag}" FontSize="10" FontWeight="Bold" Foreground="#166534" FontFamily="Consolas"/>
                                     </Border>
                                 </DockPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Summary Footnote -->
                     <Border Grid.Row="2" Background="#F1F5F9" CornerRadius="8" Padding="10,6" Margin="0,8,0,0">
-                        <TextBlock Text="✓ Guaranteed Zero-Allocation with MemoryMarshal.Read&lt;T&gt;" FontSize="10" Foreground="#334155" FontWeight="Medium"/>
+                        <TextBlock Text="{loc:Loc CodeGen_ZeroAllocFootnote}" FontSize="10" Foreground="#334155" FontWeight="Medium"/>
                     </Border>
                 </Grid>
             </Border>
@@ -184,9 +174,9 @@
                     </Grid.RowDefinitions>
                     <DockPanel Grid.Row="0" Margin="0,0,0,10">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="⚡ C# ZERO-GC STRUCT DRIVER" FontSize="11" FontWeight="Bold" Foreground="#0071E3"/>
+                            <TextBlock Text="{loc:Loc CodeGen_DriverHeader}" FontSize="11" FontWeight="Bold" Foreground="#0071E3"/>
                             <Border Background="#EFF6FF" CornerRadius="6" Padding="6,2" Margin="8,0,0,0">
-                                <TextBlock Text="ReadOnlySpan&lt;byte&gt; Inlining" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
+                                <TextBlock Text="{loc:Loc CodeGen_SpanInliningBadge}" FontSize="10" FontWeight="SemiBold" Foreground="#0071E3"/>
                             </Border>
                         </StackPanel>
                     </DockPanel>
@@ -209,10 +199,10 @@
                 <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.06" Color="#000000"/>
             </Border.Effect>
             <DockPanel>
-                <TextBlock Text="Kable Zero-GC High Performance Driver Generator • Pure C# Immutable Structs" 
+                <TextBlock Text="{loc:Loc CodeGen_FooterDesc}" 
                            Foreground="{StaticResource KableTextSecondary}" VerticalAlignment="Center" FontWeight="Medium" FontSize="12"/>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="💾 Save Driver (.cs)" Command="{Binding SaveToFileCommand}" 
+                    <Button Content="{loc:Loc Btn_SaveDriverCs}" Command="{Binding SaveToFileCommand}" 
                             Style="{StaticResource IosPrimaryButtonStyle}" FontSize="13" Padding="20,8"/>
                 </StackPanel>
             </DockPanel>

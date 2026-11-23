@@ -1,0 +1,225 @@
+namespace Kable.ConfigStudio.ViewModels;
+
+using System;
+using System.Text;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
+using Kable.Core;
+using Kable.Observability;
+using Kable.UI.Wpf.Models;
+
+public partial class MainViewModel
+{
+    [RelayCommand]
+    public async Task RunMockSimulationAsync()
+    {
+        TestStatus = "🔬 [오프라인 시뮬레이션] 가상 루프백 패킷 검증 중...";
+        TestResultColor = "#89B4FA";
+        TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] {Profile.Transport} 시뮬레이션 프레임 인코딩/디코딩 테스트");
+
+        await Task.Delay(100);
+
+        if (Profile.Transport == TransportType.ModbusTcp)
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] MBAP Header 생성 (UnitId={Profile.ModbusUnitId})");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] TX: [00 01 00 00 00 06 {Profile.ModbusUnitId:X2} 03 {Profile.ModbusTestRegister >> 8:X2} {Profile.ModbusTestRegister & 0xFF:X2} 00 02]");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] RX: [00 01 00 00 00 07 {Profile.ModbusUnitId:X2} 03 04 04 D2 16 2E] (Mock Regs: [1234, 5678])");
+            TestStatus = "🔷 [MOCK 성공] Modbus-TCP FC03 코덱 규격 검증 완료 (가상 루프백)";
+        }
+        else if (Profile.Transport == TransportType.MelsecSlmp)
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] SLMP 3E Binary 프레임 빌드 (Net={Profile.MelsecNetworkNo}, PC={Profile.MelsecPcNo}, Dev={Profile.MelsecDevice})");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] TX: [50 00 00 FF FF 03 00 0C 00 10 00 01 04 00 00 E8 03 00 A8 02 00]");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] RX: [D0 00 00 FF FF 03 00 06 00 00 00 D2 04 2E 16] (EndCode: 0000 OK)");
+            TestStatus = "🔷 [MOCK 성공] 미쓰비시 SLMP 3E 코덱 규격 검증 완료 (가상 루프백)";
+        }
+        else if (Profile.Transport == TransportType.Mqtt)
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] MQTT Publish 패킷 구성: ClientId='{Profile.MqttClientId}', Topic='{Profile.MqttTopicPrefix}/test'");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] Payload: {{\"client\":\"{Profile.MqttClientId}\",\"value\":100.0}}");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] PUBACK 시뮬레이션 수신 완료");
+            TestStatus = "🔷 [MOCK 성공] MQTT 텔레메트리 직렬화 규격 검증 완료 (가상 루프백)";
+        }
+        else if (Profile.Transport == TransportType.OpcUa)
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] OPC UA ReadRequest 구성: NodeId='{Profile.OpcNodeId}'");
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] ReadResponse: StatusCode=Good, Value='NORMAL_OPERATING'");
+            TestStatus = "🔷 [MOCK 성공] OPC UA 노드 데이터 모델 규격 검증 완료 (가상 루프백)";
+        }
+        else
+        {
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [MOCK] {Profile.Transport} 기본 프레임 에코 시뮬레이션 성공");
+            TestStatus = $"🔷 [MOCK 성공] {Profile.Transport} 가상 루프백 테스트 완료";
+        }
+
+        var cmdTx = Encoding.UTF8.GetBytes($"READ_CONFIG {Profile.DeviceName}");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow, PacketDirection.Tx, TrafficKind.AperiodicCommand,
+            "REQ_CFG", cmdTx, $"READ_CONFIG {Profile.DeviceName}", TimeSpan.Zero, LogLevel.Information, Profile.DeviceName));
+
+        var cmdRx = Encoding.UTF8.GetBytes($"CONFIG_DATA STATUS=READY;BAUD={Profile.BaudRate}");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.AperiodicCommand,
+            "RESP_CFG", cmdRx, $"CONFIG_DATA STATUS=READY;BAUD={Profile.BaudRate}", TimeSpan.FromMilliseconds(12.4), LogLevel.Information, Profile.DeviceName));
+
+        var telBytes1 = Encoding.UTF8.GetBytes("TEMP: 24.8 C");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.PeriodicTelemetry,
+            "Chamber_Temperature", telBytes1, "24.8", TimeSpan.FromMilliseconds(1.2), LogLevel.Information, Profile.DeviceName));
+
+        var telBytes2 = Encoding.UTF8.GetBytes("PRESS: 101.3 kPa");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.PeriodicTelemetry,
+            "Line_Pressure", telBytes2, "101.3", TimeSpan.FromMilliseconds(1.1), LogLevel.Information, Profile.DeviceName));
+
+        var almBytes = Encoding.UTF8.GetBytes("ALM_001: TEMPERATURE_HIGH_WARNING");
+        Terminal.OnPacketTrace(new PacketTraceRecord(
+            DateTime.UtcNow, PacketDirection.Rx, TrafficKind.SpontaneousAlarm,
+            "ALM_OVERTEMP", almBytes, "Chamber temperature high threshold warning (24.8C)", TimeSpan.Zero, LogLevel.Warning, Profile.DeviceName));
+
+        TestResultColor = "#89B4FA";
+    }
+
+    [RelayCommand]
+    public void UpdateTomlPreview()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Kable Communication Configuration");
+        sb.AppendLine($"# Generated by Kable.ConfigStudio on {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine();
+        sb.AppendLine("[device]");
+        sb.AppendLine($"name = \"{Profile.DeviceName}\"");
+        sb.AppendLine($"description = \"{Profile.Description}\"");
+        sb.AppendLine();
+        sb.AppendLine("[transport]");
+        sb.AppendLine($"type = \"{Profile.Transport}\"");
+
+        switch (Profile.Transport)
+        {
+            case TransportType.Serial:
+                sb.AppendLine($"port_name = \"{Profile.PortName}\"");
+                sb.AppendLine($"baud_rate = {Profile.BaudRate}");
+                sb.AppendLine($"data_bits = {Profile.DataBits}");
+                sb.AppendLine($"parity = \"{Profile.Parity}\"");
+                sb.AppendLine($"stop_bits = \"{Profile.StopBits}\"");
+                break;
+
+            case TransportType.Tcp:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                break;
+
+            case TransportType.NamedPipe:
+                sb.AppendLine($"pipe_name = \"{Profile.PipeName}\"");
+                break;
+
+            case TransportType.ModbusTcp:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                sb.AppendLine($"default_unit_id = {Profile.ModbusUnitId}");
+                sb.AppendLine($"test_register = {Profile.ModbusTestRegister}");
+                break;
+
+            case TransportType.MelsecSlmp:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                sb.AppendLine($"network_no = {Profile.MelsecNetworkNo}");
+                sb.AppendLine($"pc_no = {Profile.MelsecPcNo}");
+                sb.AppendLine($"default_device = \"{Profile.MelsecDevice}\"");
+                break;
+
+            case TransportType.Mqtt:
+                sb.AppendLine($"host = \"{Profile.HostIp}\"");
+                sb.AppendLine($"port = {Profile.TcpPort}");
+                sb.AppendLine($"client_id = \"{Profile.MqttClientId}\"");
+                sb.AppendLine($"topic_prefix = \"{Profile.MqttTopicPrefix}\"");
+                break;
+
+            case TransportType.OpcUa:
+                sb.AppendLine($"endpoint_url = \"{Profile.OpcEndpointUrl}\"");
+                sb.AppendLine($"node_id = \"{Profile.OpcNodeId}\"");
+                sb.AppendLine("auto_accept_certificates = true");
+                break;
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("[protocol]");
+        sb.AppendLine($"codec = \"{Profile.Codec}\"");
+        sb.AppendLine($"router = \"{Profile.Router}\"");
+        sb.AppendLine($"timeout_ms = {Profile.TimeoutMs}");
+        sb.AppendLine($"heartbeat_interval_ms = {Profile.HeartbeatIntervalMs}");
+
+        GeneratedTomlPreview = sb.ToString();
+
+        string safeStructPrefix = Profile.DeviceName.Replace(" ", "");
+        var csSb = new StringBuilder();
+        csSb.AppendLine("// <auto-generated>");
+        csSb.AppendLine("// Kable Zero-GC Hotpath Driver Implementation");
+        csSb.AppendLine($"// Generated for device: {Profile.DeviceName} on {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        csSb.AppendLine("// </auto-generated>");
+        csSb.AppendLine("using System;");
+        csSb.AppendLine("using System.Buffers;");
+        csSb.AppendLine("using System.Runtime.CompilerServices;");
+        csSb.AppendLine("using System.Runtime.InteropServices;");
+        csSb.AppendLine("using Kable.Core;");
+        csSb.AppendLine();
+        csSb.AppendLine("namespace Kable.Generated.HardwareDrivers;");
+        csSb.AppendLine();
+        csSb.AppendLine("/// <summary>");
+        csSb.AppendLine($"/// High-speed Zero-GC codec for {Profile.DeviceName}");
+        csSb.AppendLine($"/// Transport: {Profile.Transport} | Codec: {Profile.Codec}");
+        csSb.AppendLine("/// </summary>");
+        csSb.AppendLine("[StructLayout(LayoutKind.Sequential, Pack = 1)]");
+        csSb.AppendLine($"public readonly struct {safeStructPrefix}TelemetryPacket");
+        csSb.AppendLine("{");
+        csSb.AppendLine("    public readonly ushort Preamble;    // 0xAA55");
+        csSb.AppendLine("    public readonly byte   Sequence;    // 0..255");
+        csSb.AppendLine("    public readonly float  ChamberTemp; // °C");
+        csSb.AppendLine("    public readonly float  LinePress;   // kPa");
+        csSb.AppendLine("    public readonly float  FlowRate;    // mL/min");
+        csSb.AppendLine("    public readonly ushort Crc16;       // CCITT-16");
+        csSb.AppendLine();
+        csSb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        csSb.AppendLine($"    public static bool TryDecode(ReadOnlySpan<byte> source, out {safeStructPrefix}TelemetryPacket packet)");
+        csSb.AppendLine("    {");
+        csSb.AppendLine($"        if (source.Length < Unsafe.SizeOf<{safeStructPrefix}TelemetryPacket>())");
+        csSb.AppendLine("        {");
+        csSb.AppendLine("            packet = default;");
+        csSb.AppendLine("            return false;");
+        csSb.AppendLine("        }");
+        csSb.AppendLine($"        packet = MemoryMarshal.Read<{safeStructPrefix}TelemetryPacket>(source);");
+        csSb.AppendLine("        return packet.Preamble == 0xAA55;");
+        csSb.AppendLine("    }");
+        csSb.AppendLine("}");
+        GeneratedCSharpPreview = csSb.ToString();
+    }
+
+    [RelayCommand]
+    public async Task SaveToFileAsync()
+    {
+        UpdateTomlPreview();
+
+        try
+        {
+            string rawName = Profile.DeviceName?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(rawName))
+            {
+                TestStatus = "⚠️ 저장 실패: 장치 이름(DeviceName)이 비어있습니다.";
+                TestResultColor = "#F9E2AF";
+                return;
+            }
+
+            string filePath = await _fileService.SaveGeneratedDriverAsync(rawName, GeneratedCSharpPreview);
+
+            TestStatus = $"💾 C# 드라이버 구조체 파일 저장 완료: {filePath}";
+            TestResultColor = "#A6E3A1";
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [SAVE] C# Zero-GC 구조체 파일 기록 완료: {filePath}");
+        }
+        catch (Exception ex)
+        {
+            TestStatus = $"🔴 저장 실패: {ex.Message}";
+            TestResultColor = "#F38BA8";
+            TraceLog.Add($"[{DateTime.Now:HH:mm:ss.fff}] [SAVE 오류] {ex.Message}");
+        }
+    }
+}

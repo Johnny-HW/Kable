@@ -76,7 +76,7 @@ public sealed class TcpConnectionFactory : IConnectionFactory
 
             if (effectiveCt.CanBeCanceled)
             {
-                using (effectiveCt.Register(() => { try { socket.Dispose(); } catch { } }))
+                using (effectiveCt.Register(() => { try { socket.Dispose(); } catch (ObjectDisposedException) { } }))
                 {
                     await connectTask.ConfigureAwait(false);
                 }
@@ -95,8 +95,9 @@ public sealed class TcpConnectionFactory : IConnectionFactory
             socket.Dispose();
             throw new TimeoutException($"TCP connection to {_host}:{_port} timed out after {_connectTimeoutMs}ms.");
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[TcpConnectionFactory] ConnectAsync failed: {ex.Message}");
             socket.Dispose();
             throw;
         }

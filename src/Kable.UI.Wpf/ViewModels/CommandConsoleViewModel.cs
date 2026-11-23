@@ -2,6 +2,9 @@ namespace Kable.UI.Wpf.ViewModels;
 
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -12,11 +15,13 @@ using CommunityToolkit.Mvvm.Input;
 using Kable.Core;
 using Kable.Observability;
 using Kable.UI.Wpf.Models;
+using Kable.UI.Wpf.Services;
 
 public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
 {
     private readonly Dispatcher _dispatcher;
     private readonly int _maxLogCount;
+    private readonly IPacketLogExportService _logExportService;
 
     [ObservableProperty]
     private bool _isPaused;
@@ -49,9 +54,15 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     public event Func<string, Task>? ManualSendRequested;
 
     public CommandConsoleViewModel(Dispatcher? dispatcher = null, int maxLogCount = 1000)
+        : this(dispatcher, maxLogCount, WpfPacketLogExportService.Instance)
+    {
+    }
+
+    public CommandConsoleViewModel(Dispatcher? dispatcher, int maxLogCount, IPacketLogExportService? logExportService)
     {
         _dispatcher = dispatcher ?? (Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher);
         _maxLogCount = maxLogCount;
+        _logExportService = logExportService ?? WpfPacketLogExportService.Instance;
         RefreshFilteredCommands();
         _selectedSetting = FilteredSettingParameters.Count > 0 ? FilteredSettingParameters[0] : null;
     }
@@ -163,32 +174,15 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     {
         try
         {
-            var dialog = new Microsoft.Win32.SaveFileDialog
-            {
-                Title = "Export Aperiodic Command Logs",
-                Filter = "Log Files (*.log)|*.log|CSV Files (*.csv)|*.csv|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
-                FileName = $"Kable_CommandLogs_{DateTime.Now:yyyyMMdd_HHmmss}.log"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine("# Kable Aperiodic Command & Setting Trace Log");
-                sb.AppendLine($"# Exported at: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
-                sb.AppendLine("# Seq | Time | Direction | Device | Kind | Length | Latency | Payload");
-                sb.AppendLine(new string('-', 90));
-
-                foreach (var pkt in Packets)
-                {
-                    sb.AppendLine($"[{pkt.SequenceNo,5}] {pkt.Timestamp} | {pkt.Direction} | {pkt.DeviceId,-12} | {pkt.Kind,-18} | {pkt.Length,4}B | {pkt.LatencyMs,7} | {pkt.AsciiPreview}");
-                }
-
-                System.IO.File.WriteAllText(dialog.FileName, sb.ToString(), Encoding.UTF8);
-            }
+            _logExportService.ExportPacketsWithDialog(
+                Packets,
+                "Export Aperiodic Command Logs",
+                "Kable_CommandLogs",
+                "Kable Aperiodic Command & Setting Trace Log");
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException)
         {
-            // ignore or log
+            Debug.WriteLine($"[CommandConsoleViewModel] ExportToFile failed: {ex.Message}");
         }
     }
 
@@ -197,10 +191,7 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
     {
         if (string.IsNullOrWhiteSpace(ManualCommandText)) return;
 
-        if (ManualSendRequested != null)
-        {
-            await ManualSendRequested.Invoke(ManualCommandText);
-        }
+        await InvokeManualSendRequestedAsync(ManualCommandText);
     }
 
     [RelayCommand]
@@ -212,10 +203,24 @@ public partial class CommandConsoleViewModel : ObservableObject, ICommObserver
         string payload = target.BuildPayload();
         target.LastAckMessage = $"Sending: {payload}";
 
-        if (ManualSendRequested != null)
+        if (await InvokeManualSendRequestedAsync(payload))
         {
-            await ManualSendRequested.Invoke(payload);
             target.LastAckMessage = $"Applied ({DateTime.Now:HH:mm:ss})";
         }
+    }
+
+    private async Task<bool> InvokeManualSendRequestedAsync(string payload)
+    {
+        var handlers = ManualSendRequested;
+        if (handlers == null)
+        {
+            return false;
+        }
+
+        var tasks = handlers.GetInvocationList()
+            .Cast<Func<string, Task>>()
+            .Select(handler => handler(payload));
+        await Task.WhenAll(tasks);
+        return true;
     }
 }

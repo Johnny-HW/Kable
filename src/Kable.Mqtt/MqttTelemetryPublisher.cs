@@ -159,9 +159,10 @@ public sealed class MqttTelemetryPublisher : IMqttTelemetryPublisher
             {
                 await _client.DisconnectAsync().ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // Ignore disconnect error on shutdown
+                _logger?.LogWarning(ex, "MQTT disconnect error during publisher shutdown.");
+                System.Diagnostics.Debug.WriteLine($"[MqttTelemetryPublisher] Disconnect error on shutdown: {ex.Message}");
             }
         }
 

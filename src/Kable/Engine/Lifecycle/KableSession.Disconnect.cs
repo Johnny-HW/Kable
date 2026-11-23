@@ -45,13 +45,19 @@ public sealed partial class KableSession<TMessage>
             {
                 _sessionCts.Cancel();
             }
-            catch (ObjectDisposedException) { }
+            catch (ObjectDisposedException ctsEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[KableSession] Session CTS already disposed on disconnect: {ctsEx.Message}");
+            }
 
             try
             {
                 _context?.Abort("Hardware connection has been disconnected.");
             }
-            catch { }
+            catch (Exception abortEx) when (abortEx is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[KableSession] Context abort threw during disconnect: {abortEx.Message}");
+            }
             QueueCleanup(specificReason is AlarmBufferOverflowException ? specificReason : null);
         }
     }

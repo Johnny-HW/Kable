@@ -24,8 +24,9 @@ public sealed class SerialPortConnectionFactory : IConnectionFactory
                 ct.ThrowIfCancellationRequested();
                 return new SerialPortConnectionContext(port);
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine($"[SerialPortConnectionFactory] Open failed: {ex.Message}");
                 port.Dispose();
                 throw;
             }

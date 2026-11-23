@@ -110,32 +110,32 @@
                     <Border DockPanel.Dock="Left" Background="#F1F5F9" CornerRadius="12" Padding="3" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <!-- 0. 통신 설정 -->
-                            <RadioButton Content="{loc:Loc Nav_Config}" Style="{StaticResource IosNavRadioBtn}" 
+                            <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Config}" Style="{StaticResource IosNavRadioBtn}"
                                          IsChecked="{Binding IsNavConfig, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="0"/>
 
                             <!-- 1. 패킷/명령 카탈로그 (상시/수시 설정) -->
-                            <RadioButton Content="{loc:Loc Nav_Packets}" Style="{StaticResource IosNavRadioBtn}" 
+                            <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Packets}" Style="{StaticResource IosNavRadioBtn}"
                                          IsChecked="{Binding IsNavPackets, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="1"/>
 
                             <!-- 2. 수시 명령 콘솔 -->
-                            <RadioButton Content="{loc:Loc Nav_Inspector}" Style="{StaticResource IosNavRadioBtn}" 
+                            <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Inspector}" Style="{StaticResource IosNavRadioBtn}"
                                          IsChecked="{Binding IsNavInspector, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="2"/>
 
                             <!-- 3. 상시 텔레메트리 -->
-                            <RadioButton Content="{loc:Loc Nav_Telemetry}" Style="{StaticResource IosNavRadioBtn}" 
+                            <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Telemetry}" Style="{StaticResource IosNavRadioBtn}"
                                          IsChecked="{Binding IsNavTelemetry, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="3"/>
 
                             <!-- 4. 실시간 알람 -->
-                            <RadioButton Content="{loc:Loc Nav_Alarms}" Style="{StaticResource IosNavRadioBtn}" 
+                            <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Alarms}" Style="{StaticResource IosNavRadioBtn}"
                                          IsChecked="{Binding IsNavAlarms, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="4"/>
 
                             <!-- 5. C# Struct CodeGen -->
-                            <RadioButton Content="{loc:Loc Nav_Export}" Style="{StaticResource IosNavRadioBtn}" 
+                            <RadioButton GroupName="MainNav" Content="{loc:Loc Nav_Export}" Style="{StaticResource IosNavRadioBtn}"
                                          IsChecked="{Binding IsNavExport, Mode=OneWay}"
                                          Command="{Binding SetNavCommand}" CommandParameter="5"/>
                         </StackPanel>

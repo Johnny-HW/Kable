@@ -44,7 +44,8 @@ public sealed partial class KableSession<TMessage>
                 // 최초 호출자!
                 isFirstStopper = true;
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Stopping);
-                try { _sessionCts.Cancel(); } catch (ObjectDisposedException) { }
+                try { _sessionCts.Cancel(); }
+                catch (ObjectDisposedException ex) { System.Diagnostics.Debug.WriteLine($"[KableSession] Session CTS already disposed: {ex.Message}"); }
             }
         }
         finally
@@ -69,7 +70,10 @@ public sealed partial class KableSession<TMessage>
                 {
                     await Task.WhenAny(_startTcs.Task, Task.Delay(2000)).ConfigureAwait(false);
                 }
-                catch { }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[KableSession] Start wait during cleanup observed: {ex.Message}");
+                }
             }
 
             OnConnectionClosed(reason);
@@ -158,9 +162,12 @@ public sealed partial class KableSession<TMessage>
             {
                 Volatile.Write(ref _lifecycleState, (int)SessionLifecycleState.Disposed);
 
-                try { _responses.Dispose(); } catch { }
-                try { _lifecycleLock.Dispose(); } catch { }
-                try { _sessionCts.Dispose(); } catch { }
+                try { _responses.Dispose(); }
+                catch (Exception ex) when (ex is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"[KableSession] Responses dispose failed: {ex.Message}"); }
+                try { _lifecycleLock.Dispose(); }
+                catch (Exception ex) when (ex is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"[KableSession] LifecycleLock dispose failed: {ex.Message}"); }
+                try { _sessionCts.Dispose(); }
+                catch (Exception ex) when (ex is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"[KableSession] SessionCts dispose failed: {ex.Message}"); }
             }
         }
     }

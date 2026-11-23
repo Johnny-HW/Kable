@@ -104,6 +104,37 @@ public partial class KableProfileClientTests
         sub.Dispose();
     }
 
+    [Fact]
+    public async Task ProfileClient_DisposeAsync_CompletesEvenWhenPollingObserverThrows()
+    {
+        var config = new KableProfileConfig<TestPeriodicCmd, TestAperiodicCmd>()
+            .AddPeriodic(TestPeriodicCmd.GetStatus, "?STATUS", TimeSpan.FromMilliseconds(20));
+
+        var observer = new ThrowingObserver();
+        var client = new GenericKableProfileClientImpl<TestPeriodicCmd, TestAperiodicCmd>(
+            new DummySimpleClient(), config, observer);
+        client.Start();
+
+        await observer.Invoked.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await client.DisposeAsync();
+        await client.DisposeAsync(); // idempotent
+    }
+
+    private sealed class ThrowingObserver : Kable.Observability.ICommObserver
+    {
+        public TaskCompletionSource<bool> Invoked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public System.Threading.Channels.ChannelReader<Kable.Observability.PacketTraceRecord> CommandStream => throw new NotSupportedException();
+        public System.Threading.Channels.ChannelReader<Kable.Observability.PacketTraceRecord> PeriodicStream => throw new NotSupportedException();
+        public System.Threading.Channels.ChannelReader<Kable.Observability.PacketTraceRecord> AlarmStream => throw new NotSupportedException();
+
+        public void OnPacketTrace(in Kable.Observability.PacketTraceRecord trace)
+        {
+            Invoked.TrySetResult(true);
+            throw new InvalidOperationException("Simulated observer failure.");
+        }
+    }
+
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static WeakReference RegisterWeakSubscriber(
         GenericKableProfileClientImpl<TestPeriodicCmd, TestAperiodicCmd> client,

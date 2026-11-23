@@ -49,8 +49,9 @@ public static class UiReconnectExample
             string state = await session.RequestAsync<string>("STATUS", TimeSpan.FromSeconds(5), ct);
             return (session, state);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[UiReconnectExample] OpenUiAsync failed: {ex.Message}");
             await session.DisposeAsync();
             throw;
         }

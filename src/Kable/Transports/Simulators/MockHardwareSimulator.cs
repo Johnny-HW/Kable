@@ -100,8 +100,14 @@ public sealed class MockHardwareSimulator : IAsyncDisposable
                 }
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine("[MockHardwareSimulator] Processing loop cancelled.");
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MockHardwareSimulator] Processing loop stopped: {ex.Message}");
+        }
     }
 
     private string? MatchResponse(string command)
@@ -140,7 +146,14 @@ public sealed class MockHardwareSimulator : IAsyncDisposable
         _cts.Cancel();
         if (_processingLoopTask != null)
         {
-            try { await _processingLoopTask; } catch { }
+            try
+            {
+                await _processingLoopTask;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MockHardwareSimulator] Dispose loop await error: {ex.Message}");
+            }
         }
         await _serverContext.DisposeAsync();
         _cts.Dispose();

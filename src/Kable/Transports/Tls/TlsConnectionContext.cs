@@ -63,7 +63,13 @@ public sealed class TlsConnectionContext : IConnectionContext
         {
             stream?.Dispose(); client.Dispose(); throw new OperationCanceledException(ct);
         }
-        catch { stream?.Dispose(); client.Dispose(); throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TlsConnectionContext] Handshake failed: {ex.Message}");
+            stream?.Dispose();
+            client.Dispose();
+            throw;
+        }
     }
 
     public void Abort(string reason)

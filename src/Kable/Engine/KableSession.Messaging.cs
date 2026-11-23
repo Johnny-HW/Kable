@@ -148,8 +148,9 @@ public sealed partial class KableSession<TMessage>
                 OnConnectionClosed();
                 throw;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[KableSession] FIFO request faulted: {ex.Message}");
                 if (sent && !responseReceived) OnConnectionClosed();
                 throw;
             }

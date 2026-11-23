@@ -22,7 +22,7 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
     private readonly List<Task> _pollingTasks = new();
     private readonly List<IWeakSubscription<TPeriodic>> _weakSubscriptions = new();
     private readonly object _subLock = new();
-    private bool _disposed;
+    private int _disposed;
 
     public bool IsConnected => _client.IsConnected;
     public CommHealthMetrics HealthMetrics => _client.HealthMetrics;
@@ -60,7 +60,8 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
     protected void StartPolling(TPeriodic key, string rawCommand, TimeSpan interval)
     {
         var safeInterval = interval <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(200) : interval;
-        _pollingTasks.Add(Task.Run(() => PollingLoopAsync(key, rawCommand, safeInterval, _cts.Token)));
+        var token = _cts.Token;
+        _pollingTasks.Add(Task.Run(() => PollingLoopAsync(key, rawCommand, safeInterval, token)));
     }
 
     private async Task PollingLoopAsync(TPeriodic key, string rawCommand, TimeSpan interval, CancellationToken ct)
@@ -212,36 +213,52 @@ internal abstract class KableProfileClientBase<TPeriodic> : IAsyncDisposable, ID
 
     protected void ThrowIfDisposed()
     {
-        if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+        if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(GetType().FullName);
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _client.Disconnected -= OnClientDisconnected;
-        _cts.Cancel();
+        try
+        {
+            _cts.Cancel();
 #pragma warning disable CS0618
-        _client.Dispose();
+            _client.Dispose();
 #pragma warning restore CS0618
-        _cts.Dispose();
+        }
+        finally
+        {
+            _cts.Dispose();
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _client.Disconnected -= OnClientDisconnected;
-        _cts.Cancel();
-        await _client.DisposeAsync().ConfigureAwait(false);
         try
         {
-            await Task.WhenAll(_pollingTasks).ConfigureAwait(false);
+            _cts.Cancel();
+            try
+            {
+                await _client.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                try
+                {
+                    await Task.WhenAll(_pollingTasks).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[KableProfileClientBase] Polling tasks stopped during dispose: {ex.Message}");
+                }
+            }
         }
-        catch
+        finally
         {
-            // ignore cancellation
+            _cts.Dispose();
         }
-        _cts.Dispose();
     }
 }

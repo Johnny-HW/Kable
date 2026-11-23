@@ -99,7 +99,12 @@ public sealed class IpcNamedPipeClientFactory : IConnectionFactory
             await pipeStream.ConnectAsync(_timeoutMs, ct).ConfigureAwait(false);
             return new IpcNamedPipeConnectionContext(pipeStream, _pipeName);
         }
-        catch { pipeStream.Dispose(); throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[IpcNamedPipeConnectionFactory] ConnectAsync failed: {ex.Message}");
+            pipeStream.Dispose();
+            throw;
+        }
     }
 }
 
@@ -153,7 +158,12 @@ public sealed class IpcNamedPipeServerListener : IConnectionListener
             }
             return new IpcNamedPipeConnectionContext(serverStream, _pipeName);
         }
-        catch { serverStream.Dispose(); throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[IpcNamedPipeServerListener] AcceptAsync failed: {ex.Message}");
+            serverStream.Dispose();
+            throw;
+        }
         finally
         {
             lock (_acceptSync)

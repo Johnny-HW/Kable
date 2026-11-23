@@ -39,8 +39,9 @@ internal sealed class WeakSubscriptionImpl<TTarget, TCmd> : IWeakSubscription<TC
                 _handler(target, cmd, data);
                 return true;
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
+                System.Diagnostics.Debug.WriteLine($"[WeakSubscription] Subscriber threw exception: {ex.Message}");
                 return true;
             }
         }
@@ -90,8 +91,9 @@ internal sealed class WeakSubscriptionWithStateImpl<TTarget, TState, TCmd> : IWe
                 _handler(target, _state, cmd, data);
                 return true;
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
+                System.Diagnostics.Debug.WriteLine($"[WeakSubscriptionWithState] Subscriber threw exception: {ex.Message}");
                 return true;
             }
         }

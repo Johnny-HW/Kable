@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Lbl_FramingCodec" xml:space="preserve"><value>프레이밍 코덱 (Framing Codec):</value></data>
+  <data name="Lbl_TransactionRouter" xml:space="preserve"><value>트랜잭션 라우터 (Transaction Router):</value></data>
+  <data name="Transport_Serial" xml:space="preserve"><value>Serial</value></data>
+  <data name="Transport_Tcp" xml:space="preserve"><value>TCP/IP</value></data>
+  <data name="Transport_NamedPipe" xml:space="preserve"><value>Named Pipe</value></data>
+  <data name="Transport_ModbusTcp" xml:space="preserve"><value>Modbus-TCP</value></data>
+  <data name="Transport_MelsecSlmp" xml:space="preserve"><value>Melsec SLMP</value></data>
+  <data name="Transport_Mqtt" xml:space="preserve"><value>MQTT</value></data>
+  <data name="Transport_OpcUa" xml:space="preserve"><value>OPC UA</value></data>
+  <data name="Lbl_ModbusServerIp" xml:space="preserve"><value>Modbus 서버 IP:</value></data>
+  <data name="Lbl_ModbusTcpPort" xml:space="preserve"><value>TCP 포트 (기본 502):</value></data>
+  <data name="Lbl_ModbusUnitId" xml:space="preserve"><value>유닛 ID (슬레이브 ID):</value></data>
+  <data name="Lbl_ModbusTestRegister" xml:space="preserve"><value>테스트 레지스터 주소:</value></data>
+  <data name="Lbl_MelsecHostIp" xml:space="preserve"><value>PLC 호스트 IP (Q/iQ-R):</value></data>
+  <data name="Lbl_MelsecPort" xml:space="preserve"><value>SLMP 포트 (기본 5000):</value></data>
+  <data name="Lbl_MelsecNetworkNo" xml:space="preserve"><value>네트워크 번호:</value></data>
+  <data name="Lbl_MelsecPcNo" xml:space="preserve"><value>PC 번호 (기본 255):</value></data>
+  <data name="Lbl_MelsecTargetDevice" xml:space="preserve"><value>대상 디바이스 (예: D1000):</value></data>
+  <data name="Lbl_MqttBrokerHost" xml:space="preserve"><value>MQTT 브로커 호스트:</value></data>
+  <data name="Lbl_MqttPort" xml:space="preserve"><value>포트 (기본 1883):</value></data>
+  <data name="Lbl_MqttClientId" xml:space="preserve"><value>클라이언트 ID:</value></data>
+  <data name="Lbl_MqttTopicPrefix" xml:space="preserve"><value>토픽 접두사:</value></data>
+  <data name="Lbl_OpcEndpointUrl" xml:space="preserve"><value>OPC UA 엔드포인트 URL:</value></data>
+  <data name="Lbl_OpcTargetNodeId" xml:space="preserve"><value>대상 NodeId (예: ns=2;s=Device.Status):</value></data>
+  <data name="CodeGen_BreadcrumbPrefix" xml:space="preserve"><value>⚡ Kable Zero-GC 엔진 / </value></data>
+  <data name="CodeGen_TitleBadge" xml:space="preserve"><value>불변 구조체 코드 생성기</value></data>
+  <data name="CodeGen_PackBadge" xml:space="preserve"><value>Pack = 1 Sequential</value></data>
+  <data name="CodeGen_ZeroAllocBadge" xml:space="preserve"><value>0 Allocs (Hotpath Span&lt;byte&gt;)</value></data>
+  <data name="CodeGen_LangBadge" xml:space="preserve"><value>C# 13 / .NET 10</value></data>
+  <data name="CodeGen_MemoryMapHeader" xml:space="preserve"><value>🔬 구조체 메모리 맵</value></data>
+  <data name="CodeGen_TotalBytes" xml:space="preserve"><value>총 크기: 19 바이트</value></data>
+  <data name="CodeGen_Field0_Offset" xml:space="preserve"><value>오프셋 +0 (2 Bytes)</value></data>
+  <data name="CodeGen_Field0_Name" xml:space="preserve"><value>Preamble (ushort)</value></data>
+  <data name="CodeGen_Field0_Tag" xml:space="preserve"><value>0xAA55</value></data>
+  <data name="CodeGen_Field1_Offset" xml:space="preserve"><value>오프셋 +2 (1 Byte)</value></data>
+  <data name="CodeGen_Field1_Name" xml:space="preserve"><value>Sequence (byte)</value></data>
+  <data name="CodeGen_Field1_Tag" xml:space="preserve"><value>0..255</value></data>
+  <data name="CodeGen_Field2_Offset" xml:space="preserve"><value>오프셋 +3 (4 Bytes)</value></data>
+  <data name="CodeGen_Field2_Name" xml:space="preserve"><value>ChamberTemp (float)</value></data>
+  <data name="CodeGen_Field_Ieee754" xml:space="preserve"><value>IEEE 754</value></data>
+  <data name="CodeGen_Field3_Offset" xml:space="preserve"><value>오프셋 +7 (4 Bytes)</value></data>
+  <data name="CodeGen_Field3_Name" xml:space="preserve"><value>LinePressure (float)</value></data>
+  <data name="CodeGen_Field4_Offset" xml:space="preserve"><value>오프셋 +11 (4 Bytes)</value></data>
+  <data name="CodeGen_Field4_Name" xml:space="preserve"><value>FlowRate (float)</value></data>
+  <data name="CodeGen_Field5_Offset" xml:space="preserve"><value>오프셋 +15 (2 Bytes)</value></data>
+  <data name="CodeGen_Field5_Name" xml:space="preserve"><value>Crc16 (ushort)</value></data>
+  <data name="CodeGen_Field5_Tag" xml:space="preserve"><value>CCITT-16</value></data>
+  <data name="CodeGen_ZeroAllocFootnote" xml:space="preserve"><value>✓ MemoryMarshal.Read&lt;T&gt; 무할당 보장</value></data>
+  <data name="CodeGen_DriverHeader" xml:space="preserve"><value>⚡ C# ZERO-GC 구조체 드라이버</value></data>
+  <data name="CodeGen_SpanInliningBadge" xml:space="preserve"><value>ReadOnlySpan&lt;byte&gt; 인라이닝</value></data>
+  <data name="CodeGen_FooterDesc" xml:space="preserve"><value>Kable Zero-GC 고성능 드라이버 코드 생성기 • 순수 C# 불변 구조체</value></data>
+  <data name="Btn_SaveDriverCs" xml:space="preserve"><value>💾 드라이버 저장 (.cs)</value></data>
+</root>

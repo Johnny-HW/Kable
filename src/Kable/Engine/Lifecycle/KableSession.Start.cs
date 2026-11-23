@@ -144,7 +144,10 @@ public sealed partial class KableSession<TMessage>
                 {
                     await context.DisposeAsync().ConfigureAwait(false);
                 }
-                catch { }
+                catch (Exception disposeEx) when (disposeEx is not OutOfMemoryException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[KableSession] Orphan context dispose failed: {disposeEx.Message}");
+                }
 
                 Volatile.Write(ref _isConnected, 0);
                 var cancelEx = new OperationCanceledException("Session was stopped or disposed while establishing connection.");

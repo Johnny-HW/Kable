@@ -27,7 +27,11 @@ public sealed class KableClientBuilder<TMessage>
     /// </summary>
     public KableClientBuilder<TMessage> UseOptions(KableDeviceOptions options)
     {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(options);
+#else
         if (options == null) throw new ArgumentNullException(nameof(options));
+#endif
         if (options.DefaultRequestTimeoutMs <= 0)
             throw new ArgumentOutOfRangeException(nameof(options.DefaultRequestTimeoutMs));
         _defaultRequestTimeout = TimeSpan.FromMilliseconds(options.DefaultRequestTimeoutMs);
@@ -37,17 +41,13 @@ public sealed class KableClientBuilder<TMessage>
         int connectTimeout = options.ConnectTimeoutMs;
         if (connectTimeout <= 0) throw new ArgumentOutOfRangeException(nameof(options.ConnectTimeoutMs));
 
-        switch (options.Transport?.Trim().ToLowerInvariant())
+        switch (options.GetTransportKind())
         {
-            case "tcp":
-            case "socket":
+            case KableTransportKind.Tcp:
                 UseTcp(options.Host, options.Port, connectTimeout);
                 break;
 
-            case "serial":
-            case "serialport":
-            case "rs232":
-            case "rs485":
+            case KableTransportKind.SerialPort:
                 UseSerialPort(
                     options.PortName,
                     options.BaudRate,
@@ -56,14 +56,11 @@ public sealed class KableClientBuilder<TMessage>
                     options.GetStopBits());
                 break;
 
-            case "namedpipe":
-            case "pipe":
-            case "ipc":
+            case KableTransportKind.NamedPipe:
                 UseNamedPipe(options.PipeName, options.ServerName, connectTimeout);
                 break;
 
-            case "simulator":
-            case "mock":
+            case KableTransportKind.Simulator:
                 UseSimulator(sim => { });
                 break;
 

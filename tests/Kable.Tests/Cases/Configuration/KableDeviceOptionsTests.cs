@@ -126,4 +126,38 @@ public class KableDeviceOptionsTests
 
         Assert.NotNull(session);
     }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("999")]
+    [InlineData("-1")]
+    [InlineData("1,2")]
+    [InlineData("Tcp,SerialPort")]
+    [InlineData("Unknown")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TransportKindParser_NumericOrUndefinedInputs_ReturnUnknown(string input)
+    {
+        Assert.Equal(KableTransportKind.Unknown, KableTransportKindParser.Parse(input));
+    }
+
+    [Theory]
+    [InlineData("tcp", KableTransportKind.Tcp)]
+    [InlineData("socket", KableTransportKind.Tcp)]
+    [InlineData("rs485", KableTransportKind.SerialPort)]
+    [InlineData("ipc", KableTransportKind.NamedPipe)]
+    [InlineData("mock", KableTransportKind.Simulator)]
+    public void TransportKindParser_KnownAliases_MapToExpectedKind(string input, KableTransportKind expected)
+    {
+        Assert.Equal(expected, KableTransportKindParser.Parse(input));
+    }
+
+    [Fact]
+    public void PublicOptionRecords_RemainInheritableForMinorCompatibility()
+    {
+        Assert.False(typeof(KableDeviceOptions).IsSealed);
+        Assert.False(typeof(Kable.Core.Security.ConcurrencyOptions).IsSealed);
+        Assert.False(typeof(Kable.Core.Security.LaunchGuardOptions).IsSealed);
+        Assert.False(typeof(Kable.Core.Security.SecurityTransportOptions).IsSealed);
+    }
 }

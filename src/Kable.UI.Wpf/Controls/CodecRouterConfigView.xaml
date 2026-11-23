@@ -18,11 +18,11 @@
             <TextBlock Text="{loc:Loc Header_CodecRouter}" FontWeight="Bold" FontSize="15" Foreground="{StaticResource KableAccentBlue}" Margin="0,0,0,14"/>
             <UniformGrid Columns="2">
                 <StackPanel Margin="0,0,8,0">
-                    <TextBlock Text="Framing Codec:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{loc:Loc Lbl_FramingCodec}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                     <ComboBox Style="{StaticResource IosComboBoxStyle}" ItemsSource="{Binding AvailableCodecs}" SelectedItem="{Binding Profile.Codec}"/>
                 </StackPanel>
                 <StackPanel Margin="8,0,0,0">
-                    <TextBlock Text="Transaction Router:" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{loc:Loc Lbl_TransactionRouter}" Foreground="{StaticResource KableTextSecondary}" Margin="0,0,0,6"/>
                     <ComboBox Style="{StaticResource IosComboBoxStyle}" ItemsSource="{Binding AvailableRouters}" SelectedItem="{Binding Profile.Router}"/>
                 </StackPanel>
             </UniformGrid>

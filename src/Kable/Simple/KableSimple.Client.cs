@@ -44,8 +44,9 @@ public static partial class KableSimple
                 await _session.StartAsync(ct).ConfigureAwait(false);
                 _readLoopTask = Task.Run(ConsumeStreamAsync);
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[KableSimpleClient] InitializeAsync failed: {ex.Message}");
                 await DisposeAsync().ConfigureAwait(false);
                 throw;
             }

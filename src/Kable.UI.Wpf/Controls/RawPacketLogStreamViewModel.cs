@@ -2,6 +2,7 @@ namespace Kable.UI.Wpf.Controls;
 
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Channels;
@@ -11,13 +12,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kable.Core;
 using Kable.Observability;
+using Kable.UI.Wpf.Services;
 using Kable.UI.Wpf.ViewModels;
-using Microsoft.Win32;
 
 public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserver
 {
     private readonly Dispatcher _dispatcher;
     private readonly int _maxLogCount;
+    private readonly IPacketLogExportService _logExportService;
 
     [ObservableProperty]
     private bool _isPaused;
@@ -53,9 +55,15 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
     public ChannelReader<PacketTraceRecord> AlarmStream => throw new NotSupportedException();
 
     public RawPacketLogStreamViewModel(Dispatcher? dispatcher = null, int maxLogCount = 1000)
+        : this(dispatcher, maxLogCount, WpfPacketLogExportService.Instance)
+    {
+    }
+
+    public RawPacketLogStreamViewModel(Dispatcher? dispatcher, int maxLogCount, IPacketLogExportService? logExportService)
     {
         _dispatcher = dispatcher ?? (Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher);
         _maxLogCount = maxLogCount;
+        _logExportService = logExportService ?? WpfPacketLogExportService.Instance;
     }
 
     public void OnPacketTrace(in PacketTraceRecord trace)
@@ -141,32 +149,20 @@ public partial class RawPacketLogStreamViewModel : ObservableObject, ICommObserv
     {
         try
         {
-            var dialog = new SaveFileDialog
+            string? savedPath = _logExportService.ExportPacketsWithDialog(
+                Packets,
+                "Export Packet Stream Logs",
+                "Kable_PacketStream",
+                "Kable Hardware Packet Trace History Log");
+
+            if (!string.IsNullOrEmpty(savedPath))
             {
-                Title = "Export Packet Stream Logs",
-                Filter = "Log Files (*.log)|*.log|CSV Files (*.csv)|*.csv|Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
-                FileName = $"Kable_PacketStream_{DateTime.Now:yyyyMMdd_HHmmss}.log"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine("# Kable Hardware Packet Trace History Log");
-                sb.AppendLine($"# Exported at: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
-                sb.AppendLine("# Seq | Time | Direction | Device | Kind | Length | Latency | Payload");
-                sb.AppendLine(new string('-', 90));
-
-                foreach (var pkt in Packets)
-                {
-                    sb.AppendLine($"[{pkt.SequenceNo,5}] {pkt.Timestamp} | {pkt.Direction} | {pkt.DeviceId,-12} | {pkt.Kind,-18} | {pkt.Length,4}B | {pkt.LatencyMs,7} | {pkt.AsciiPreview}");
-                }
-
-                File.WriteAllText(dialog.FileName, sb.ToString(), Encoding.UTF8);
-                StatusMessage = $"Saved {Packets.Count} packets to {Path.GetFileName(dialog.FileName)}";
+                StatusMessage = $"Saved {Packets.Count} packets to {Path.GetFileName(savedPath)}";
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException)
         {
+            Debug.WriteLine($"[RawPacketLogStreamViewModel] ExportToFile failed: {ex.Message}");
             StatusMessage = $"Export Failed: {ex.Message}";
         }
     }

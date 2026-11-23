@@ -57,8 +57,9 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer
                 : EventWaitHandle.OpenExisting(eventName);
             return new SharedMemoryWaveformBuffer(mmf, accessor, pointer, dataEvent, creator, capacity);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[SharedMemoryWaveformBuffer] Attach cleanup: {ex.Message}");
             dataEvent?.Dispose();
             if (acquired) accessor!.SafeMemoryMappedViewHandle.ReleasePointer();
             accessor?.Dispose();

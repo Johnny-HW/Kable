@@ -28,8 +28,9 @@ public static class SharedMemoryTransport
             c2s = SharedMemoryRingBuffer.Create(c2sName, bufferCapacityPowerOfTwo);
             return new SharedMemoryConnectionContext(c2s, s2c, $"SharedMemory:Server:{channelName}");
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[SharedMemoryTransport] CreateServerEndpoint cleanup: {ex.Message}");
             c2s?.ReleaseUnconnected();
             s2c.ReleaseUnconnected();
             throw;
@@ -52,8 +53,9 @@ public static class SharedMemoryTransport
             c2s = SharedMemoryRingBuffer.Open(c2sName);
             return new SharedMemoryConnectionContext(s2c, c2s, $"SharedMemory:Client:{channelName}");
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[SharedMemoryTransport] ConnectClientEndpoint cleanup: {ex.Message}");
             c2s?.ReleaseUnconnected();
             s2c.ReleaseUnconnected();
             throw;

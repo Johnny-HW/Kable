@@ -83,8 +83,9 @@ public sealed class GuardedProcessLauncher : IProcessLauncher
 
             return process;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[GuardedProcessLauncher] Launch failed: {ex.Message}");
             await lockHandle.DisposeAsync().ConfigureAwait(false);
             throw;
         }

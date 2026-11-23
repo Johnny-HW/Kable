@@ -51,9 +51,9 @@ public sealed class VirtualDeviceSimulator : IDisposable
         {
             _simulationTask?.Wait(500);
         }
-        catch
+        catch (Exception ex) when (ex is AggregateException or OperationCanceledException or ObjectDisposedException)
         {
-            // ignore cancellation
+            System.Diagnostics.Debug.WriteLine($"[VirtualDeviceSimulator] Stop wait completed with cancellation: {ex.Message}");
         }
         _cts?.Dispose();
         _cts = null;

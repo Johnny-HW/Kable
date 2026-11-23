@@ -53,9 +53,9 @@ public sealed class DaemonService
                             if (readResult.IsCompleted || readResult.IsCanceled) break;
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
                     {
-                        // Session faulted or client disconnected abruptly
+                        System.Diagnostics.Debug.WriteLine($"[DaemonService] Session {context.ConnectionId} disconnected: {ex.Message}");
                     }
                     finally
                     {

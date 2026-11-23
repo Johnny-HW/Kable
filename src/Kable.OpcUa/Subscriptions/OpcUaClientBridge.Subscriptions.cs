@@ -29,8 +29,9 @@ public sealed partial class OpcUaClientBridge
             _recovery ??= RecoveryLoopAsync(_shutdown.Token);
             return handle;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[OpcUaClientBridge] Subscribe failed: {ex.Message}");
             try
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -73,7 +74,12 @@ public sealed partial class OpcUaClientBridge
             _session = await Session.Create(_configuration, configured, false, true, "KableClientSession", _sessionTimeoutMs,
                 _identity, null, ct).ConfigureAwait(false);
         }
-        catch { DisposeIdentity(); throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OpcUaClientBridge] Session.Create failed: {ex.Message}");
+            DisposeIdentity();
+            throw;
+        }
 #pragma warning restore CS0618
         _session.KeepAliveInterval = 500;
         _session.KeepAlive += OnKeepAlive;
@@ -83,7 +89,12 @@ public sealed partial class OpcUaClientBridge
             Volatile.Write(ref _needsReconnect, 0);
             LastRecoveryError = null;
         }
-        catch { Volatile.Write(ref _needsReconnect, 1); throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OpcUaClientBridge] Attach subscriptions failed: {ex.Message}");
+            Volatile.Write(ref _needsReconnect, 1);
+            throw;
+        }
     }
 
     private void OnKeepAlive(ISession session, KeepAliveEventArgs args)
