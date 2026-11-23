@@ -101,4 +101,42 @@ public sealed class GuardedProcessLauncherTests : IDisposable
 
         await handle.DisposeAsync();
     }
+
+    [Theory]
+    [InlineData("PATH")]
+    [InlineData("DOTNET_STARTUP_HOOKS")]
+    [InlineData("LD_PRELOAD")]
+    [InlineData("CORECLR_PROFILER")]
+    public async Task LaunchAsync_ProhibitedEnvironmentVariable_ThrowsSecurityValidationException(string envKey)
+    {
+        var launchGuard = new PathAndHashLaunchGuard(new LaunchGuardOptions { EnableAllowlistOnly = false });
+        var concurrencyGuard = new SingleFlightConcurrencyGuard();
+        var launcher = new GuardedProcessLauncher(launchGuard, concurrencyGuard);
+
+        var cmd = new LaunchCommand
+        {
+            ExecutablePath = Path.Combine(_tempDir, "safe.exe"),
+            EnvironmentVariables = new System.Collections.Generic.Dictionary<string, string> { [envKey] = "evil" }
+        };
+
+        var ex = await Assert.ThrowsAsync<SecurityValidationException>(async () => await launcher.LaunchAsync(cmd));
+        ex.Message.Should().Contain("prohibited environment variable");
+    }
+
+    [Fact]
+    public async Task LaunchAsync_NonExistentWorkingDirectory_ThrowsSecurityValidationException()
+    {
+        var launchGuard = new PathAndHashLaunchGuard(new LaunchGuardOptions { EnableAllowlistOnly = false });
+        var concurrencyGuard = new SingleFlightConcurrencyGuard();
+        var launcher = new GuardedProcessLauncher(launchGuard, concurrencyGuard);
+
+        var cmd = new LaunchCommand
+        {
+            ExecutablePath = Path.Combine(_tempDir, "safe.exe"),
+            WorkingDirectory = Path.Combine(_tempDir, "does_not_exist")
+        };
+
+        var ex = await Assert.ThrowsAsync<SecurityValidationException>(async () => await launcher.LaunchAsync(cmd));
+        ex.Message.Should().Contain("does not exist");
+    }
 }

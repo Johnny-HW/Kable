@@ -26,4 +26,10 @@ public sealed record LaunchCommand
     /// 환경 변수 오버라이드 딕셔너리
     /// </summary>
     public IReadOnlyDictionary<string, string>? EnvironmentVariables { get; init; }
+
+    /// <summary>
+    /// 표준 출력/오류 스트림 리디렉션 활성화 여부 (기본값: false).
+    /// 활성화 시 호출자가 두 스트림을 병렬로 소비해야 파이프 버퍼 데드락을 방지할 수 있습니다.
+    /// </summary>
+    public bool RedirectStandardStreams { get; init; }
 }

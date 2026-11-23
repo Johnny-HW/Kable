@@ -78,21 +78,35 @@ public sealed class IpcNamedPipeClientFactory : IConnectionFactory
     private readonly string _pipeName;
     private readonly string _serverName;
     private readonly int _timeoutMs;
+    private readonly bool _currentUserOnly;
 
     public IpcNamedPipeClientFactory(string pipeName, string serverName = ".", int timeoutMs = 5000)
+        : this(pipeName, serverName, timeoutMs, currentUserOnly: true)
+    {
+    }
+
+    public IpcNamedPipeClientFactory(string pipeName, string serverName, int timeoutMs, bool currentUserOnly)
     {
         _pipeName = pipeName;
         _serverName = serverName;
         _timeoutMs = timeoutMs;
+        _currentUserOnly = currentUserOnly;
     }
 
     public async ValueTask<IConnectionContext> ConnectAsync(CancellationToken ct = default)
     {
+        var pipeOptions = System.IO.Pipes.PipeOptions.Asynchronous;
+#if NET8_0_OR_GREATER
+        if (_currentUserOnly)
+        {
+            pipeOptions |= System.IO.Pipes.PipeOptions.CurrentUserOnly;
+        }
+#endif
         var pipeStream = new NamedPipeClientStream(
             _serverName,
             _pipeName,
             PipeDirection.InOut,
-            System.IO.Pipes.PipeOptions.Asynchronous);
+            pipeOptions);
 
         try
         {
@@ -111,6 +125,7 @@ public sealed class IpcNamedPipeClientFactory : IConnectionFactory
 public sealed class IpcNamedPipeServerListener : IConnectionListener
 {
     private readonly string _pipeName;
+    private readonly bool _currentUserOnly;
     private NamedPipeServerStream? _currentServerStream;
     private readonly CancellationTokenSource _cts = new();
     private readonly object _acceptSync = new();
@@ -119,18 +134,31 @@ public sealed class IpcNamedPipeServerListener : IConnectionListener
     private bool _sourceDisposed;
 
     public IpcNamedPipeServerListener(string pipeName)
+        : this(pipeName, currentUserOnly: true)
+    {
+    }
+
+    public IpcNamedPipeServerListener(string pipeName, bool currentUserOnly)
     {
         _pipeName = pipeName;
+        _currentUserOnly = currentUserOnly;
     }
 
     public async ValueTask<IConnectionContext> AcceptAsync(CancellationToken ct = default)
     {
+        var pipeOptions = System.IO.Pipes.PipeOptions.Asynchronous;
+#if NET8_0_OR_GREATER
+        if (_currentUserOnly)
+        {
+            pipeOptions |= System.IO.Pipes.PipeOptions.CurrentUserOnly;
+        }
+#endif
         var serverStream = new NamedPipeServerStream(
             _pipeName,
             PipeDirection.InOut,
             NamedPipeServerStream.MaxAllowedServerInstances,
             PipeTransmissionMode.Byte,
-            System.IO.Pipes.PipeOptions.Asynchronous);
+            pipeOptions);
 
         try
         {
@@ -141,15 +169,18 @@ public sealed class IpcNamedPipeServerListener : IConnectionListener
                 _currentServerStream = serverStream;
             }
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _cts.Token);
-            using var registration = linkedCts.Token.Register(() => serverStream.Dispose());
-            try
+            using (linkedCts.Token.Register(() => serverStream.Dispose()))
             {
-                await serverStream.WaitForConnectionAsync(linkedCts.Token).ConfigureAwait(false);
+                try
+                {
+                    await serverStream.WaitForConnectionAsync(linkedCts.Token).ConfigureAwait(false);
+                }
+                catch (Exception) when (linkedCts.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(linkedCts.Token);
+                }
             }
-            catch (Exception) when (linkedCts.IsCancellationRequested)
-            {
-                throw new OperationCanceledException(linkedCts.Token);
-            }
+            // Registration is disposed before ownership handoff so late cancellation cannot dispose the returned stream.
             lock (_acceptSync)
             {
                 linkedCts.Token.ThrowIfCancellationRequested();

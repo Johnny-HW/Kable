@@ -72,4 +72,21 @@ public sealed class LifetimeRegressionTests
         await using var client = await new IpcNamedPipeClientFactory(name).ConnectAsync(deadline.Token);
         await using var server = await second;
     }
+
+    [Fact]
+    public async Task MultiAccountOptInOverload_ConnectsAndTransfersData()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        string name = "kable_acl_optin_" + Guid.NewGuid().ToString("N");
+        await using var listener = new IpcNamedPipeServerListener(name, currentUserOnly: false);
+        var accept = listener.AcceptAsync(deadline.Token).AsTask();
+        await using var client = await new IpcNamedPipeClientFactory(name, ".", 5000, currentUserOnly: false).ConnectAsync(deadline.Token);
+        await using var server = await accept;
+
+        var sending = client.Output.WriteAsync(new byte[] { 7, 8 }, deadline.Token).AsTask();
+        var read = await server.Input.ReadAsync(deadline.Token);
+        Assert.Equal(2, read.Buffer.Length);
+        server.Input.AdvanceTo(read.Buffer.End);
+        await sending;
+    }
 }
