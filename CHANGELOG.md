@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.0] - 2026-11-23
+
+[Release notes](docs/releases/1.11.0.md) / [한국어](docs/releases/1.11.0.ko.md).
+
+### Added
+- Release XML documentation (`lib/*/*.xml`), `.snupkg` symbol packages, portable PDBs, and built-in .NET SDK SourceLink across all library packages.
+- Central Package Management (`Directory.Packages.props`) with TFM-aligned `Microsoft.Extensions.*` (`8.0.0` on `netstandard2.0`/`net8.0`, `10.0.8` on `net10.0`) and GA `System.IO.Ports`.
+- Binary-compatible `IpcNamedPipe` constructor overloads accepting `bool currentUserOnly` for explicit cross-account opt-in.
+- Optional MQTT `Username`, `Password`, `UseTls`, and `AllowUntrustedCertificates` settings on `MqttOptions`.
+- `LaunchCommand.RedirectStandardStreams` (default `false`) and `VirtualDeviceSimulator.StopAsync()` / `IAsyncDisposable`.
+- Shared `PacketLogGrid` control, frozen `IosTheme.Colors.xaml` brushes (`po:Freeze="True"`), and the `Kable.UI.Wpf.Tests` test project.
+
+### Changed
+- **Fail-Closed `PathAndHashLaunchGuard`**: Rejects execution when the allowlist is empty, checks full paths before filenames, and enforces SHA-256 verification whenever hashes are configured.
+- **`IpcNamedPipe`**: Defaults to `PipeOptions.CurrentUserOnly` on .NET 8/10.
+- **`Kable.Mqtt`**: Throws `DeviceDisconnectedException` on disconnected QoS 1/2 publishes while logging and dropping QoS 0; rejects non-finite metric values and wildcard topic segments.
+- **`GuardedProcessLauncher`**: Blocks dangerous environment variable overrides, validates/normalizes `WorkingDirectory`, and avoids capturing redirected streams unless opted in.
+- Marked legacy `OpcUaClientBridge(string, ...)` and four unimplemented generator attributes `[Obsolete]` while keeping compatibility.
+
+### Fixed
+- Guarded `SharedMemoryRingBuffer` and `SharedMemoryWaveformBuffer` against corrupted `Head`/`Tail` OOB access, wait/dispose races, stale `AutoReset` wakeups, and duplicate kernel events.
+- Fixed Roslyn incremental caching (`CommandModel`), per-command output, `KABLEGEN001` non-partial diagnostics, root-pack file binding, control/keyword escaping, and duplicate constant/enum suffixes in `Kable.Generators`.
+- Fixed session shutdown alarm spool loss, `StartAsync` timeout connection leaks, canceled stream hot-spin, `TimeProvider` timestamp mismatches, `KableLocalizer` thread safety, `SingleFlightConcurrencyGuard` lock eviction races, transport cleanup leaks, and MELSEC/Modbus outbound frame length validation.
+- Fixed gRPC server stream/CTS leaks, client connect token lifetime, 5-RPC auth header cloning, and OPC UA reconnect `KeepAlive`/session cleanup.
+- Prevented `ProtocolPackPersistence.Save` path traversal, added schema/range/typeKind validation, and switched `ProtocolPackYaml` to static cached single-pass parsing.
+- Fixed WPF duplicate telemetry logging, missing units, unwired `FilterText` views, per-packet UI flooding (50 ms batched flush), UI-thread blocking in `VirtualDeviceSimulator`/`ConfigStudio`, and flaky test port/delay/parallel-arena races.
+
+---
+
 ## [1.10.1] - 2026-10-29
 
 [Release notes](docs/releases/1.10.1.md) / [한국어](docs/releases/1.10.1.ko.md).

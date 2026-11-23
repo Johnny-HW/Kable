@@ -67,4 +67,4 @@ enum OnDemandCommand { ReadModel }
 [오류 처리와 종료](ERROR_HANDLING.md) · [세션 수명](CONNECTION_LIFECYCLE.md)
 
 [성능 비교](benchmarks/LibraryComparison.md) · [오류 처리 검증](benchmarks/FaultComparison.md) ·
-[1.10.1 릴리즈 노트](/releases/1.10.1.ko.md) · [GitHub 저장소](https://github.com/Johnny-HW/Kable)
+[1.11.0 릴리즈 노트](/releases/1.11.0.ko.md) · [GitHub 저장소](https://github.com/Johnny-HW/Kable)

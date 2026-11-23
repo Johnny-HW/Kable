@@ -1,9 +1,9 @@
-> 최신 버전: **1.10.1** (2026-10-29). [릴리즈 노트](../releases/1.10.1.ko.md) · [게시 검증](https://github.com/Johnny-HW/Kable/actions/runs/40816337009).
+> 최신 버전: **1.11.0** (2026-11-23). [릴리즈 노트](../releases/1.11.0.ko.md) · [변경 이력](../../CHANGELOG.md).
 
 # Kable 설치·보안·업그레이드·배포 안내
 
-상태: **1.10.1 NuGet 게시 완료 (2026-10-29)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.10.1)와 [게시 검증 결과](https://github.com/Johnny-HW/Kable/actions/runs/40816337009)를 참고한다.
-1.10.1의 변경 사항과 호환성은 [릴리즈 노트](../releases/1.10.1.ko.md)에 기록한다.
+상태: **1.11.0 릴리즈 준비 및 로컬 검증 완료 (2026-11-23)**. [공식 패키지](https://www.nuget.org/packages/Kable/1.11.0)와 [릴리즈 노트](../releases/1.11.0.ko.md)를 참고한다.
+1.11.0의 보안 기본값 변경과 호환성 안내도 [릴리즈 노트](../releases/1.11.0.ko.md)에 기록한다.
 
 ## 환경과 패키지 선택
 
@@ -31,7 +31,7 @@ Serial과 공유 메모리의 플랫폼 제약은 사용하는 드라이버와 �
 ```powershell
 dotnet new console -n EquipmentApp -f net8.0
 Set-Location EquipmentApp
-dotnet add package Kable --version 1.10.1
+dotnet add package Kable --version 1.11.0
 ```
 
 미게시 후보 버전은 위 명령으로 설치된다고 가정하지 않는다.

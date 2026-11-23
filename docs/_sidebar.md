@@ -18,5 +18,7 @@
   * [오류 처리 · Fault handling](/ko/benchmarks/FaultComparison.md)
 
 * **릴리즈 · Releases**
+  * [1.11.0 한국어](/releases/1.11.0.ko.md)
+  * [1.11.0 English](/releases/1.11.0.md)
   * [1.10.1 한국어](/releases/1.10.1.ko.md)
   * [1.10.1 English](/releases/1.10.1.md)

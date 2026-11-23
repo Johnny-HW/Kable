@@ -67,4 +67,4 @@ The ten-second delay keeps the demonstration alive. `TryGetFresh` returns false 
 [Failures and shutdown](ERROR_HANDLING.md) · [Session lifetime](CONNECTION_LIFECYCLE.md)
 
 [Performance comparison (Korean)](/ko/benchmarks/LibraryComparison.md) · [Fault comparison (Korean)](/ko/benchmarks/FaultComparison.md) ·
-[1.10.1 release notes](/releases/1.10.1.md) · [GitHub repository](https://github.com/Johnny-HW/Kable)
+[1.11.0 release notes](/releases/1.11.0.md) · [GitHub repository](https://github.com/Johnny-HW/Kable)

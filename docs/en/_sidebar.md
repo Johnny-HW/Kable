@@ -29,6 +29,7 @@
   * [Master index](/en/INDEX.md)
 
 * **Release notes**
+  * [1.11.0](/releases/1.11.0.md)
   * [1.10.1](/releases/1.10.1.md)
   * [1.10.0](/releases/1.10.0.md)
   * [1.9.2](/releases/1.9.2.md)

@@ -30,6 +30,7 @@
   * [전체 기술 문서 색인](/ko/INDEX.md)
 
 * **릴리즈 노트**
+  * [1.11.0](/releases/1.11.0.ko.md)
   * [1.10.1](/releases/1.10.1.ko.md)
   * [1.10.0](/releases/1.10.0.ko.md)
   * [1.9.2](/releases/1.9.2.ko.md)
