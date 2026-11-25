@@ -10,7 +10,7 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer
     /// <summary>Creates a new named buffer. An existing buffer is never reset; use Open to attach.</summary>
     public static SharedMemoryWaveformBuffer Create(string bufferName, int capacityPowerOfTwo = 16384)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(bufferName);
+        SharedMemoryCompat.ThrowIfNullOrWhiteSpace(bufferName, nameof(bufferName));
         if (capacityPowerOfTwo <= 0 || (capacityPowerOfTwo & (capacityPowerOfTwo - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacityPowerOfTwo));
         long totalBytes = 256 + (long)capacityPowerOfTwo * sizeof(WaveformSample);
@@ -35,7 +35,7 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer
 
     public static SharedMemoryWaveformBuffer Open(string bufferName)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(bufferName);
+        SharedMemoryCompat.ThrowIfNullOrWhiteSpace(bufferName, nameof(bufferName));
         var (mmfName, evtName) = GetKernelObjectNames(bufferName);
         var mmf = MemoryMappedFile.OpenExisting(mmfName, MemoryMappedFileRights.ReadWrite);
         return Attach(mmf, evtName, false, 0, 0);

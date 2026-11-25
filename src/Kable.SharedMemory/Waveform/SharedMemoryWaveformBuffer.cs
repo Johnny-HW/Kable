@@ -54,7 +54,9 @@ public struct WaveformBufferHeader
 /// <summary>
 /// 초당 수천~수만 회의 고주파 파형 샘플을 Zero-Copy로 교환하는 SPSC MMF 파형 버퍼.
 /// </summary>
+#if NET5_0_OR_GREATER
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
 public unsafe sealed partial class SharedMemoryWaveformBuffer : IDisposable
 {
     private const int Disposing = int.MinValue;

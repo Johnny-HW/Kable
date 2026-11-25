@@ -4,7 +4,9 @@ using System.IO.MemoryMappedFiles;
 using System.Threading;
 
 /// <summary>Single-producer/single-consumer byte ring in a named Windows memory mapping.</summary>
+#if NET5_0_OR_GREATER
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
 public unsafe sealed partial class SharedMemoryRingBuffer : IDisposable
 {
     private readonly MemoryMappedFile _mmf;
@@ -58,7 +60,7 @@ public unsafe sealed partial class SharedMemoryRingBuffer : IDisposable
     /// <summary>Creates a new physical ring. An existing mapping is never overwritten.</summary>
     public static SharedMemoryRingBuffer Create(string bufferName, int capacityPowerOfTwo = 64 * 1024)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(bufferName);
+        SharedMemoryCompat.ThrowIfNullOrWhiteSpace(bufferName, nameof(bufferName));
         if (capacityPowerOfTwo <= 0 || (capacityPowerOfTwo & (capacityPowerOfTwo - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacityPowerOfTwo));
         using var resources = new RingBufferResources();
@@ -73,7 +75,7 @@ public unsafe sealed partial class SharedMemoryRingBuffer : IDisposable
     /// <summary>Opens and validates an existing physical ring without changing its shared state.</summary>
     public static SharedMemoryRingBuffer Open(string bufferName)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(bufferName);
+        SharedMemoryCompat.ThrowIfNullOrWhiteSpace(bufferName, nameof(bufferName));
         using var resources = new RingBufferResources();
         resources.Mapping = MemoryMappedFile.OpenExisting(bufferName + "_mmf", MemoryMappedFileRights.ReadWrite);
         resources.Map();

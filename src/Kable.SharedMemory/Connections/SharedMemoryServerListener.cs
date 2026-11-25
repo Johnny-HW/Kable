@@ -22,8 +22,8 @@ public sealed partial class SharedMemoryServerListener : IConnectionListener
     public SharedMemoryServerListener(string channelName, int bufferCapacityPowerOfTwo = 64 * 1024,
         int handshakeTimeoutMs = 5000)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(channelName);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(handshakeTimeoutMs);
+        SharedMemoryCompat.ThrowIfNullOrWhiteSpace(channelName, nameof(channelName));
+        SharedMemoryCompat.ThrowIfNegativeOrZero(handshakeTimeoutMs, nameof(handshakeTimeoutMs));
         if (bufferCapacityPowerOfTwo <= 0 || (bufferCapacityPowerOfTwo & (bufferCapacityPowerOfTwo - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(bufferCapacityPowerOfTwo));
         _channelName = channelName;
@@ -53,7 +53,12 @@ public sealed partial class SharedMemoryServerListener : IConnectionListener
             {
                 try
                 {
+#if NET6_0_OR_GREATER
                     await Task.Delay(Timeout.Infinite, _active.ConnectionClosed).WaitAsync(linked.Token).ConfigureAwait(false);
+#else
+                    using var wait = CancellationTokenSource.CreateLinkedTokenSource(_active.ConnectionClosed, linked.Token);
+                    await Task.Delay(Timeout.Infinite, wait.Token).ConfigureAwait(false);
+#endif
                 }
                 catch (OperationCanceledException) when (_active.ConnectionClosed.IsCancellationRequested && !linked.IsCancellationRequested)
                 {
@@ -63,8 +68,12 @@ public sealed partial class SharedMemoryServerListener : IConnectionListener
                 _active = null;
             }
             linked.Token.ThrowIfCancellationRequested();
+            var pipeOptions = PipeOptions.Asynchronous;
+#if NETCOREAPP2_1_OR_GREATER || NET5_0_OR_GREATER
+            pipeOptions |= PipeOptions.CurrentUserOnly;
+#endif
             pipe = new NamedPipeServerStream(SharedMemoryHandshake.ControlName(_channelName), PipeDirection.InOut, 1,
-                PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                PipeTransmissionMode.Byte, pipeOptions);
             lock (_sync)
             {
                 linked.Token.ThrowIfCancellationRequested();

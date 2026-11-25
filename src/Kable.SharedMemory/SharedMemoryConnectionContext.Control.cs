@@ -28,7 +28,7 @@ public sealed partial class SharedMemoryConnectionContext
         try
         {
             // EOF, an unexpected byte, or a pipe error all terminate only this IPC generation.
-            await pipe.ReadAsync(new byte[1], ct).ConfigureAwait(false);
+            await SharedMemoryCompat.ReadAsync(pipe, new byte[1], ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

@@ -27,13 +27,13 @@ public sealed partial class SharedMemoryConnectionContext
 
     public ValueTask DisposeAsync()
     {
-        TaskCompletionSource? owner = null;
+        TaskCompletionSource<bool>? owner = null;
         Task disposal;
         lock (_lifetimeSync)
         {
             if (_disposeTask == null)
             {
-                owner = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                owner = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _disposeTask = owner.Task;
             }
             disposal = _disposeTask;
@@ -42,7 +42,7 @@ public sealed partial class SharedMemoryConnectionContext
         return new ValueTask(disposal);
     }
 
-    private async Task DisposeCoreAsync(TaskCompletionSource completion)
+    private async Task DisposeCoreAsync(TaskCompletionSource<bool> completion)
     {
         try
         {
@@ -63,7 +63,7 @@ public sealed partial class SharedMemoryConnectionContext
                     _cancellationDisposed = true;
                 }
             }
-            completion.TrySetResult();
+            completion.TrySetResult(true);
         }
         catch (Exception error) { completion.TrySetException(error); }
     }

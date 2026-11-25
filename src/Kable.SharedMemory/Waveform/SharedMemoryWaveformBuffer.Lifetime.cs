@@ -7,20 +7,20 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer
 {
     public bool WaitForData(int timeoutMs)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(timeoutMs, Timeout.Infinite);
+        SharedMemoryCompat.ThrowIfLessThan(timeoutMs, Timeout.Infinite, nameof(timeoutMs));
         EnterOrThrow();
         try
         {
             if (IsReadyForRead()) return true;
             if (timeoutMs == 0) return false;
 
-            long started = Environment.TickCount64;
+            long started = SharedMemoryCompat.GetTickCount64();
             while (true)
             {
                 if (IsReadyForRead()) return true;
                 int remaining = timeoutMs == Timeout.Infinite
                     ? Timeout.Infinite
-                    : (int)Math.Max(0, timeoutMs - (Environment.TickCount64 - started));
+                    : (int)Math.Max(0, timeoutMs - (SharedMemoryCompat.GetTickCount64() - started));
                 if (remaining == 0) return IsReadyForRead();
                 if (!_dataEvent.WaitOne(remaining)) return IsReadyForRead();
             }
@@ -86,7 +86,7 @@ public unsafe sealed partial class SharedMemoryWaveformBuffer
         if (!TryEnter()) return;
         try
         {
-            int previous = Interlocked.Or(ref _lifetimeState, Disposing);
+            int previous = SharedMemoryCompat.InterlockedOr(ref _lifetimeState, Disposing);
             if (previous >= 0) CloseCore();
         }
         finally { Exit(); }

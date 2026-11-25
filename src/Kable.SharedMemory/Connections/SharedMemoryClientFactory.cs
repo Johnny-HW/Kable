@@ -11,8 +11,8 @@ public sealed class SharedMemoryClientFactory : IConnectionFactory
 
     public SharedMemoryClientFactory(string channelName, int connectTimeoutMs = 5000)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(channelName);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(connectTimeoutMs);
+        SharedMemoryCompat.ThrowIfNullOrWhiteSpace(channelName, nameof(channelName));
+        SharedMemoryCompat.ThrowIfNegativeOrZero(connectTimeoutMs, nameof(connectTimeoutMs));
         _channelName = channelName;
         _connectTimeoutMs = connectTimeoutMs;
     }
@@ -21,8 +21,12 @@ public sealed class SharedMemoryClientFactory : IConnectionFactory
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(_connectTimeoutMs);
+        var pipeOptions = PipeOptions.Asynchronous;
+#if NETCOREAPP2_1_OR_GREATER || NET5_0_OR_GREATER
+        pipeOptions |= PipeOptions.CurrentUserOnly;
+#endif
         var pipe = new NamedPipeClientStream(".", SharedMemoryHandshake.ControlName(_channelName),
-            PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+            PipeDirection.InOut, pipeOptions);
         SharedMemoryConnectionContext? context = null;
         bool published = false;
         try
@@ -31,7 +35,7 @@ public sealed class SharedMemoryClientFactory : IConnectionFactory
             await SharedMemoryHandshake.WriteRequestAsync(pipe, timeout.Token).ConfigureAwait(false);
             Guid generation = await SharedMemoryHandshake.ReadReplyAsync(pipe, timeout.Token).ConfigureAwait(false);
             context = SharedMemoryTransport.ConnectClientEndpoint(SharedMemoryHandshake.SessionName(_channelName, generation));
-            await pipe.WriteAsync(new byte[] { 1 }, timeout.Token).ConfigureAwait(false);
+            await SharedMemoryCompat.WriteAsync(pipe, new byte[] { 1 }, timeout.Token).ConfigureAwait(false);
             context.AttachControlPipe(pipe, generation);
             published = true;
             return context;

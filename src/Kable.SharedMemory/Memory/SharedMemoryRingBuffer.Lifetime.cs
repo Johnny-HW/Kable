@@ -75,7 +75,7 @@ public unsafe sealed partial class SharedMemoryRingBuffer
         if (!TryEnter()) return;
         try
         {
-            int previous = Interlocked.Or(ref _lifetimeState, Disposing);
+            int previous = SharedMemoryCompat.InterlockedOr(ref _lifetimeState, Disposing);
             if (previous >= 0 && publishClose) CloseCore();
         }
         finally { Exit(); }

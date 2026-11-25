@@ -27,7 +27,7 @@ public sealed partial class SharedMemoryRingBuffer
 
     private ValueTask<bool> WaitForConditionAsync(bool space, int timeoutMs, CancellationToken ct)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(timeoutMs, Timeout.Infinite);
+        SharedMemoryCompat.ThrowIfLessThan(timeoutMs, Timeout.Infinite, nameof(timeoutMs));
         ct.ThrowIfCancellationRequested();
         if (!TryEnter()) return new ValueTask<bool>(true);
         bool transferred = false;
@@ -44,7 +44,7 @@ public sealed partial class SharedMemoryRingBuffer
 
     private async Task<bool> WaitRegisteredAsync(bool space, int timeoutMs, CancellationToken ct)
     {
-        long started = Environment.TickCount64;
+        long started = SharedMemoryCompat.GetTickCount64();
         try
         {
             while (true)
@@ -72,7 +72,7 @@ public sealed partial class SharedMemoryRingBuffer
     // Compatibility API; connection pumps use the asynchronous methods exclusively.
     private bool WaitForCondition(bool space, int timeoutMs, CancellationToken ct)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(timeoutMs, Timeout.Infinite);
+        SharedMemoryCompat.ThrowIfLessThan(timeoutMs, Timeout.Infinite, nameof(timeoutMs));
         ct.ThrowIfCancellationRequested();
         if (!TryEnter()) return true;
         bool waiting = false;
@@ -83,8 +83,12 @@ public sealed partial class SharedMemoryRingBuffer
             EnterWait(space);
             waiting = true;
             var handle = space ? _spaceAvailableEvent : _dataAvailableEvent;
+#if NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
             using var cancellation = ct.UnsafeRegister(static state => ((EventWaitHandle)state!).Set(), handle);
-            long started = Environment.TickCount64;
+#else
+            using var cancellation = ct.Register(static state => ((EventWaitHandle)state!).Set(), handle);
+#endif
+            long started = SharedMemoryCompat.GetTickCount64();
             while (true)
             {
                 ct.ThrowIfCancellationRequested();
@@ -107,7 +111,7 @@ public sealed partial class SharedMemoryRingBuffer
 
     private static int Remaining(int timeoutMs, long started)
         => timeoutMs == Timeout.Infinite ? Timeout.Infinite
-            : (int)Math.Max(0, timeoutMs - (Environment.TickCount64 - started));
+            : (int)Math.Max(0, timeoutMs - (SharedMemoryCompat.GetTickCount64() - started));
 
     private void EnterWait(bool space)
     {
